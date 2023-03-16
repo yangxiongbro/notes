@@ -3608,9 +3608,19 @@ public class Application {
 
 
 
-#### 源码
+#### 方法一：findEligibleAdvisors
 
-##### findEligibleAdvisors
+该方法的作用是找到有资格的 Advisor 切面
+
+过程如下
+
+1. 找到所有 Advisor 切面
+2. 找到所有 Aspect 切面并转换为 Advisor 切面
+3. 找到适合当前 Bean 的所有 Advisor 切面
+
+
+
+##### 源码
 
 ```java
 public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyCreator {
@@ -3634,30 +3644,93 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 ```
 
 
+###### 找到所有 Advisor 切面
 
-##### wrapIfNecessary
+该方法从 BeanFactory 中获取所有 Advisor 类型的对象
 
 ```java
-public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware {
-    protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
-        if (StringUtils.hasLength(beanName) && this.targetSourcedBeans.contains(beanName)) {
-            return bean;
-        } else if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
-            return bean;
-        } else if (!this.isInfrastructureClass(bean.getClass()) && !this.shouldSkip(bean.getClass(), beanName)) {
-            Object[] specificInterceptors = this.getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, (TargetSource)null);
-            if (specificInterceptors != DO_NOT_PROXY) {
-                this.advisedBeans.put(cacheKey, Boolean.TRUE);
-                Object proxy = this.createProxy(bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
-                this.proxyTypes.put(cacheKey, proxy.getClass());
-                return proxy;
-            } else {
-                this.advisedBeans.put(cacheKey, Boolean.FALSE);
-                return bean;
+public class BeanFactoryAdvisorRetrievalHelper {
+// 省略部分代码
+    public List<Advisor> findAdvisorBeans() {
+        String[] advisorNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(this.beanFactory, Advisor.class, true, false);
+        List<Advisor> advisors = new ArrayList();
+        for(String name:advisorNames) {
+            advisors.add(this.beanFactory.getBean(name, Advisor.class));
+        }
+        return advisors;
+    }
+}
+```
+
+
+
+###### 找到所有 Aspect 切面并转换为 Advisor 切面
+
+1. 从 BeanFactory 中获取所有对象
+2. 判断是否为 Aspect 切面对象
+3. 如果是 Aspect 切面对象就使用 Aspect 切面方法的信息生成 Advisor 切面
+
+
+
+```java
+public class BeanFactoryAspectJAdvisorsBuilder {
+// 省略部分代码
+    public List<Advisor> buildAspectJAdvisors() {
+        List<Advisor> advisors = new ArrayList();
+        String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(this.beanFactory, Object.class, true, false);
+        for(String beanName:beanNames){
+            Class<?> beanType = this.beanFactory.getType(beanName, false);
+            if (beanType != null && this.advisorFactory.isAspect(beanType)) {
+                AspectMetadata amd = new AspectMetadata(beanType, beanName);
+                if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
+                    MetadataAwareAspectInstanceFactory factory = new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
+                    advisors.addAll(this.advisorFactory.getAdvisors(factory));
+                } else {
+                    MetadataAwareAspectInstanceFactory factory = new PrototypeAspectInstanceFactory(this.beanFactory, beanName);
+                    advisors.addAll(this.advisorFactory.getAdvisors(factory));
+                }
             }
+        }
+        return advisors;
+    }
+}
+```
+
+
+
+###### 找到适合当前 Bean 的所有 Advisor 切面
+
+1. 将所有 Advisor 切面与目标 Bean 进行匹配，获取目标 Bean 的 Advisor 切面
+
+
+
+```java
+public abstract class AopUtils {
+    public static List<Advisor> findAdvisorsThatCanApply(List<Advisor> candidateAdvisors, Class<?> clazz) {
+        if (candidateAdvisors.isEmpty()) {
+            return candidateAdvisors;
         } else {
-            this.advisedBeans.put(cacheKey, Boolean.FALSE);
-            return bean;
+            List<Advisor> eligibleAdvisors = new ArrayList();
+            Iterator var3 = candidateAdvisors.iterator();
+
+            while(var3.hasNext()) {
+                Advisor candidate = (Advisor)var3.next();
+                if (candidate instanceof IntroductionAdvisor && canApply(candidate, clazz)) {
+                    eligibleAdvisors.add(candidate);
+                }
+            }
+
+            boolean hasIntroductions = !eligibleAdvisors.isEmpty();
+            Iterator var7 = candidateAdvisors.iterator();
+
+            while(var7.hasNext()) {
+                Advisor candidate = (Advisor)var7.next();
+                if (!(candidate instanceof IntroductionAdvisor) && canApply(candidate, clazz, hasIntroductions)) {
+                    eligibleAdvisors.add(candidate);
+                }
+            }
+
+            return eligibleAdvisors;
         }
     }
 }
@@ -3665,17 +3738,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport imp
 
 
 
-### 方法一：findEligibleAdvisors
-
-该方法的作用是找到 Bean 中的 Advisor 切面和 Aspect 切面，并将找到的 Aspect 切面转换为 Advisor 切面
-
-1. 找到所有 Advisor 切面
-2. 找到所有 Aspect 切面并转换为 Advisor 切面
-3. 找到适合当前 Bean 的所有 Advisor 切面
-
-
-
-#### 示例
+##### 示例
 
 ```java
 public class Target1 {
@@ -3753,12 +3816,11 @@ public class MyConfig {
 }
 ```
 
-```java
-// 包名为了方便调用 protected 方法 findEligibleAdvisors、wrapIfNecessary
-package org.springframework.aop.framework.autoproxy;
 
+
+```java
 public class Application {
-    public static void main(String[]args) throws NoSuchFieldException, IllegalAccessException {
+    public static void main(String[]args) {
         GenericApplicationContext context = new GenericApplicationContext();
         context.registerBean("myConfig", MyConfig.class);
         context.registerBean(ConfigurationClassPostProcessor.class);
@@ -3766,222 +3828,119 @@ public class Application {
         context.registerBean(AnnotationAwareAspectJAutoProxyCreator.class);
         context.refresh();
 
-        /**
-         * 第一个重要的方法 findEligibleAdvisors 找到有资格的 Advisors
-         * 1.有资格的 Advisors 一部分是低级的，可以由自己编写，如例中的 advisor
-         * 2.有资格的 Advisors 另一部分是高级的，由 AnnotationAwareAspectJAutoProxyCreator 解析 @Aspect 获得
-         */
-        AnnotationAwareAspectJAutoProxyCreator creator = context.getBean(AnnotationAwareAspectJAutoProxyCreator.class);
+        List<Advisor> candidateAdvisors = findAdvisorBeans(context.getDefaultListableBeanFactory());
+        candidateAdvisors.addAll(buildAspectJAdvisors());
+        List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, Target1.class);
 
+        System.out.println("排序");
+        AnnotationAwareOrderComparator.sort(eligibleAdvisors);
+        printAdvisor(eligibleAdvisors);
+    }
+
+    private static List<Advisor> findAdvisorBeans(DefaultListableBeanFactory beanFactory){
         System.out.println("找到所有 Advisor 切面");
-        Field advisorHelperField = creator.getClass().getSuperclass().getSuperclass().getDeclaredField("advisorRetrievalHelper");
-        advisorHelperField.setAccessible(true);
-        BeanFactoryAdvisorRetrievalHelper advisorHelper = (BeanFactoryAdvisorRetrievalHelper) advisorHelperField.get(creator);
-        List<Advisor> candidateAdvisors = advisorHelper.findAdvisorBeans();
-        for(Advisor advisor:candidateAdvisors){
-            System.out.println(advisor);
-        }
+        List<Advisor> candidateAdvisors = new ArrayList<>(beanFactory.getBeansOfType(Advisor.class).values());
+        printAdvisor(candidateAdvisors);
+        return candidateAdvisors;
+    }
 
+    private static List<Advisor> buildAspectJAdvisors(){
         System.out.println("找到所有 Aspect 切面并转换为 Advisor 切面");
-        Field aspectJAdvisorsBuilderField = creator.getClass().getDeclaredField("aspectJAdvisorsBuilder");
-        aspectJAdvisorsBuilderField.setAccessible(true);
-        BeanFactoryAspectJAdvisorsBuilder aspectJAdvisorsBuilder = (BeanFactoryAspectJAdvisorsBuilder) aspectJAdvisorsBuilderField.get(creator);
-        List<Advisor> aspectAdvisors = aspectJAdvisorsBuilder.buildAspectJAdvisors();
-        for(Advisor advisor:aspectAdvisors){
-            System.out.println(advisor);
+        AspectInstanceFactory factory = new SingletonAspectInstanceFactory(new MyAspect());
+        List<Advisor> aspectAdvisors = new ArrayList<>();
+        for(Method method:MyAspect.class.getDeclaredMethods()){
+            /**
+             *   @Before 前置通知会被转换为下面原始的 AspectJMethodBeforeAdvice 形式, 该对象包含了如下信息
+             *       a. 通知代码从哪儿来
+             *       b. 切点是什么
+             *       c. 通知对象如何创建, 本例共用同一个 Aspect 对象
+             *   类似的通知还有
+             *       1. AspectJAroundAdvice (环绕通知)
+             *       2. AspectJAfterReturningAdvice
+             *       3. AspectJAfterThrowingAdvice (环绕通知)
+             *       4. AspectJAfterAdvice (环绕通知)
+             */
+            if (method.isAnnotationPresent(Before.class)) {
+                // 解析切点
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(Before.class).value());
+                // 通知类
+                // 切面
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut, new AspectJMethodBeforeAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(After.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(After.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut,  new AspectJAfterReturningAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(AfterReturning.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(AfterReturning.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut,  new AspectJAfterReturningAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(Around.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(Around.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut, new AspectJAroundAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            }
         }
-        candidateAdvisors.addAll(aspectAdvisors);
+        printAdvisor(aspectAdvisors);
+        return aspectAdvisors;
+    }
 
+    private static List<Advisor> findAdvisorsThatCanApply(List<Advisor> candidateAdvisors, Class<?> clazz){
         System.out.println("找到适合当前 Bean 的所有 Advisor 切面");
-        List<Advisor> eligibleAdvisors = AopUtils.findAdvisorsThatCanApply(candidateAdvisors, Target1.class);
-        for(Advisor advisor:eligibleAdvisors){
+        List<Advisor> eligibleAdvisors = new ArrayList<>();
+        for (Advisor advisor : candidateAdvisors) {
+            for(Method method:Target1.class.getDeclaredMethods()){
+                if(((PointcutAdvisor)advisor).getPointcut().getMethodMatcher().matches(method, clazz)){
+                    eligibleAdvisors.add(advisor);
+                    break;
+                }
+            }
+        }
+        printAdvisor(eligibleAdvisors);
+        return eligibleAdvisors;
+    }
+
+    private static void printAdvisor(List<Advisor> advisors){
+        for(Advisor advisor:advisors){
             System.out.println(advisor);
         }
-        
-        // advisor 排序等......
     }
 }
 ```
 
-#### 源码
-
-###### findAdvisorBeans
-
-作用
-
-1. 该方法从 BeanFactory 中获取所有 Advisor 类型的对象
 
 
+
+
+#### 方法二：wrapIfNecessary
+
+##### 源码
 
 ```java
-public class BeanFactoryAdvisorRetrievalHelper {
-        public List<Advisor> findAdvisorBeans() {
-        String[] advisorNames = this.cachedAdvisorBeanNames;
-        if (advisorNames == null) {
-            advisorNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(this.beanFactory, Advisor.class, true, false);
-            this.cachedAdvisorBeanNames = advisorNames;
-        }
-
-        if (advisorNames.length == 0) {
-            return new ArrayList();
+public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware {
+    protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+        if (StringUtils.hasLength(beanName) && this.targetSourcedBeans.contains(beanName)) {
+            return bean;
+        } else if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
+            return bean;
+        } else if (!this.isInfrastructureClass(bean.getClass()) && !this.shouldSkip(bean.getClass(), beanName)) {
+            Object[] specificInterceptors = this.getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, (TargetSource)null);
+            if (specificInterceptors != DO_NOT_PROXY) {
+                this.advisedBeans.put(cacheKey, Boolean.TRUE);
+                Object proxy = this.createProxy(bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
+                this.proxyTypes.put(cacheKey, proxy.getClass());
+                return proxy;
+            } else {
+                this.advisedBeans.put(cacheKey, Boolean.FALSE);
+                return bean;
+            }
         } else {
-            List<Advisor> advisors = new ArrayList();
-            String[] var3 = advisorNames;
-            int var4 = advisorNames.length;
-
-            for(int var5 = 0; var5 < var4; ++var5) {
-                String name = var3[var5];
-                if (this.isEligibleBean(name)) {
-                    if (this.beanFactory.isCurrentlyInCreation(name)) {
-                        if (logger.isTraceEnabled()) {
-                            logger.trace("Skipping currently created advisor '" + name + "'");
-                        }
-                    } else {
-                        try {
-                            advisors.add(this.beanFactory.getBean(name, Advisor.class));
-                        } catch (BeanCreationException var11) {
-                            Throwable rootCause = var11.getMostSpecificCause();
-                            if (rootCause instanceof BeanCurrentlyInCreationException) {
-                                BeanCreationException bce = (BeanCreationException)rootCause;
-                                String bceBeanName = bce.getBeanName();
-                                if (bceBeanName != null && this.beanFactory.isCurrentlyInCreation(bceBeanName)) {
-                                    if (logger.isTraceEnabled()) {
-                                        logger.trace("Skipping advisor '" + name + "' with dependency on currently created bean: " + var11.getMessage());
-                                    }
-                                    continue;
-                                }
-                            }
-
-                            throw var11;
-                        }
-                    }
-                }
-            }
-
-            return advisors;
-        }
-    }
-}
-```
-
-###### buildAspectJAdvisors
-
-作用
-
-1. 从 BeanFactory 中获取所有对象
-2. 判断是否为 Aspect 切面对象
-3. 如果是 Aspect 切面对象就使用 Aspect 切面方法的信息生成 Advisor 切面
-
-
-
-```java
-public class BeanFactoryAspectJAdvisorsBuilder {
-        public List<Advisor> buildAspectJAdvisors() {
-        List<String> aspectNames = this.aspectBeanNames;
-        if (aspectNames == null) {
-            synchronized(this) {
-                aspectNames = this.aspectBeanNames;
-                if (aspectNames == null) {
-                    List<Advisor> advisors = new ArrayList();
-                    List<String> aspectNames = new ArrayList();
-                    String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(this.beanFactory, Object.class, true, false);
-                    String[] var18 = beanNames;
-                    int var19 = beanNames.length;
-
-                    for(int var7 = 0; var7 < var19; ++var7) {
-                        String beanName = var18[var7];
-                        if (this.isEligibleBean(beanName)) {
-                            Class<?> beanType = this.beanFactory.getType(beanName, false);
-                            if (beanType != null && this.advisorFactory.isAspect(beanType)) {
-                                aspectNames.add(beanName);
-                                AspectMetadata amd = new AspectMetadata(beanType, beanName);
-                                if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
-                                    MetadataAwareAspectInstanceFactory factory = new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
-                                    List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
-                                    if (this.beanFactory.isSingleton(beanName)) {
-                                        this.advisorsCache.put(beanName, classAdvisors);
-                                    } else {
-                                        this.aspectFactoryCache.put(beanName, factory);
-                                    }
-
-                                    advisors.addAll(classAdvisors);
-                                } else {
-                                    if (this.beanFactory.isSingleton(beanName)) {
-                                        throw new IllegalArgumentException("Bean with name '" + beanName + "' is a singleton, but aspect instantiation model is not singleton");
-                                    }
-
-                                    MetadataAwareAspectInstanceFactory factory = new PrototypeAspectInstanceFactory(this.beanFactory, beanName);
-                                    this.aspectFactoryCache.put(beanName, factory);
-                                    advisors.addAll(this.advisorFactory.getAdvisors(factory));
-                                }
-                            }
-                        }
-                    }
-
-                    this.aspectBeanNames = aspectNames;
-                    return advisors;
-                }
-            }
-        }
-
-        if (aspectNames.isEmpty()) {
-            return Collections.emptyList();
-        } else {
-            List<Advisor> advisors = new ArrayList();
-            Iterator var3 = aspectNames.iterator();
-
-            while(var3.hasNext()) {
-                String aspectName = (String)var3.next();
-                List<Advisor> cachedAdvisors = (List)this.advisorsCache.get(aspectName);
-                if (cachedAdvisors != null) {
-                    advisors.addAll(cachedAdvisors);
-                } else {
-                    MetadataAwareAspectInstanceFactory factory = (MetadataAwareAspectInstanceFactory)this.aspectFactoryCache.get(aspectName);
-                    advisors.addAll(this.advisorFactory.getAdvisors(factory));
-                }
-            }
-
-            return advisors;
-        }
-    }
-}
-```
-
-###### findAdvisorsThatCanApply
-
-作用
-
-将所有 Advisor 切面与目标 Bean 进行匹配，获取目标 Bean 的 Advisor 切面
-
-
-
-```java
-public abstract class AopUtils {
-    public static List<Advisor> findAdvisorsThatCanApply(List<Advisor> candidateAdvisors, Class<?> clazz) {
-        if (candidateAdvisors.isEmpty()) {
-            return candidateAdvisors;
-        } else {
-            List<Advisor> eligibleAdvisors = new ArrayList();
-            Iterator var3 = candidateAdvisors.iterator();
-
-            while(var3.hasNext()) {
-                Advisor candidate = (Advisor)var3.next();
-                if (candidate instanceof IntroductionAdvisor && canApply(candidate, clazz)) {
-                    eligibleAdvisors.add(candidate);
-                }
-            }
-
-            boolean hasIntroductions = !eligibleAdvisors.isEmpty();
-            Iterator var7 = candidateAdvisors.iterator();
-
-            while(var7.hasNext()) {
-                Advisor candidate = (Advisor)var7.next();
-                if (!(candidate instanceof IntroductionAdvisor) && canApply(candidate, clazz, hasIntroductions)) {
-                    eligibleAdvisors.add(candidate);
-                }
-            }
-
-            return eligibleAdvisors;
+            this.advisedBeans.put(cacheKey, Boolean.FALSE);
+            return bean;
         }
     }
 }
@@ -3989,16 +3948,7 @@ public abstract class AopUtils {
 
 
 
-
-### 方法二：wrapIfNecessary
-
-#### 源码
-
-
-
-
-
-#### 示例
+##### 示例
 
 
 
