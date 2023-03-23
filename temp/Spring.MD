@@ -4488,6 +4488,18 @@ public class Application {
 
 
 
+##### 总结
+
+1. @Before 前置通知会被转换为原始的 AspectJMethodBeforeAdvice 形式, 该对象包含了如下信息
+   1. 通知代码从哪儿来
+   2. 切点是什么(这里为啥要切点, 后面解释)
+   3. 通知对象如何创建, 本例共用同一个 Aspect 对象
+2. 类似的还有
+   1. AspectJAroundAdvice (环绕通知)
+   2. AspectJAfterReturningAdvice
+   3. AspectJAfterThrowingAdvice (环绕通知)
+   4. AspectJAfterAdvice (环绕通知)
+
 
 
 #### 方法二：wrapIfNecessary
@@ -4749,34 +4761,8 @@ public class Application {
 ```
 
 
-### @Aspect 切面转为 Advisor 切面
 
-
-
-
-
-
-#### 演示3 - @Before 对应的低级通知
-
-##### 代码参考
-
-**org.springframework.aop.framework.autoproxy.A17_2**
-
-#### 收获💡
-
-1. @Before 前置通知会被转换为原始的 AspectJMethodBeforeAdvice 形式, 该对象包含了如下信息
-   1. 通知代码从哪儿来
-   2. 切点是什么(这里为啥要切点, 后面解释)
-   3. 通知对象如何创建, 本例共用同一个 Aspect 对象
-2. 类似的还有
-   1. AspectJAroundAdvice (环绕通知)
-   2. AspectJAfterReturningAdvice
-   3. AspectJAfterThrowingAdvice (环绕通知)
-   4. AspectJAfterAdvice (环绕通知)
-
-
-
-### 18) 静态通知调用
+### 静态通知调用
 
 代理对象调用流程如下（以 JDK 动态代理实现为例）
 
@@ -4833,13 +4819,261 @@ ih -->> -Proxy :
 
 
 
-#### 演示1 - 通知调用过程
+#### 通知调用过程
 
-##### 代码参考
+##### 示例
 
-**org.springframework.aop.framework.A18**
+```java
+public class Target1{
+    public void foo(){
+        System.out.println("target1 foo");
+    }
+}
+public class Target2 {
+    public void bar(){
+        System.out.println("target2 bar");
+    }
+}
 
-#### 收获💡
+```
+
+```java
+@Aspect
+public class MyAspect {
+    @Before("execution(* foo())")
+    public void fooBefore() {
+        System.out.println("foo before");
+    }
+
+    @After("execution(* foo())")
+    public void fooAfter() {
+        System.out.println("foo after");
+    }
+
+    @Before("execution(* bar())")
+    public void barBefore() {
+        System.out.println("bar before");
+    }
+
+    @After("execution(* bar())")
+    public void barAfter() {
+        System.out.println("bar after");
+    }
+}
+```
+
+```java
+@Configuration
+public class MyConfig {
+
+    // 低级 Advisor 切面
+    @Bean
+    public Advisor fooAdvisor(MethodInterceptor advice){
+        // 切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* foo())");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+        return advisor;
+    }
+
+    // 低级 Advisor 切面
+    @Bean
+    public Advisor barAdvisor(MethodInterceptor advice){
+        // 切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* bar())");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+        return advisor;
+    }
+
+    // 通知
+    @Bean
+    public MethodInterceptor advice(){
+        return invocation -> {
+            System.out.println("advice before...");
+            Object result = invocation.proceed(); // 调用目标
+            System.out.println("advice after...");
+            return result;
+        };
+    }
+}
+```
+
+```java
+package org.springframework.aop.framework;
+
+public class Application {
+    public static void main(String[]args) throws Throwable {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("myConfig", MyConfig.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.registerBean("myAspect", MyAspect.class);
+        context.registerBean(AnnotationAwareAspectJAutoProxyCreator.class);
+        context.refresh();
+        Target1 target1 = new Target1();
+
+        List<Advisor> eligibleAdvisors = findEligibleAdvisors(target1.getClass(), context.getDefaultListableBeanFactory());
+
+        ProxyFactory factory = new ProxyFactory();
+        factory.addAdvice(ExposeInvocationInterceptor.INSTANCE);
+        factory.addAdvisors(eligibleAdvisors);
+
+        factory.setTarget(target1);
+        factory.setInterfaces(target1.getClass().getInterfaces());
+        factory.setProxyTargetClass(false);
+
+        /*
+
+            其实无论 ProxyFactory 基于哪种方式创建代理, 最后干活(调用 advice)的是一个 MethodInvocation 对象
+                a. 因为 advisor 有多个, 且一个套一个调用, 因此需要一个调用链对象, 即 MethodInvocation
+                b. MethodInvocation 要知道 advice 有哪些, 还要知道目标, 调用次序如下
+
+                将 MethodInvocation 放入当前线程
+                    |-> before1 ----------------------------------- 从当前线程获取 MethodInvocation
+                    |                                             |
+                    |   |-> before2 --------------------          | 从当前线程获取 MethodInvocation
+                    |   |                              |          |
+                    |   |   |-> target ------ 目标   advice2    advice1
+                    |   |                              |          |
+                    |   |-> after2 ---------------------          |
+                    |                                             |
+                    |-> after1 ------------------------------------
+                c. 从上图看出, 环绕通知才适合作为 advice, 因此其他 before、afterReturning 都会被转换成环绕通知
+                d. 统一转换为环绕通知, 体现的是设计模式中的适配器模式
+                    - 对外是为了方便使用要区分 before、afterReturning
+                    - 对内统一都是环绕通知, 统一用 MethodInterceptor 表示
+
+            此步获取所有执行时需要的 advice (静态)
+                a. 即统一转换为 MethodInterceptor 环绕通知, 这体现在方法名中的 Interceptors 上
+                b. 适配如下
+                  - MethodBeforeAdviceAdapter 将 @Before AspectJMethodBeforeAdvice 适配为 MethodBeforeAdviceInterceptor
+                  - AfterReturningAdviceAdapter 将 @AfterReturning AspectJAfterReturningAdvice 适配为 AfterReturningAdviceInterceptor
+         */
+
+        System.out.println("把所有通知转换为环绕通知");
+        Method method = target1.getClass().getMethod("foo");
+        List<Object> methodInterceptorList = factory.getInterceptorsAndDynamicInterceptionAdvice(method, target1.getClass());
+        for (Object o : methodInterceptorList) {
+            System.out.println(o);
+        }
+
+        System.out.println("创建并执行调用链 (环绕通知s + 目标)");
+        MethodInvocation methodInvocation = new ReflectiveMethodInvocation(
+                null, target1, method, new Object[0], target1.getClass(), methodInterceptorList
+        );
+        methodInvocation.proceed();
+
+        /*
+            学到了什么
+                a. 无参数绑定的通知如何被调用
+                b. MethodInvocation 编程技巧: 拦截器、过滤器等等实现都与此类似
+                c. 适配器模式在 Spring 中的体现
+         */
+    }
+
+    /**
+     * 创建代理
+     *  a. proxyTargetClass = false, 目标实现了接口, 用 jdk 实现
+     *  b. proxyTargetClass = false,  目标没有实现接口, 用 cglib 实现
+     *  c. proxyTargetClass = true, 总是使用 cglib 实现
+     */
+    private static Object wrapIfNecessary(Object bean, DefaultListableBeanFactory beanFactory){
+        List<Advisor> eligibleAdvisors = Application.findEligibleAdvisors(bean.getClass(), beanFactory);
+        ProxyFactory factory = new ProxyFactory();
+        // 把这个 Advice 把 MethodInvocation 放入当前线程，因为有些 advice 需要使用到 MethodInvocation
+        factory.addAdvice(ExposeInvocationInterceptor.INSTANCE);
+        factory.addAdvisors(eligibleAdvisors);
+
+        factory.setTarget(bean);
+        factory.setInterfaces(bean.getClass().getInterfaces());
+        factory.setProxyTargetClass(false);
+        return factory.getProxy(Thread.currentThread().getContextClassLoader());
+    }
+
+    private static List<Advisor> findEligibleAdvisors(Class<?> clazz, DefaultListableBeanFactory beanFactory){
+        List<Advisor> candidateAdvisors = findAdvisorBeans(beanFactory);
+        candidateAdvisors.addAll(buildAspectJAdvisors());
+        return findAdvisorsThatCanApply(candidateAdvisors, clazz);
+    }
+
+    private static List<Advisor> findAdvisorBeans(DefaultListableBeanFactory beanFactory){
+        System.out.println("找到所有 Advisor 切面");
+        List<Advisor> candidateAdvisors = new ArrayList<>(beanFactory.getBeansOfType(Advisor.class).values());
+        printAdvisor(candidateAdvisors);
+        return candidateAdvisors;
+    }
+
+    private static List<Advisor> buildAspectJAdvisors(){
+        System.out.println("找到所有 Aspect 切面并转换为 Advisor 切面");
+        AspectInstanceFactory factory = new SingletonAspectInstanceFactory(new MyAspect());
+        List<Advisor> aspectAdvisors = new ArrayList<>();
+        for(Method method:MyAspect.class.getDeclaredMethods()){
+            /**
+             *   @Before 前置通知会被转换为下面原始的 AspectJMethodBeforeAdvice 形式, 该对象包含了如下信息
+             *       a. 通知代码从哪儿来
+             *       b. 切点是什么
+             *       c. 通知对象如何创建, 本例共用同一个 Aspect 对象
+             *   类似的通知还有
+             *       1. AspectJAroundAdvice (环绕通知)
+             *       2. AspectJAfterReturningAdvice
+             *       3. AspectJAfterThrowingAdvice (环绕通知)
+             *       4. AspectJAfterAdvice (环绕通知)
+             */
+            if (method.isAnnotationPresent(Before.class)) {
+                // 解析切点
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(Before.class).value());
+                // 通知类
+                // 切面
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut, new AspectJMethodBeforeAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(After.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(After.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut,  new AspectJAfterAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(AfterReturning.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(AfterReturning.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut,  new AspectJAfterReturningAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(Around.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(Around.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut, new AspectJAroundAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            }
+        }
+        printAdvisor(aspectAdvisors);
+        return aspectAdvisors;
+    }
+
+    private static List<Advisor> findAdvisorsThatCanApply(List<Advisor> candidateAdvisors, Class<?> clazz){
+        System.out.println("找到适合当前 Bean 的所有 Advisor 切面");
+        List<Advisor> eligibleAdvisors = new ArrayList<>();
+        for (Advisor advisor : candidateAdvisors) {
+            for(Method method:Target1.class.getDeclaredMethods()){
+                if(((PointcutAdvisor)advisor).getPointcut().getMethodMatcher().matches(method, clazz)){
+                    eligibleAdvisors.add(advisor);
+                    break;
+                }
+            }
+        }
+        printAdvisor(eligibleAdvisors);
+        return eligibleAdvisors;
+    }
+
+    private static void printAdvisor(List<Advisor> advisors){
+        for(Advisor advisor:advisors){
+            System.out.println(advisor);
+        }
+    }
+}
+```
+
+
+
+##### 总结
 
 代理方法执行时会做如下工作
 
@@ -4852,13 +5086,101 @@ ih -->> -Proxy :
 
 
 
-#### 演示2 - 模拟 MethodInvocation
+#### 模拟 MethodInvocation
 
-##### 代码参考
+##### 示例
 
-**org.springframework.aop.framework.A18_1**
+```java
+static class Target {
+    public void foo() {
+        System.out.println("Target.foo()");
+    }
+}
+```
 
-#### 收获💡
+```java
+static class Advice1 implements MethodInterceptor {
+    public Object invoke(MethodInvocation invocation) throws Throwable {
+        System.out.println("Advice1.before()");
+        Object result = invocation.proceed();// 调用下一个通知或目标
+        System.out.println("Advice1.after()");
+        return result;
+    }
+}
+
+static class Advice2 implements MethodInterceptor {
+    public Object invoke(MethodInvocation invocation) throws Throwable {
+        System.out.println("Advice2.before()");
+        Object result = invocation.proceed();// 调用下一个通知或目标
+        System.out.println("Advice2.after()");
+        return result;
+    }
+}
+```
+
+```java
+static class MyInvocation implements MethodInvocation {
+    private Object target;  // 1
+    private Method method;
+    private Object[] args;
+    List<MethodInterceptor> methodInterceptorList; // 2
+    private int count = 1; // 调用次数
+
+    public MyInvocation(Object target, Method method, Object[] args, List<MethodInterceptor> methodInterceptorList) {
+        this.target = target;
+        this.method = method;
+        this.args = args;
+        this.methodInterceptorList = methodInterceptorList;
+    }
+
+    @Override
+    public Method getMethod() {
+        return method;
+    }
+
+    @Override
+    public Object[] getArguments() {
+        return args;
+    }
+
+    @Override
+    public Object proceed() throws Throwable { // 调用每一个环绕通知, 调用目标
+        if (count > methodInterceptorList.size()) {
+            // 调用目标， 返回并结束递归
+            return method.invoke(target, args);
+        }
+        // 逐一调用通知, count + 1
+        MethodInterceptor methodInterceptor = methodInterceptorList.get(count++ - 1);
+        return methodInterceptor.invoke(this);
+    }
+
+    @Override
+    public Object getThis() {
+        return target;
+    }
+
+    @Override
+    public AccessibleObject getStaticPart() {
+        return method;
+    }
+}
+```
+
+```java
+public static void main(String[] args) throws Throwable {
+    Target target = new Target();
+    List<MethodInterceptor> list = List.of(
+            new Advice1(),
+            new Advice2()
+    );
+    MyInvocation invocation = new MyInvocation(target, Target.class.getMethod("foo"), new Object[0], list);
+    invocation.proceed();
+}
+```
+
+
+
+##### 总结
 
 1. proceed() 方法调用链中下一个环绕通知
 2. 每个环绕通知内部继续调用 proceed()
