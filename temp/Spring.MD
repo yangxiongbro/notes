@@ -5291,20 +5291,188 @@ public class Application {
 
 ## WEB MVC
 
-### 20) RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter
+### RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter
 
 RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter 俩是一对，分别用来
 
 * 处理 @RequestMapping 映射
 * 调用控制器方法、并处理方法参数与方法返回值
 
-#### 演示1 - DispatcherServlet 初始化
 
-##### 代码参考
 
-**com.itheima.a20** 包
+#### 示例
 
-#### 收获💡
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cn.example</groupId>
+    <artifactId>example</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+
+    <!-- 引入Spring Boot依赖 -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.3.12.RELEASE</version>
+    </parent>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <!-- 引入Web场景依赖启动器 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+```properties
+server.port=8081
+spring.mvc.servlet.load-on-startup=1
+```
+
+```java
+@Configuration
+@ComponentScan
+@PropertySource("classpath:application.properties")
+@EnableConfigurationProperties({WebMvcProperties.class, ServerProperties.class})
+/**
+ * WebMvcProperties 以 spring.mvc 开头的配置
+ * 类似的还有
+ * WebMvcProperties 以 spring.web 开头的配置
+ * ServerProperties 以 server 开头的配置
+ */
+public class WebConfig {
+    /**
+     * 内嵌 web 容器工厂
+     */
+    @Bean
+    public TomcatServletWebServerFactory tomcatServletWebServerFactory(ServerProperties serverProperties) {
+        return new TomcatServletWebServerFactory(serverProperties.getPort());
+    }
+
+    /**
+     * 创建 DispatcherServlet
+     */
+    @Bean
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
+
+    /**
+     * 注册 DispatcherServlet, Spring MVC 的入口
+     */
+    @Bean
+    public DispatcherServletRegistrationBean dispatcherServletRegistrationBean(
+            DispatcherServlet dispatcherServlet, WebMvcProperties webMvcProperties) {
+        DispatcherServletRegistrationBean registrationBean = new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+        /**
+         * 设置 Servlet 一启动时就初始化，参数对应不用 Servlet 启动优先级，优先级从小到大逐渐降低
+         * 或者在 Spring 的配置文件配置 spring.mvc.servlet.load-on-startup=1
+         * registrationBean.setLoadOnStartup(1);
+         */
+        registrationBean.setLoadOnStartup(webMvcProperties.getServlet().getLoadOnStartup());
+        return registrationBean;
+    }
+}
+```
+
+```java
+public class Application {
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+    }
+}
+```
+
+
+
+#### DispatcherServlet 初始化
+
+```java
+protected void onRefresh(ApplicationContext context) {
+    this.initStrategies(context);
+}
+
+protected void initStrategies(ApplicationContext context) {
+    // 初始化文件解析器
+    this.initMultipartResolver(context);
+    // 初始化本地化解析器
+    this.initLocaleResolver(context);
+    // 初始化模板解析器
+    this.initThemeResolver(context);
+    // 初始化路径映射器
+    this.initHandlerMappings(context);
+    // 初始化控制器适配器
+    this.initHandlerAdapters(context);
+    // 初始化异常解析器
+    this.initHandlerExceptionResolvers(context);
+    this.initRequestToViewNameTranslator(context);
+    this.initViewResolvers(context);
+    this.initFlashMapManager(context);
+}
+
+private void initHandlerMappings(ApplicationContext context) {
+    this.handlerMappings = null;
+    // 是否检测包括父子容器的所有 HandlerMapping
+    if (this.detectAllHandlerMappings) {
+        Map<String, HandlerMapping> matchingBeans = BeanFactoryUtils.beansOfTypeIncludingAncestors(context, HandlerMapping.class, true, false);
+        if (!matchingBeans.isEmpty()) {
+            this.handlerMappings = new ArrayList(matchingBeans.values());
+            AnnotationAwareOrderComparator.sort(this.handlerMappings);
+        }
+    } else {
+        try {
+            HandlerMapping hm = (HandlerMapping)context.getBean("handlerMapping", HandlerMapping.class);
+            this.handlerMappings = Collections.singletonList(hm);
+        } catch (NoSuchBeanDefinitionException var3) {
+        }
+    }
+
+    // 容器中没有找到 HandlerMapping，则获取默认的 HandlerMapping
+    if (this.handlerMappings == null) {
+        this.handlerMappings = this.getDefaultStrategies(context, HandlerMapping.class);
+        if (this.logger.isTraceEnabled()) {
+            this.logger.trace("No HandlerMappings declared for servlet '" + this.getServletName() + "': using default strategies from DispatcherServlet.properties");
+        }
+    }
+
+}
+```
+
+
+
+#### 总结
 
 1. DispatcherServlet 是在第一次被访问时执行初始化, 也可以通过配置修改为 Tomcat 启动后就初始化
 2. 在初始化时会从 Spring 容器中找一些 Web 需要的组件, 如 HandlerMapping、HandlerAdapter 等，并逐一调用它们的初始化
@@ -5315,6 +5483,8 @@ RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter 俩是一对，分
 4. RequestMappingHandlerAdapter 初始化时，会准备 HandlerMethod 调用时需要的各个组件，如：
    * HandlerMethodArgumentResolver 解析控制器方法参数
    * HandlerMethodReturnValueHandler 处理控制器方法返回值
+
+
 
 
 
