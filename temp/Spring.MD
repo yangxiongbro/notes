@@ -5300,7 +5300,7 @@ RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter 俩是一对，分
 
 
 
-#### 示例
+#### 依赖配置
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -5336,6 +5336,11 @@ RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter 俩是一对，分
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -5357,6 +5362,16 @@ RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter 俩是一对，分
 server.port=8081
 spring.mvc.servlet.load-on-startup=1
 ```
+
+
+
+#### DispatcherServlet 初始化
+
+
+
+##### 示例
+
+
 
 ```java
 @Configuration
@@ -5401,6 +5416,56 @@ public class WebConfig {
         registrationBean.setLoadOnStartup(webMvcProperties.getServlet().getLoadOnStartup());
         return registrationBean;
     }
+
+    /**
+     * 如果用 DispatcherServlet 初始化时默认添加的组件, 并不会作为 bean 添加到 Spring 容器中, 给测试带来困扰
+     * 1. 加入 RequestMappingHandlerMapping
+     */
+    @Bean
+    public RequestMappingHandlerMapping requestMappingHandlerMapping() {
+        return new RequestMappingHandlerMapping();
+    }
+
+    /**
+     * 2. 继续加入RequestMappingHandlerAdapter, 会替换掉 DispatcherServlet 默认的 4 个 HandlerAdapter
+     */
+    @Bean
+    public MyRequestMappingHandlerAdapter requestMappingHandlerAdapter() {
+        MyRequestMappingHandlerAdapter handlerAdapter = new MyRequestMappingHandlerAdapter();
+        return handlerAdapter;
+    }
+}
+```
+
+```java
+@Controller
+public class MyController {
+
+    private static final Logger log = LoggerFactory.getLogger(MyController.class);
+
+    @GetMapping("/test1")
+    public ModelAndView test1() throws Exception {
+        log.debug("test1()");
+        return null;
+    }
+    
+    @PostMapping("/test2")
+    public ModelAndView test2(@RequestParam("name") String name) {
+        log.debug("test2({})", name);
+        return null;
+    }
+}
+```
+
+```java
+/**
+ * 为了调用父类的受保护方法，所以写一个子类重写为 public
+ */
+public class MyRequestMappingHandlerAdapter extends RequestMappingHandlerAdapter {
+    @Override
+    public ModelAndView invokeHandlerMethod(HttpServletRequest request, HttpServletResponse response, HandlerMethod handlerMethod) throws Exception {
+        return super.invokeHandlerMethod(request, response, handlerMethod);
+    }
 }
 ```
 
@@ -5411,13 +5476,40 @@ public class Application {
     public static void main(String[] args) throws Exception {
         AnnotationConfigServletWebServerApplicationContext context =
                 new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+
+        // 作用 解析 @RequestMapping 以及派生注解，生成路径与控制器方法的映射关系, 在初始化时就生成
+        RequestMappingHandlerMapping handlerMapping = context.getBean(RequestMappingHandlerMapping.class);
+
+        // 获取映射结果
+        Map<RequestMappingInfo, HandlerMethod> handlerMethods = handlerMapping.getHandlerMethods();
+        handlerMethods.forEach((k, v) -> {
+            System.out.println(k + "=" + v);
+        });
+
+        // 请求来了，获取控制器方法  返回处理器执行链对象
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/test1");
+        request.setLocalPort(8081);
+        // request.setParameter("name", "张三");
+        // request.addHeader("token", "某个令牌");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        HandlerExecutionChain chain = handlerMapping.getHandler(request);
+        System.out.println(chain);
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>");
+        // HandlerAdapter 作用: 调用控制器方法
+        MyRequestMappingHandlerAdapter handlerAdapter = context.getBean(MyRequestMappingHandlerAdapter.class);
+        handlerAdapter.invokeHandlerMethod(request, response, (HandlerMethod) chain.getHandler());
+
+        // 检查响应
+        byte[] content = response.getContentAsByteArray();
+        System.out.println("结果：" + new String(content, StandardCharsets.UTF_8));
     }
 }
 ```
 
 
 
-#### DispatcherServlet 初始化
+##### 源码
 
 ```java
 protected void onRefresh(ApplicationContext context) {
@@ -5472,7 +5564,7 @@ private void initHandlerMappings(ApplicationContext context) {
 
 
 
-#### 总结
+##### 总结
 
 1. DispatcherServlet 是在第一次被访问时执行初始化, 也可以通过配置修改为 Tomcat 启动后就初始化
 2. 在初始化时会从 Spring 容器中找一些 Web 需要的组件, 如 HandlerMapping、HandlerAdapter 等，并逐一调用它们的初始化
@@ -5488,13 +5580,260 @@ private void initHandlerMappings(ApplicationContext context) {
 
 
 
-#### 演示2 - 自定义参数与返回值处理器
+#### 参数与返回值处理器
 
-##### 代码参考
+##### 示例
 
-**com.itheima.a20.TokenArgumentResolver** ，**com.itheima.a20.YmlReturnValueHandler**
+```java
+public class Application {
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
 
-#### 收获💡
+    public static void main(String[] args) {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+
+        // HandlerAdapter 作用: 调用控制器方法
+        MyRequestMappingHandlerAdapter handlerAdapter = context.getBean(MyRequestMappingHandlerAdapter.class);
+		/**
+		 * 不同的参数由不同的参数解析器来解析
+		 */
+        System.out.println(">>>>>>>>>>>>>>>>>>>>> 所有参数解析器");
+        for (HandlerMethodArgumentResolver resolver : handlerAdapter.getArgumentResolvers()) {
+            System.out.println(resolver);
+        }
+
+		/**
+		 * 不同的返回值由不同的返回值解析器来解析
+		 */
+        System.out.println(">>>>>>>>>>>>>>>>>>>>> 所有返回值解析器");
+        for (HandlerMethodReturnValueHandler handler : handlerAdapter.getReturnValueHandlers()) {
+            System.out.println(handler);
+        }
+    }
+}
+```
+
+
+
+##### 自定义解析器
+
+```java
+/**
+ * 例如经常需要用到请求头中的 token 信息, 用下面注解来标注由哪个参数来获取它
+ * token=令牌
+ */
+@Target(ElementType.PARAMETER)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Token {
+}
+```
+
+```java
+/**
+ * 自定义参数解析器
+ */
+public class TokenArgumentResolver implements HandlerMethodArgumentResolver {
+    /**
+     * 是否支持某个参数
+     */
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+        Token token = parameter.getParameterAnnotation(Token.class);
+        return token != null;
+    }
+
+    /**
+     * 解析参数
+     */
+    @Override
+    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
+                                  NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+        return webRequest.getHeader("token");
+    }
+}
+```
+
+```java
+/**
+ * 自定义返回值解析器
+ */
+public class YmlReturnValueHandler implements HandlerMethodReturnValueHandler {
+    /**
+     * 是否支持某个返回值
+     */
+    @Override
+    public boolean supportsReturnType(MethodParameter returnType) {
+        Yml yml = returnType.getMethodAnnotation(Yml.class);
+        return yml != null;
+    }
+
+    /**
+     * 解析返回值
+     */
+    @Override
+    public void handleReturnValue(Object returnValue, MethodParameter returnType,
+                                  ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+        // 1. 转换返回结果为 yaml 字符串
+        String str = new Yaml().dump(returnValue);
+
+        // 2. 将 yaml 字符串写入响应
+        HttpServletResponse response = webRequest.getNativeResponse(HttpServletResponse.class);
+        response.setContentType("text/plain;charset=utf-8");
+        response.getWriter().print(str);
+
+        // 3. 设置请求已经处理完毕
+        mavContainer.setRequestHandled(true);
+    }
+}
+```
+
+```java
+@Configuration
+@ComponentScan
+@PropertySource("classpath:application.properties")
+@EnableConfigurationProperties({WebMvcProperties.class, ServerProperties.class})
+/**
+ * WebMvcProperties 以 spring.mvc 开头的配置
+ * 类似的还有
+ * WebMvcProperties 以 spring.web 开头的配置
+ * ServerProperties 以 server 开头的配置
+ */
+public class WebConfig {
+    /**
+     * 内嵌 web 容器工厂
+     */
+    @Bean
+    public TomcatServletWebServerFactory tomcatServletWebServerFactory(ServerProperties serverProperties) {
+        return new TomcatServletWebServerFactory(serverProperties.getPort());
+    }
+
+    /**
+     * 创建 DispatcherServlet
+     */
+    @Bean
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
+
+    /**
+     * 注册 DispatcherServlet, Spring MVC 的入口
+     */
+    @Bean
+    public DispatcherServletRegistrationBean dispatcherServletRegistrationBean(
+            DispatcherServlet dispatcherServlet, WebMvcProperties webMvcProperties) {
+        DispatcherServletRegistrationBean registrationBean = new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+        /**
+         * 设置 Servlet 一启动时就初始化，参数对应不用 Servlet 启动优先级，优先级从小到大逐渐降低
+         * 或者在 Spring 的配置文件配置 spring.mvc.servlet.load-on-startup=1
+         * registrationBean.setLoadOnStartup(1);
+         */
+        registrationBean.setLoadOnStartup(webMvcProperties.getServlet().getLoadOnStartup());
+        return registrationBean;
+    }
+
+    /**
+     * 如果用 DispatcherServlet 初始化时默认添加的组件, 并不会作为 bean 添加到 Spring 容器中, 给测试带来困扰
+     * 1. 加入 RequestMappingHandlerMapping
+     */
+    @Bean
+    public RequestMappingHandlerMapping requestMappingHandlerMapping() {
+        return new RequestMappingHandlerMapping();
+    }
+
+    /**
+     * 2. 继续加入RequestMappingHandlerAdapter, 会替换掉 DispatcherServlet 默认的 4 个 HandlerAdapter
+     */
+    @Bean
+    public MyRequestMappingHandlerAdapter requestMappingHandlerAdapter() {
+        TokenArgumentResolver tokenArgumentResolver = new TokenArgumentResolver();
+        YmlReturnValueHandler ymlReturnValueHandler = new YmlReturnValueHandler();
+        MyRequestMappingHandlerAdapter handlerAdapter = new MyRequestMappingHandlerAdapter();
+        /**
+         * 加入自定义参数解析器和返回值解析器
+         */
+        handlerAdapter.setCustomArgumentResolvers(Collections.singletonList(tokenArgumentResolver));
+        handlerAdapter.setCustomReturnValueHandlers(Collections.singletonList(ymlReturnValueHandler));
+        return handlerAdapter;
+    }
+}
+```
+
+```java
+@Controller
+public class MyController {
+
+    private static final Logger log = LoggerFactory.getLogger(MyController.class);
+    @PutMapping("/test3")
+    @Yml
+    public User test3(@Token String token) {
+        log.debug("test3({})", token);
+        return new User("张三", 18);
+    }
+
+    public static class User {
+        private String name;
+        private int age;
+
+        public User(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+    }
+}
+```
+
+```java
+public class Application {
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+
+
+        // 作用 解析 @RequestMapping 以及派生注解，生成路径与控制器方法的映射关系, 在初始化时就生成
+        RequestMappingHandlerMapping handlerMapping = context.getBean(RequestMappingHandlerMapping.class);
+
+        // HandlerAdapter 作用: 调用控制器方法
+        MyRequestMappingHandlerAdapter handlerAdapter = context.getBean(MyRequestMappingHandlerAdapter.class);
+
+        // 请求来了，获取控制器方法  返回处理器执行链对象
+        MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/test3");
+        request.setParameter("token", "token");
+        request.addHeader("token", "某个令牌");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        HandlerExecutionChain chain = handlerMapping.getHandler(request);
+        System.out.println(chain);
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>");
+        handlerAdapter.invokeHandlerMethod(request, response, (HandlerMethod) chain.getHandler());
+
+        // 检查响应
+        byte[] content = response.getContentAsByteArray();
+        System.out.println("结果：" + new String(content, StandardCharsets.UTF_8));
+    }
+}
+```
+
+
+
+##### 总结
 
 1. 体会参数解析器的作用
 2. 体会返回值处理器的作用
