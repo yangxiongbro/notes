@@ -720,7 +720,7 @@ public class WebConfig {
 4. 销毁：在容器关闭时，会销毁所有单例对象（即调用它们的销毁方法）
    * prototype 对象也能够销毁，不过需要容器这边主动调用
 
-一些资料会提到，生命周期中还有一类 bean 后处理器：BeanPostProcessor，会在 bean 的初始化的前后，提供一些扩展逻辑。但这种说法是不完整的，见下面的演示1
+一些资料会提到，生命周期中还有一类 bean 后处理器：BeanPostProcessor，会在 bean 的初始化的前后，提供一些扩展逻辑。但这种说法是不完整的，见下面的演示
 
 
 
@@ -5564,22 +5564,6 @@ private void initHandlerMappings(ApplicationContext context) {
 
 
 
-##### 总结
-
-1. DispatcherServlet 是在第一次被访问时执行初始化, 也可以通过配置修改为 Tomcat 启动后就初始化
-2. 在初始化时会从 Spring 容器中找一些 Web 需要的组件, 如 HandlerMapping、HandlerAdapter 等，并逐一调用它们的初始化
-3. RequestMappingHandlerMapping 初始化时，会收集所有 @RequestMapping 映射信息，封装为 Map，其中
-   * key 是 RequestMappingInfo 类型，包括请求路径、请求方法等信息
-   * value 是 HandlerMethod 类型，包括控制器方法对象、控制器对象
-   * 有了这个 Map，就可以在请求到达时，快速完成映射，找到 HandlerMethod 并与匹配的拦截器一起返回给 DispatcherServlet
-4. RequestMappingHandlerAdapter 初始化时，会准备 HandlerMethod 调用时需要的各个组件，如：
-   * HandlerMethodArgumentResolver 解析控制器方法参数
-   * HandlerMethodReturnValueHandler 处理控制器方法返回值
-
-
-
-
-
 #### 参数与返回值处理器
 
 ##### 示例
@@ -5833,22 +5817,184 @@ public class Application {
 
 
 
-##### 总结
+#### 总结
 
-1. 体会参数解析器的作用
-2. 体会返回值处理器的作用
+1. DispatcherServlet 是在第一次被访问时执行初始化, 也可以通过配置修改为 Tomcat 启动后就初始化
+2. 在初始化时会从 Spring 容器中找一些 Web 需要的组件, 如 HandlerMapping、HandlerAdapter 等，并逐一调用它们的初始化
+3. RequestMappingHandlerMapping 初始化时，会收集所有 @RequestMapping 映射信息，封装为 Map，其中
+   * key 是 RequestMappingInfo 类型，包括请求路径、请求方法等信息
+   * value 是 HandlerMethod 类型，包括控制器方法对象、控制器对象
+   * 有了这个 Map，就可以在请求到达时，快速完成映射，找到 HandlerMethod 并与匹配的拦截器一起返回给 DispatcherServlet
+4. RequestMappingHandlerAdapter 初始化时，会准备 HandlerMethod 调用时需要的各个组件，如：
+   * HandlerMethodArgumentResolver 解析控制器方法参数
+   * HandlerMethodReturnValueHandler 处理控制器方法返回值
 
 
 
-### 21) 参数解析器
+### 参数解析器
 
-#### 演示 - 常见参数解析器
+#### 常见参数解析器
 
-##### 代码参考
+```java
+org.springframework.web.method.annotation.RequestParamMethodArgumentResolver@abbc908
+org.springframework.web.method.annotation.RequestParamMapMethodArgumentResolver@44afefd5
+org.springframework.web.servlet.mvc.method.annotation.PathVariableMethodArgumentResolver@9a7a808
+org.springframework.web.servlet.mvc.method.annotation.PathVariableMapMethodArgumentResolver@72209d93
+org.springframework.web.servlet.mvc.method.annotation.MatrixVariableMethodArgumentResolver@2687f956
+org.springframework.web.servlet.mvc.method.annotation.MatrixVariableMapMethodArgumentResolver@1ded7b14
+org.springframework.web.servlet.mvc.method.annotation.ServletModelAttributeMethodProcessor@29be7749
+org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor@5f84abe8
+org.springframework.web.servlet.mvc.method.annotation.RequestPartMethodArgumentResolver@4650a407
+org.springframework.web.method.annotation.RequestHeaderMethodArgumentResolver@30135202
+org.springframework.web.method.annotation.RequestHeaderMapMethodArgumentResolver@6a4d7f76
+org.springframework.web.servlet.mvc.method.annotation.ServletCookieValueMethodArgumentResolver@10ec523c
+org.springframework.web.method.annotation.ExpressionValueMethodArgumentResolver@53dfacba
+org.springframework.web.servlet.mvc.method.annotation.SessionAttributeMethodArgumentResolver@79767781
+org.springframework.web.servlet.mvc.method.annotation.RequestAttributeMethodArgumentResolver@78411116
+org.springframework.web.servlet.mvc.method.annotation.ServletRequestMethodArgumentResolver@aced190
+org.springframework.web.servlet.mvc.method.annotation.ServletResponseMethodArgumentResolver@245a060f
+org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor@6edaa77a
+org.springframework.web.servlet.mvc.method.annotation.RedirectAttributesMethodArgumentResolver@1e63d216
+org.springframework.web.method.annotation.ModelMethodProcessor@62ddd21b
+org.springframework.web.method.annotation.MapMethodProcessor@16c3ca31
+org.springframework.web.method.annotation.ErrorsMethodArgumentResolver@2d195ee4
+org.springframework.web.method.annotation.SessionStatusMethodArgumentResolver@2d6aca33
+org.springframework.web.servlet.mvc.method.annotation.UriComponentsBuilderMethodArgumentResolver@21ab988f
+org.springframework.web.servlet.mvc.method.annotation.PrincipalMethodArgumentResolver@29314cc9
+org.springframework.web.method.annotation.RequestParamMethodArgumentResolver@4e38d975
+org.springframework.web.servlet.mvc.method.annotation.ServletModelAttributeMethodProcessor@35f8a9d3
+```
 
-**com.itheima.a21** 包
 
-#### 收获💡
+
+#### 示例
+
+```java
+public class User {
+    private String name;
+    private int age;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                '}';
+    }
+}
+```
+
+```java
+public class MyController {
+    public void test(
+            @RequestParam("name1") String name1, // name1=张三
+            String name2,                        // name2=李四
+            @RequestParam("age") int age,        // age=18
+            @RequestParam(name = "home", defaultValue = "${JAVA_HOME}") String home1, // spring 获取数据
+            @RequestParam("file") MultipartFile file, // 上传文件
+            @PathVariable("id") int id,               //  /test/124   /test/{id}
+            @RequestHeader("Content-Type") String header,
+            @CookieValue("token") String token,
+            @Value("${JAVA_HOME}") String home2, // spring 获取数据  ${} #{}
+            HttpServletRequest request,          // request, response, session ...
+            @ModelAttribute("abc") User user1,          // name=zhang&age=18
+            User user2,                          // name=zhang&age=18
+            @RequestBody User user3              // json
+    ) {
+    }
+}
+```
+
+```java
+public class Application {
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(WebConfig.class);
+        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+        // 准备测试 Request
+        HttpServletRequest request = mockRequest();
+
+        // 要点1. 控制器方法被封装为 HandlerMethod
+        HandlerMethod handlerMethod = new HandlerMethod(new MyController(), MyController.class.getMethod("test", String.class, String.class, int.class, String.class, MultipartFile.class, int.class, String.class, String.class, String.class, HttpServletRequest.class, User.class, User.class, User.class));
+
+        // 要点2. 准备对象绑定与类型转换
+        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(null, null);
+
+        // 要点3. 准备 ModelAndViewContainer 用来存储中间 Model 结果
+        ModelAndViewContainer container = new ModelAndViewContainer();
+
+        // 要点4. 解析每个参数值
+        for (MethodParameter parameter : handlerMethod.getMethodParameters()) {
+            // 多个解析器组合
+            HandlerMethodArgumentResolverComposite composite = new HandlerMethodArgumentResolverComposite();
+            composite.addResolvers(
+                    //                                          false 表示必须有 @RequestParam
+                    new RequestParamMethodArgumentResolver(beanFactory, false),
+                    new PathVariableMethodArgumentResolver(),
+                    new RequestHeaderMethodArgumentResolver(beanFactory),
+                    new ServletCookieValueMethodArgumentResolver(beanFactory),
+                    new ExpressionValueMethodArgumentResolver(beanFactory),
+                    new ServletRequestMethodArgumentResolver(),
+                    new ServletModelAttributeMethodProcessor(false), // 必须有 @ModelAttribute
+                    new RequestResponseBodyMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())),
+                    new ServletModelAttributeMethodProcessor(true), // 省略了 @ModelAttribute
+                    new RequestParamMethodArgumentResolver(beanFactory, true) // 省略 @RequestParam
+            );
+
+            String annotations = Arrays.stream(parameter.getParameterAnnotations()).map(a -> a.annotationType().getSimpleName()).collect(Collectors.joining());
+            String str = annotations.length() > 0 ? " @" + annotations + " " : " ";
+            parameter.initParameterNameDiscovery(new DefaultParameterNameDiscoverer());
+
+            if (composite.supportsParameter(parameter)) {
+                // 支持此参数
+                Object v = composite.resolveArgument(parameter, container, new ServletWebRequest(request), factory);
+//                System.out.println(v.getClass());
+                System.out.println(String.format("[%d] %s %s %s -> %s", parameter.getParameterIndex(), str, parameter.getParameterType().getSimpleName(), parameter.getParameterName(), v));
+                System.out.println("模型数据为：" + container.getModel());
+            } else {
+                System.out.println(String.format("[%d] %s %s %s", parameter.getParameterIndex(), str, parameter.getParameterType().getSimpleName(), parameter.getParameterName()));
+            }
+        }
+    }
+
+    private static HttpServletRequest mockRequest() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("name1", "zhangsan");
+        request.setParameter("name2", "lisi");
+        request.addPart(new MockPart("file", "abc", "hello".getBytes(StandardCharsets.UTF_8)));
+        Map<String, String> map = new AntPathMatcher().extractUriTemplateVariables("/test/{id}", "/test/123");
+        System.out.println(map);
+        request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, map);
+        request.setContentType("application/json");
+        request.setCookies(new Cookie("token", "123456"));
+        request.setParameter("name", "张三");
+        request.setParameter("age", "18");
+        request.setContent("{\"nam\":\"李四\",\"ag\":20}".getBytes(StandardCharsets.UTF_8));
+
+        return new StandardServletMultipartResolver().resolveMultipart(request);
+    }
+}
+```
+
+
+
+#### 总结
 
 1. 初步了解 RequestMappingHandlerAdapter 的调用过程
    1. 控制器方法被封装为 HandlerMethod
@@ -5876,15 +6022,187 @@ public class Application {
 
 
 
-### 22) 参数名解析
+### 参数名解析
 
-#### 演示 - 两种方法获取参数名
+#### 问题
 
-##### 代码参考
+方法的参数经过编译器编译之后不再是源码中的参数名
 
-**com.itheima.a22.A22**
+```java
+// 源码
+public class Bean{
+    public void foo(String name, int age){
 
-#### 收获💡
+    }
+}
+
+// javac ./Bean.java 编译
+// 使用 idea 查看 class 文件
+public class Bean {
+    public Bean() {
+    }
+
+    public void foo(String var1, int var2) {
+    }
+}
+
+// javap -c -v ./Bean.class 反编译查看字节码
+public void foo(java.lang.String, int);
+	descriptor: (Ljava/lang/String;I)V
+    flags: ACC_PUBLIC
+    Code:
+        stack=0, locals=3, args_size=3
+            0: return
+        LineNumberTable:
+            line 6: 0
+```
+
+
+
+#### 解决方法
+
+##### 使用参数 `-parameters`编译
+
+```java
+// javac -parameters ./Bean.java 编译
+// 使用 idea 查看 class 文件
+public class Bean {
+    public Bean() {
+    }
+
+    public void foo(String name, int age) {
+    }
+}
+
+// javap -c -v ./Bean.class 反编译查看字节码
+public void foo(java.lang.String, int);
+	descriptor: (Ljava/lang/String;I)V
+    flags: ACC_PUBLIC
+    Code:
+        stack=0, locals=3, args_size=3
+            0: return
+        LineNumberTable:
+            line 6: 0
+        MethodParameters:
+            Name                           Flags
+            name
+            age
+```
+
+##### 使用参数 `-g`编译
+
+```java
+// javac -parameters ./Bean.java 编译
+// 使用 idea 查看 class 文件
+public class Bean {
+    public Bean() {
+    }
+
+    public void foo(String name, int age) {
+    }
+}
+
+// javap -c -v ./Bean.class 反编译查看字节码
+public void foo(java.lang.String, int);
+	descriptor: (Ljava/lang/String;I)V
+    flags: ACC_PUBLIC
+    Code:
+        stack=0, locals=3, args_size=3
+            0: return
+        LineNumberTable:
+            line 6: 0
+        LocalVariableTable:
+            Start  Length  Slot  Name   Signature
+                0       1     0  this   Lcom/example/vo/Bean;
+                0       1     1  name   Ljava/lang/String;
+                0       1     2   age   I
+```
+
+
+
+##### 区别
+
+ `-parameters`与`-g`的区别
+
+- `-parameters`方法参数名存在方法参数表中，可以通过反射获取方法参数名
+- `-g`方法参数名存在本地变量表中，不可以通过反射获取方法参数名，但是能通过 ASM 技术获取
+- Spring 中同时支持这两个方式获取变量名
+
+
+
+#### Spring 的参数名获取
+
+- Spring Boot 会在编译时加入 `-parameters`
+- 大部分 IDE 会在编译时加入 `-g`
+
+
+
+1. 在 Spring 项目的 src 同级目录添加下面的源码（避免 Idea 自动编译）
+
+```java
+public class MyBean{
+    public void foo(String name, int age){
+
+    }
+}
+```
+
+2. File -> Project Structure -> Project Settings -> Modules -> 选择当前项目 -> Dependencies -> 添加 JARs or Directories -> 添加 MyBean 目录
+
+3. 使用不同编译方式编译 MyBean 之后运行测试代码查看运行结果
+
+```java
+public class Application {
+    public static void main(String[] args) throws NoSuchMethodException {
+        System.out.println("反射获取的变量名：");
+        Method foo = MyBean.class.getMethod("foo", String.class, int.class);
+        for(Parameter parameter:foo.getParameters()){
+            System.out.println(parameter.getName());
+        }
+
+        System.out.println("本地变量表的变量名：");
+        LocalVariableTableParameterNameDiscoverer nameDiscoverer = new LocalVariableTableParameterNameDiscoverer();
+        String[] parameterNames = nameDiscoverer.getParameterNames(foo);
+        if(null != parameterNames){
+            for(String parameterName:parameterNames){
+                System.out.println(parameterName);
+            }
+        }
+
+        System.out.println("Spring 获取的的变量名：");
+        DefaultParameterNameDiscoverer defaultNameDiscoverer = new DefaultParameterNameDiscoverer();
+        parameterNames = defaultNameDiscoverer.getParameterNames(foo);
+        if(null != parameterNames){
+            for(String parameterName:parameterNames){
+                System.out.println(parameterName);
+            }
+        }
+    }
+}
+```
+
+
+
+**DefaultParameterNameDiscoverer 结合了方法参数变量表和本地变量表参数名的获取方法**
+
+```java
+public class DefaultParameterNameDiscoverer extends PrioritizedParameterNameDiscoverer {
+    public DefaultParameterNameDiscoverer() {
+        if (KotlinDetector.isKotlinReflectPresent() && !GraalDetector.inImageCode()) {
+            this.addDiscoverer(new KotlinReflectionParameterNameDiscoverer());
+        }
+		
+        // 根据反射获取方法参数变量名
+        this.addDiscoverer(new StandardReflectionParameterNameDiscoverer());
+        // 根据本地变量表获取方法参数名
+        this.addDiscoverer(new LocalVariableTableParameterNameDiscoverer());
+    }
+}
+```
+
+
+
+#### 总结
 
 1. 如果编译时添加了 -parameters 可以生成参数表, 反射时就可以拿到参数名
 2. 如果编译时添加了 -g 可以生成调试信息, 但分为两种情况
@@ -5894,7 +6212,7 @@ public class Application {
 
 
 
-### 23) 对象绑定与类型转换
+### 对象绑定与类型转换
 
 #### 底层第一套转换接口与实现
 
@@ -5989,30 +6307,336 @@ TypeConverterDelegate --> PropertyEditorRegistry
 
 
 
-#### 演示1 - 类型转换与数据绑定
+#### 类型转换与数据绑定
 
-##### 代码参考
+##### 示例
 
-**com.itheima.a23** 包
+###### SimpleTypeConverter
 
-#### 收获💡
+```java
+public class TestSimpleConverter {
+    public static void main(String[] args) {
+        // 仅有类型转换的功能
+        SimpleTypeConverter typeConverter = new SimpleTypeConverter();
+        Integer number = typeConverter.convertIfNecessary("13", int.class);
+        Date date = typeConverter.convertIfNecessary("1999/03/04", Date.class);
+        System.out.println(number);
+        System.out.println(date);
+    }
+}
+```
 
-基本的类型转换与数据绑定用法
+###### BeanWrapperImpl
 
-* SimpleTypeConverter
-* BeanWrapperImpl
-* DirectFieldAccessor
-* ServletRequestDataBinder
+```java
+public class TestBeanWrapper {
+    public static void main(String[] args) {
+        // 利用反射原理, 为 bean 的属性赋值
+        MyBean target = new MyBean();
+        BeanWrapperImpl wrapper = new BeanWrapperImpl(target);
+        wrapper.setPropertyValue("a", "10");
+        wrapper.setPropertyValue("b", "hello");
+        wrapper.setPropertyValue("c", "1999/03/04");
+        System.out.println(target);
+    }
+
+    static class MyBean {
+        private int a;
+        private String b;
+        private Date c;
+
+        public int getA() {
+            return a;
+        }
+
+        public void setA(int a) {
+            this.a = a;
+        }
+
+        public String getB() {
+            return b;
+        }
+
+        public void setB(String b) {
+            this.b = b;
+        }
+
+        public Date getC() {
+            return c;
+        }
+
+        public void setC(Date c) {
+            this.c = c;
+        }
+
+        @Override
+        public String toString() {
+            return "MyBean{" +
+                   "a=" + a +
+                   ", b='" + b + '\'' +
+                   ", c=" + c +
+                   '}';
+        }
+    }
+}
+```
+
+###### DirectFieldAccessor
+
+```java
+public class TestFieldAccessor {
+    public static void main(String[] args) {
+        // 利用反射原理, 为 bean 的属性赋值
+        MyBean target = new MyBean();
+        DirectFieldAccessor accessor = new DirectFieldAccessor(target);
+        accessor.setPropertyValue("a", "10");
+        accessor.setPropertyValue("b", "hello");
+        accessor.setPropertyValue("c", "1999/03/04");
+        System.out.println(target);
+    }
+
+    static class MyBean {
+        private int a;
+        private String b;
+        private Date c;
+        @Override
+        public String toString() {
+            return "MyBean{" +
+                   "a=" + a +
+                   ", b='" + b + '\'' +
+                   ", c=" + c +
+                   '}';
+        }
+    }
+}
+```
+
+###### DataBinder
+
+```java
+public class TestDataBinder {
+
+    public static void main(String[] args) {
+        // 执行数据绑定
+        MyBean target = new MyBean();
+        DataBinder dataBinder = new DataBinder(target);
+        // 设置走 Property 还是 Field
+        dataBinder.initDirectFieldAccess();
+        MutablePropertyValues pvs = new MutablePropertyValues();
+        pvs.add("a", "10");
+        pvs.add("b", "hello");
+        pvs.add("c", "1999/03/04");
+        dataBinder.bind(pvs);
+        System.out.println(target);
+    }
+
+    static class MyBean {
+        private int a;
+        private String b;
+        private Date c;
+
+        @Override
+        public String toString() {
+            return "MyBean{" +
+                   "a=" + a +
+                   ", b='" + b + '\'' +
+                   ", c=" + c +
+                   '}';
+        }
+    }
+}
+```
+
+###### ServletRequestDataBinder
+
+```java
+public class TestServletDataBinder {
+
+    public static void main(String[] args) {
+        // web 环境下数据绑定
+        MyBean target = new MyBean();
+        ServletRequestDataBinder dataBinder = new ServletRequestDataBinder(target);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("a", "10");
+        request.setParameter("b", "hello");
+        request.setParameter("c", "1999/03/04");
+
+        dataBinder.bind(new ServletRequestParameterPropertyValues(request));
+
+        System.out.println(target);
+    }
+
+    static class MyBean {
+        private int a;
+        private String b;
+        private Date c;
+
+        public int getA() {
+            return a;
+        }
+
+        public void setA(int a) {
+            this.a = a;
+        }
+
+        public String getB() {
+            return b;
+        }
+
+        public void setB(String b) {
+            this.b = b;
+        }
+
+        public Date getC() {
+            return c;
+        }
+
+        public void setC(Date c) {
+            this.c = c;
+        }
+
+        @Override
+        public String toString() {
+            return "MyBean{" +
+                   "a=" + a +
+                   ", b='" + b + '\'' +
+                   ", c=" + c +
+                   '}';
+        }
+    }
+}
+```
 
 
 
-#### 演示2 - 数据绑定工厂
+#### 数据绑定工厂
 
-##### 代码参考
+##### 示例
 
-**com.itheima.a23.TestServletDataBinderFactory**
+```java
+public class MyDateFormatter implements Formatter<Date> {
+    private static final Logger log = LoggerFactory.getLogger(MyDateFormatter.class);
+    private final String desc;
 
-#### 收获💡
+    public MyDateFormatter(String desc) {
+        this.desc = desc;
+    }
+
+    @Override
+    public String print(Date date, Locale locale) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy|MM|dd");
+        return sdf.format(date);
+    }
+
+    @Override
+    public Date parse(String text, Locale locale) throws ParseException {
+        log.debug(">>>>>> 进入了: {}", desc);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy|MM|dd");
+        return sdf.parse(text);
+    }
+}
+```
+
+```java
+public class TestServletDataBinderFactory {
+    public static void main(String[] args) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("birthday", "1999|01|02");
+        request.setParameter("address.name", "西安");
+
+        User target = new User();
+//         "1. 用工厂, 无转换功能"
+//        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(null, null);
+
+//         "2. 用 @InitBinder 转换"          PropertyEditorRegistry PropertyEditor
+//        InvocableHandlerMethod method = new InvocableHandlerMethod(new MyController(), MyController.class.getMethod("testInitBinder", WebDataBinder.class));
+//        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(Collections.singletonList(method), null);
+
+//         "3. 用 ConversionService 转换"    ConversionService Formatter
+//        FormattingConversionService service = new FormattingConversionService();
+//        service.addFormatter(new MyDateFormatter("用 ConversionService 方式扩展转换功能"));
+//        ConfigurableWebBindingInitializer initializer = new ConfigurableWebBindingInitializer();
+//        initializer.setConversionService(service);
+//        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(null, initializer);
+
+//         "4. 同时加了 @InitBinder 和 ConversionService" 使用了 @InitBinder
+//        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(Collections.singletonList(method), initializer);
+
+//         "5. 使用默认 ConversionService 转换" 需要配合 Spring 的容器格式化注解 @DateTimeFormat
+//        非 Spring Boot 程序可以使用 DefaultFormattingConversionService，Spring Boot 程序可以使用 ApplicationConversionService，
+        DefaultFormattingConversionService service = new DefaultFormattingConversionService();
+//        ApplicationConversionService service = new ApplicationConversionService();
+        ConfigurableWebBindingInitializer initializer = new ConfigurableWebBindingInitializer();
+        initializer.setConversionService(service);
+        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(null, initializer);
+
+        WebDataBinder dataBinder = factory.createBinder(new ServletWebRequest(request), target, "user");
+        dataBinder.bind(new ServletRequestParameterPropertyValues(request));
+        System.out.println(target);
+    }
+
+    static class MyController {
+        @InitBinder
+        public void testInitBinder(WebDataBinder dataBinder) {
+            // 扩展 dataBinder 的转换器
+            dataBinder.addCustomFormatter(new MyDateFormatter("用 @InitBinder 方式扩展的"));
+        }
+    }
+
+    public static class User {
+        @DateTimeFormat(pattern = "yyyy|MM|dd")
+        private Date birthday;
+        private Address address;
+
+        public Address getAddress() {
+            return address;
+        }
+
+        public void setAddress(Address address) {
+            this.address = address;
+        }
+
+        public Date getBirthday() {
+            return birthday;
+        }
+
+        public void setBirthday(Date birthday) {
+            this.birthday = birthday;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                   "birthday=" + birthday +
+                   ", address=" + address +
+                   '}';
+        }
+    }
+
+    public static class Address {
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return "Address{" +
+                   "name='" + name + '\'' +
+                   '}';
+        }
+    }
+}
+```
+
+
+
+##### 总结
 
 ServletRequestDataBinderFactory 的用法和扩展点
 
@@ -6028,16 +6652,37 @@ ServletRequestDataBinderFactory 的用法和扩展点
 
 
 
-#### 演示3 - 获取泛型参数
+#### 获取泛型参数
 
-##### 代码参考
+##### 示例
 
-**com.itheima.a23.sub** 包
+```java
+public class TestGenericType {
+    public static void main(String[] args) {
+//         小技巧
+//         1. java api
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>");
+        Type type = TeacherDao.class.getGenericSuperclass();
+        System.out.println(type);
 
-#### 收获💡
+//        判断父类型是否是泛型
+        if (type instanceof ParameterizedType) {
+            ParameterizedType parameterizedType = (ParameterizedType) type;
+            System.out.println(parameterizedType.getActualTypeArguments()[0]);
+        }
 
-1. java api 获取泛型参数
-2. spring api 获取泛型参数
+//         2. spring api 1
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>");
+        Class<?> t = GenericTypeResolver.resolveTypeArgument(TeacherDao.class, BaseDao.class);
+        System.out.println(t);
+
+//         3. spring api 2
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>");
+        System.out.println(ResolvableType.forClass(TeacherDao.class).getSuperType().getGeneric().resolve());
+    }
+
+}
+```
 
 
 
