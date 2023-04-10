@@ -6686,9 +6686,25 @@ public class TestGenericType {
 
 
 
-### 24) @ControllerAdvice 之 @InitBinder
+### @ControllerAdvice 
 
-#### 演示 - 准备 @InitBinder
+对 Controller 提供增强功能
+
+- @InitBinder 补充自定义参数转换器
+
+- @ModelAttribute 方法的返回值会作为模型数据补充到控制器的执行过程中
+- @ExceptionHandler 统一处理异样
+
+
+
+#### @InitBinder
+
+- 可以加在 `@ControllerAdvice` 的方法上，作用范围是全局的，对所有 `@Controller` 都生效
+- 可以加在 `@Controller` 的方法上，作用范围是当前 `@Controller`，只对当前 `@Controller` 生效
+
+
+
+##### 示例
 
 **准备 @InitBinder** 在整个 HandlerAdapter 调用过程中所处的位置
 
@@ -6730,7 +6746,142 @@ container -->> -adapter:
 * HandlerMethodArgumentResolverComposite 在图中缩写为 ArgumentResolvers
 * HandlerMethodReturnValueHandlerComposite 在图中缩写为 ReturnValueHandlers
 
-#### 收获💡
+
+
+```java
+public class MyDateFormatter implements Formatter<Date> {
+    private static final Logger log = LoggerFactory.getLogger(MyDateFormatter.class);
+    private final String desc;
+
+    public MyDateFormatter(String desc) {
+        this.desc = desc;
+    }
+
+    @Override
+    public String print(Date date, Locale locale) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy|MM|dd");
+        return sdf.format(date);
+    }
+
+    @Override
+    public Date parse(String text, Locale locale) throws ParseException {
+        log.debug(">>>>>> 进入了: {}", desc);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy|MM|dd");
+        return sdf.parse(text);
+    }
+}
+```
+
+```java
+@Configuration
+public class WebConfig {
+
+    @ControllerAdvice
+    static class MyControllerAdvice {
+        @InitBinder
+        public void binder3(WebDataBinder webDataBinder) {
+            webDataBinder.addCustomFormatter(new MyDateFormatter("binder3 转换器"));
+        }
+    }
+
+    @Controller
+    static class Controller1 {
+        @InitBinder
+        public void binder1(WebDataBinder webDataBinder) {
+            webDataBinder.addCustomFormatter(new MyDateFormatter("binder1 转换器"));
+        }
+
+        public void foo() {
+
+        }
+    }
+
+    @Controller
+    static class Controller2 {
+        @InitBinder
+        public void binder21(WebDataBinder webDataBinder) {
+            webDataBinder.addCustomFormatter(new MyDateFormatter("binder21 转换器"));
+        }
+
+        @InitBinder
+        public void binder22(WebDataBinder webDataBinder) {
+            webDataBinder.addCustomFormatter(new MyDateFormatter("binder22 转换器"));
+        }
+
+        public void bar() {
+
+        }
+    }
+
+}
+```
+
+```java
+public class Application {
+
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    public static void main(String[] args) throws Exception {
+        /*
+            @InitBinder 的来源有两个
+            1. @ControllerAdvice 中 @InitBinder 标注的方法，由 RequestMappingHandlerAdapter 在初始化时解析并记录
+            2. @Controller 中 @InitBinder 标注的方法，由 RequestMappingHandlerAdapter 会在控制器方法首次执行时解析并记录
+         */
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(WebConfig.class);
+
+        RequestMappingHandlerAdapter handlerAdapter = new RequestMappingHandlerAdapter();
+        handlerAdapter.setApplicationContext(context);
+        handlerAdapter.afterPropertiesSet();
+
+        log.debug("1. 刚开始...");
+        showBindMethods(handlerAdapter);
+
+        Method getDataBinderFactory = RequestMappingHandlerAdapter.class.getDeclaredMethod("getDataBinderFactory", HandlerMethod.class);
+        getDataBinderFactory.setAccessible(true);
+
+        log.debug("2. 模拟调用 Controller1 的 foo 方法时 ...");
+        getDataBinderFactory.invoke(handlerAdapter, new HandlerMethod(new WebConfig.Controller1(), WebConfig.Controller1.class.getMethod("foo")));
+        showBindMethods(handlerAdapter);
+
+        log.debug("3. 模拟调用 Controller2 的 bar 方法时 ...");
+        getDataBinderFactory.invoke(handlerAdapter, new HandlerMethod(new WebConfig.Controller2(), WebConfig.Controller2.class.getMethod("bar")));
+        showBindMethods(handlerAdapter);
+
+        context.close();
+
+        /*
+            a. Method 对象的获取利用了缓存来进行加速
+            b. 绑定器工厂的扩展点(advice 之一), 通过 @InitBinder 扩展类型转换器
+         */
+    }
+
+    @SuppressWarnings("all")
+    private static void showBindMethods(RequestMappingHandlerAdapter handlerAdapter) throws NoSuchFieldException, IllegalAccessException {
+        Field initBinderAdviceCache = RequestMappingHandlerAdapter.class.getDeclaredField("initBinderAdviceCache");
+        initBinderAdviceCache.setAccessible(true);
+        Map<ControllerAdviceBean, Set<Method>> globalMap = (Map<ControllerAdviceBean, Set<Method>>) initBinderAdviceCache.get(handlerAdapter);
+        log.debug("全局的 @InitBinder 方法 {}",
+                globalMap.values().stream()
+                        .flatMap(ms -> ms.stream().map(m -> m.getName()))
+                        .collect(Collectors.toList())
+        );
+
+        Field initBinderCache = RequestMappingHandlerAdapter.class.getDeclaredField("initBinderCache");
+        initBinderCache.setAccessible(true);
+        Map<Class<?>, Set<Method>> controllerMap = (Map<Class<?>, Set<Method>>) initBinderCache.get(handlerAdapter);
+        log.debug("控制器的 @InitBinder 方法 {}",
+                controllerMap.entrySet().stream()
+                        .flatMap(e -> e.getValue().stream().map(v -> e.getKey().getSimpleName() + "." + v.getName()))
+                        .collect(Collectors.toList())
+        );
+    }
+}
+```
+
+
+
+##### 总结
 
 1. RequestMappingHandlerAdapter 初始化时会解析 @ControllerAdvice 中的 @InitBinder 方法
 2. RequestMappingHandlerAdapter 会以类为单位，在该类首次使用时，解析此类的 @InitBinder 方法
@@ -6739,9 +6890,9 @@ container -->> -adapter:
 
 
 
-### 25) 控制器方法执行流程
+#### 控制器方法执行流程
 
-#### 图1
+##### 图1
 
 ```mermaid
 classDiagram
@@ -6771,7 +6922,7 @@ ServletInvocableHandlerMethod 需要
 
 
 
-#### 图2
+##### 图2
 
 ```mermaid
 sequenceDiagram
@@ -6787,7 +6938,13 @@ container -->> -mf:
 mf -->> -adapter: 
 ```
 
-#### 图3
+- WebDataBinderFactory 数据绑定工厂
+- ModelFactory 模型工厂，用来创建模型数据
+- ModelAndViewContainer 存放临时模型数据，`@ControllerAdvice` 的 `@ModelAttribute` 产生的临时数据
+
+
+
+##### 图3
 
 ```mermaid
 sequenceDiagram
@@ -6812,6 +6969,135 @@ rh -->> -ihm:
 ihm -->> -adapter: 
 adapter ->> +container: 获取 ModelAndView
 container -->> -adapter: 
+```
+
+
+
+- RequestMappingHandlerAdapter
+- ServletInvocableHandlerMethod 反射调用控制器方法
+- ArgumentResolvers HandlerMethodArgumentResolverComposite 参数解析器，准备参数
+- ReturnValueHandlers HandlerMethodReturnValueHandlerComposite  返回值处理器，处理返回值
+- ModelAndViewContainer
+
+
+
+##### 示例
+
+```java
+@Configuration
+public class WebConfig {
+
+    @ControllerAdvice
+    static class MyControllerAdvice {
+        @ModelAttribute("a")
+        public String aa() {
+            return "aa";
+        }
+    }
+
+    @Controller
+    static class Controller1 {
+        @ModelAttribute("b")
+        public String aa() {
+            return "bb";
+        }
+
+        // 使用 @ResponseStatus 为了方便测试，不需要实现 HandlerMethodReturnValueHandlerComposite
+        @ResponseStatus(HttpStatus.OK)
+        public ModelAndView foo(@ModelAttribute("u") User user) {
+            System.out.println("foo");
+            return null;
+        }
+    }
+
+    static class User {
+        private String name;
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+
+            return name;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                   "name='" + name + '\'' +
+                   '}';
+        }
+    }
+}
+```
+
+```java
+public class A26 {
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(WebConfig.class);
+
+        RequestMappingHandlerAdapter adapter = new RequestMappingHandlerAdapter();
+        adapter.setApplicationContext(context);
+        adapter.afterPropertiesSet();
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("name", "张三");
+        /*
+            现在可以通过 ServletInvocableHandlerMethod 把这些整合在一起, 并完成控制器方法的调用, 如下
+         */
+        ServletInvocableHandlerMethod handlerMethod = new ServletInvocableHandlerMethod(
+                new WebConfig.Controller1(), WebConfig.Controller1.class.getMethod("foo", WebConfig.User.class));
+
+        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(null, null);
+
+        handlerMethod.setDataBinderFactory(factory);
+        handlerMethod.setParameterNameDiscoverer(new DefaultParameterNameDiscoverer());
+        handlerMethod.setHandlerMethodArgumentResolvers(getArgumentResolvers(context));
+
+        ModelAndViewContainer container = new ModelAndViewContainer();
+
+        // 获取模型工厂方法
+        Method getModelFactory = RequestMappingHandlerAdapter.class.getDeclaredMethod("getModelFactory", HandlerMethod.class, WebDataBinderFactory.class);
+        getModelFactory.setAccessible(true);
+        ModelFactory modelFactory = (ModelFactory) getModelFactory.invoke(adapter, handlerMethod, factory);
+
+        // 初始化模型数据
+        modelFactory.initModel(new ServletWebRequest(request), container, handlerMethod);
+
+        handlerMethod.invokeAndHandle(new ServletWebRequest(request), container);
+
+        System.out.println(container.getModel());
+
+        context.close();
+
+        /*
+            a. 控制器方法是如何调用的
+            b. 模型数据如何产生
+            c. advice 之二, @ModelAttribute 补充模型数据
+         */
+    }
+
+    public static HandlerMethodArgumentResolverComposite getArgumentResolvers(AnnotationConfigApplicationContext context) {
+        HandlerMethodArgumentResolverComposite composite = new HandlerMethodArgumentResolverComposite();
+        composite.addResolvers(
+                new RequestParamMethodArgumentResolver(context.getDefaultListableBeanFactory(), false),
+                new PathVariableMethodArgumentResolver(),
+                new RequestHeaderMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ServletCookieValueMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ExpressionValueMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ServletRequestMethodArgumentResolver(),
+                new ServletModelAttributeMethodProcessor(false),
+                new RequestResponseBodyMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())),
+                new ServletModelAttributeMethodProcessor(true),
+                new RequestParamMethodArgumentResolver(context.getDefaultListableBeanFactory(), true)
+        );
+        return composite;
+    }
+
+}
 ```
 
 
