@@ -7155,15 +7155,35 @@ container -->> -adapter:
 
 
 
-### 27) 返回值处理器
+### 返回值处理器
 
-#### 演示 - 常见返回值处理器
+#### 常见返回值处理器
 
-##### 代码参考
+```java
+org.springframework.web.servlet.mvc.method.annotation.ModelAndViewMethodReturnValueHandler@4c9e38
+org.springframework.web.method.annotation.ModelMethodProcessor@5d1e09bc
+org.springframework.web.servlet.mvc.method.annotation.ViewMethodReturnValueHandler@4bdc8b5d
+org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitterReturnValueHandler@3bcd426c
+org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBodyReturnValueHandler@5f14a673
+org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor@726a17c4
+org.springframework.web.servlet.mvc.method.annotation.HttpHeadersReturnValueHandler@5dc3fcb7
+org.springframework.web.servlet.mvc.method.annotation.CallableMethodReturnValueHandler@c4c0b41
+org.springframework.web.servlet.mvc.method.annotation.DeferredResultMethodReturnValueHandler@76911385
+org.springframework.web.servlet.mvc.method.annotation.AsyncTaskMethodReturnValueHandler@5467eea4
+org.springframework.web.servlet.mvc.method.annotation.ServletModelAttributeMethodProcessor@160396db
+org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor@7a799159
+org.springframework.web.servlet.mvc.method.annotation.ViewNameMethodReturnValueHandler@40ab8a8
+org.springframework.web.method.annotation.MapMethodProcessor@6ff37443
+org.springframework.web.servlet.mvc.method.annotation.ServletModelAttributeMethodProcessor@65cc8228
+```
 
-**com.itheima.a27** 包
 
-#### 收获💡
+
+#### 示例
+
+
+
+#### 总结
 
 1. 常见的返回值处理器
    * ModelAndView，分别获取其模型和视图名，放入 ModelAndViewContainer
