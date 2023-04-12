@@ -7181,6 +7181,216 @@ org.springframework.web.servlet.mvc.method.annotation.ServletModelAttributeMetho
 
 #### 示例
 
+> `Spring Boot` 版本为 `2.5.5`
+
+```java
+@Configuration
+public class WebConfig {
+
+    @Bean
+    public FreeMarkerConfigurer freeMarkerConfigurer() throws IOException {
+        FreeMarkerConfigurer configurer = new FreeMarkerConfigurer();
+        configurer.setDefaultEncoding("utf-8");
+        configurer.setTemplateLoaderPath("classpath:templates");
+        return configurer;
+    }
+
+    @Bean // FreeMarkerView 在借助 Spring 初始化时，会要求 web 环境才会走 setConfiguration, 这里想办法去掉了 web 环境的约束
+    public FreeMarkerViewResolver viewResolver(FreeMarkerConfigurer configurer) {
+        FreeMarkerViewResolver resolver = new FreeMarkerViewResolver(){
+//            @Override
+            protected AbstractUrlBasedView instantiateView() {
+                FreeMarkerView view = new FreeMarkerView() {
+                    @Override
+                    protected boolean isContextRequired() {
+                        return false;
+                    }
+                };
+                view.setConfiguration(configurer.getConfiguration());
+                return view;
+            }
+        };
+        resolver.setContentType("text/html;charset=utf-8");
+        resolver.setPrefix("/");
+        resolver.setSuffix(".ftl");
+        resolver.setExposeSpringMacroHelpers(false);
+        return resolver;
+    }
+
+}
+```
+
+```java
+public class Application {
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(WebConfig.class);
+        // 1. 测试返回值类型为 ModelAndView
+        test(context, "test1", null);
+
+        // 2. 测试返回值类型为 String 时, 把它当做视图名
+        test(context, "test2", null);
+
+        // 3. 测试返回值添加了 @ModelAttribute 注解时, 此时需找到默认视图名
+        test(context, "test3", "/test3");
+
+        // 4. 测试返回值不加 @ModelAttribute 注解且返回非简单类型时, 此时需找到默认视图名
+        test(context, "test4", "/test4");
+
+        // 5. 测试返回值类型为 ResponseEntity 时, 此时不走视图流程
+        test(context, "test5", null);
+
+        // 6. 测试返回值类型为 HttpHeaders 时, 此时不走视图流程
+        test(context, "test6", null);
+
+        // 7. 测试返回值添加了 @ResponseBody 注解时, 此时不走视图流程
+        test(context, "test7", null);
+    }
+
+    private static void test(AnnotationConfigApplicationContext context, String methodName, String uri) throws Exception {
+        Method method = Controller.class.getMethod(methodName);
+        Controller controller = new Controller();
+        Object returnValue = method.invoke(controller); // 获取返回值
+
+        HandlerMethod methodHandle = new HandlerMethod(controller, method);
+
+        ModelAndViewContainer container = new ModelAndViewContainer();
+        HandlerMethodReturnValueHandlerComposite composite = getReturnValueHandler();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        if(null != uri){
+            request.setRequestURI(uri);
+            // 将请求 uri 存入 request 域，当没有找到视图名时将获取 uri 作为视图名
+            UrlPathHelper.defaultInstance.resolveAndCacheLookupPath(request);
+        }
+        ServletWebRequest webRequest = new ServletWebRequest(request, response);
+        if (composite.supportsReturnType(methodHandle.getReturnType())) { // 检查是否支持此类型的返回值
+            composite.handleReturnValue(returnValue, methodHandle.getReturnType(), container, webRequest);
+            System.out.println(container.getModel());
+            System.out.println(container.getViewName());
+            // 返回值为 ResponseEntity、HttpHeaders、@ResponseBody 的处理器中 `handleReturnValue` 方法内 `mavContainer.setRequestHandled(true);` 设置了不需要视图解析
+            if (!container.isRequestHandled()) {
+                renderView(context, container, webRequest); // 渲染视图
+            } else {
+                for (String name : response.getHeaderNames()) {
+                    System.out.println(name + "=" + response.getHeader(name));
+                }
+                System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+            }
+        }
+    }
+
+    public static HandlerMethodReturnValueHandlerComposite getReturnValueHandler() {
+        HandlerMethodReturnValueHandlerComposite composite = new HandlerMethodReturnValueHandlerComposite();
+        composite.addHandler(new ModelAndViewMethodReturnValueHandler());
+        composite.addHandler(new ViewNameMethodReturnValueHandler());
+        composite.addHandler(new ServletModelAttributeMethodProcessor(false));
+        composite.addHandler(new HttpEntityMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())));
+        composite.addHandler(new HttpHeadersReturnValueHandler());
+        composite.addHandler(new RequestResponseBodyMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())));
+        composite.addHandler(new ServletModelAttributeMethodProcessor(true));
+        return composite;
+    }
+
+    @SuppressWarnings("all")
+    private static void renderView(AnnotationConfigApplicationContext context, ModelAndViewContainer container,
+                                   ServletWebRequest webRequest) throws Exception {
+        log.debug(">>>>>> 渲染视图");
+        FreeMarkerViewResolver resolver = context.getBean(FreeMarkerViewResolver.class);
+        String viewName = container.getViewName() != null ? container.getViewName() : new DefaultRequestToViewNameTranslator().getViewName(webRequest.getRequest());
+        log.debug("没有获取到视图名, 采用默认视图名: {}", viewName);
+        // 每次渲染时, 会产生新的视图对象, 它并非被 Spring 所管理, 但确实借助了 Spring 容器来执行初始化
+        View view = resolver.resolveViewName(viewName, Locale.getDefault());
+        view.render(container.getModel(), webRequest.getRequest(), webRequest.getResponse());
+        System.out.println(new String(((MockHttpServletResponse) webRequest.getResponse()).getContentAsByteArray(), StandardCharsets.UTF_8));
+    }
+
+    static class Controller {
+        private static final Logger log = LoggerFactory.getLogger(Controller.class);
+
+        public ModelAndView test1() {
+            log.debug("test1()");
+            ModelAndView mav = new ModelAndView("view1");
+            mav.addObject("name", "张三");
+            return mav;
+        }
+
+        public String test2() {
+            log.debug("test2()");
+            return "view2";
+        }
+
+        @ModelAttribute
+//        @RequestMapping("/test3")
+        // 返回值缺少视图名，找不到视图名时会使用路径作为视图名
+        public User test3() {
+            log.debug("test3()");
+            return new User("李四", 20);
+        }
+
+        public User test4() {
+            log.debug("test4()");
+            return new User("王五", 30);
+        }
+
+        public HttpEntity<User> test5() {
+            log.debug("test5()");
+            return new HttpEntity<>(new User("赵六", 40));
+        }
+
+        public HttpHeaders test6() {
+            log.debug("test6()");
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Content-Type", "text/html");
+            return headers;
+        }
+
+        @ResponseBody
+        public User test7() {
+            log.debug("test7()");
+            return new User("钱七", 50);
+        }
+    }
+
+    // 必须用 public 修饰, 否则 freemarker 渲染其 name, age 属性时失败
+    public static class User {
+        private String name;
+        private int age;
+
+        public User(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                   "name='" + name + '\'' +
+                   ", age=" + age +
+                   '}';
+        }
+    }
+}
+```
+
 
 
 #### 总结
@@ -7189,28 +7399,141 @@ org.springframework.web.servlet.mvc.method.annotation.ServletModelAttributeMetho
    * ModelAndView，分别获取其模型和视图名，放入 ModelAndViewContainer
    * 返回值类型为 String 时，把它当做视图名，放入 ModelAndViewContainer
    * 返回值添加了 @ModelAttribute 注解时，将返回值作为模型，放入 ModelAndViewContainer
-     * 此时需找到默认视图名
+     * 此时需找到默认视图名（使用路径作为视图名）
    * 返回值省略 @ModelAttribute 注解且返回非简单类型时，将返回值作为模型，放入 ModelAndViewContainer
-     * 此时需找到默认视图名
+     * 此时需找到默认视图名（使用路径作为视图名）
    * 返回值类型为 ResponseEntity 时
-     * 此时走 MessageConverter，并设置 ModelAndViewContainer.requestHandled 为 true
+     * 不走视图相应流程，此时走 MessageConverter，并设置 ModelAndViewContainer.requestHandled 为 true
+     * 处理器中 `handleReturnValue` 方法内 `mavContainer.setRequestHandled(true);` 设置了不需要视图解析
    * 返回值类型为 HttpHeaders 时
-     * 会设置 ModelAndViewContainer.requestHandled 为 true
+     * 不走视图相应流程，会设置 ModelAndViewContainer.requestHandled 为 true
+     * 处理器中 `handleReturnValue` 方法内 `mavContainer.setRequestHandled(true);` 设置了不需要视图解析
    * 返回值添加了 @ResponseBody 注解时
-     * 此时走 MessageConverter，并设置 ModelAndViewContainer.requestHandled 为 true
+     * 不走视图相应流程，此时走 MessageConverter，并设置 ModelAndViewContainer.requestHandled 为 true
+     * 处理器中 `handleReturnValue` 方法内 `mavContainer.setRequestHandled(true);` 设置了不需要视图解析
 2. 组合模式在 Spring 中的体现 + 1
 
 
 
-### 28) MessageConverter
+### MessageConverter
 
-#### 演示 - MessageConverter 的作用
+#### 示例
 
-##### 代码参考
+```java
+public class Application {
+    public static void main(String[] args) throws IOException, NoSuchMethodException, HttpMediaTypeNotAcceptableException {
+        test1();
+        test2();
+        test3();
+        test4();
+    }
 
-**com.itheima.a28.A28**
+    private static void test4() throws IOException, HttpMediaTypeNotAcceptableException, NoSuchMethodException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        ServletWebRequest webRequest = new ServletWebRequest(request, response);
 
-#### 收获💡
+        request.addHeader("Accept", "application/xml");
+        response.setContentType("application/json");
+        List messageConverterList = new ArrayList<>(2);
+        messageConverterList.add(new MappingJackson2HttpMessageConverter());
+        messageConverterList.add(new MappingJackson2XmlHttpMessageConverter());
+        RequestResponseBodyMethodProcessor processor = new RequestResponseBodyMethodProcessor(messageConverterList);
+        processor.handleReturnValue(
+                new User("张三", 18),
+                new MethodParameter(Application.class.getMethod("user"), -1),
+                new ModelAndViewContainer(),
+                webRequest
+        );
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+    }
+
+    @ResponseBody
+    @RequestMapping(produces = "application/json")
+    public User user() {
+        return null;
+    }
+
+    /**
+     * json 字符串转 java 对象
+     */
+    private static void test3() throws IOException {
+        MockHttpInputMessage message = new MockHttpInputMessage("{\"name\":\"李四\",\"age\":20}".getBytes(StandardCharsets.UTF_8));
+        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+        if (converter.canRead(User.class, MediaType.APPLICATION_JSON)) {
+            Object read = converter.read(User.class, message);
+            System.out.println(read);
+        }
+    }
+
+    /**
+     * java 对象转 xml 格式字符串
+     */
+    private static void test2() throws IOException {
+        MockHttpOutputMessage message = new MockHttpOutputMessage();
+        MappingJackson2XmlHttpMessageConverter converter = new MappingJackson2XmlHttpMessageConverter();
+        if (converter.canWrite(User.class, MediaType.APPLICATION_XML)) {
+            converter.write(new User("李四", 20), MediaType.APPLICATION_XML, message);
+            System.out.println(message.getBodyAsString());
+        }
+    }
+
+    /**
+     * java 对象转 json 格式字符串
+     */
+    public static void test1() throws IOException {
+        MockHttpOutputMessage message = new MockHttpOutputMessage();
+        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+        if (converter.canWrite(User.class, MediaType.APPLICATION_JSON)) {
+            converter.write(new User("张三", 18), MediaType.APPLICATION_JSON, message);
+            System.out.println(message.getBodyAsString());
+        }
+    }
+
+    public static class User {
+        private String name;
+        private int age;
+
+        @JsonCreator
+        public User(@JsonProperty("name") String name, @JsonProperty("age") int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                   "name='" + name + '\'' +
+                   ", age=" + age +
+                   '}';
+        }
+    }
+}
+```
+
+
+
+
+
+
+
+#### 总结
 
 1. MessageConverter 的作用
    * @ResponseBody 是返回值处理器解析的
