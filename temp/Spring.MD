@@ -6981,6 +6981,48 @@ container -->> -adapter:
 
 
 
+
+
+#### @ModelAttribute
+
+**准备 @ModelAttribute** 在整个 HandlerAdapter 调用过程中所处的位置
+
+```mermaid
+sequenceDiagram
+participant adapter as HandlerAdapter
+participant bf as WebDataBinderFactory
+participant mf as ModelFactory
+participant ihm as ServletInvocableHandlerMethod
+participant ar as ArgumentResolvers 
+participant rh as ReturnValueHandlers
+participant container as ModelAndViewContainer
+
+adapter ->> +bf: 准备 @InitBinder
+bf -->> -adapter: 
+rect rgb(200, 150, 255)
+adapter ->> +mf: 准备 @ModelAttribute
+mf ->> +container: 添加Model数据
+container -->> -mf: 
+mf -->> -adapter: 
+end
+adapter ->> +ihm: invokeAndHandle
+ihm ->> +ar: 获取 args
+ar ->> ar: 有的解析器涉及 RequestBodyAdvice
+ar ->> container: 有的解析器涉及数据绑定生成Model数据
+ar -->> -ihm: args
+ihm ->> ihm: method.invoke(bean,args) 得到 returnValue
+ihm ->> +rh: 处理 returnValue
+rh ->> rh: 有的处理器涉及 ResponseBodyAdvice
+rh ->> +container: 添加Model数据,处理视图名,是否渲染等
+container -->> -rh: 
+rh -->> -ihm: 
+ihm -->> -adapter: 
+adapter ->> +container: 获取 ModelAndView
+container -->> -adapter: 
+```
+
+
+
 ##### 示例
 
 ```java
@@ -7033,7 +7075,7 @@ public class WebConfig {
 ```
 
 ```java
-public class A26 {
+public class Application {
 
     public static void main(String[] args) throws Exception {
         AnnotationConfigApplicationContext context =
@@ -7102,15 +7144,22 @@ public class A26 {
 
 
 
-### 26) @ControllerAdvice 之 @ModelAttribute
 
-#### 演示 - 准备 @ModelAttribute
 
-##### 代码参考
+##### 总结
 
-**com.itheima.a26** 包
+1. RequestMappingHandlerAdapter 初始化时会解析 @ControllerAdvice 中的 @ModelAttribute 方法
+2. RequestMappingHandlerAdapter 会以类为单位，在该类首次使用时，解析此类的 @ModelAttribute 方法
+3. 以上两种 @ModelAttribute 的解析结果都会缓存来避免重复解析
+4. 控制器方法调用时，会综合利用本类的 @ModelAttribute 方法和 @ControllerAdvice 中的 @ModelAttribute 方法创建模型工厂
 
-**准备 @ModelAttribute** 在整个 HandlerAdapter 调用过程中所处的位置
+
+
+#### ResponseBodyAdvice
+
+##### 示例
+
+**ResponseBodyAdvice 增强** 在整个 HandlerAdapter 调用过程中所处的位置
 
 ```mermaid
 sequenceDiagram
@@ -7124,12 +7173,10 @@ participant container as ModelAndViewContainer
 
 adapter ->> +bf: 准备 @InitBinder
 bf -->> -adapter: 
-rect rgb(200, 150, 255)
 adapter ->> +mf: 准备 @ModelAttribute
 mf ->> +container: 添加Model数据
 container -->> -mf: 
 mf -->> -adapter: 
-end
 adapter ->> +ihm: invokeAndHandle
 ihm ->> +ar: 获取 args
 ar ->> ar: 有的解析器涉及 RequestBodyAdvice
@@ -7137,7 +7184,9 @@ ar ->> container: 有的解析器涉及数据绑定生成Model数据
 ar -->> -ihm: args
 ihm ->> ihm: method.invoke(bean,args) 得到 returnValue
 ihm ->> +rh: 处理 returnValue
+rect rgb(200, 150, 255)
 rh ->> rh: 有的处理器涉及 ResponseBodyAdvice
+end
 rh ->> +container: 添加Model数据,处理视图名,是否渲染等
 container -->> -rh: 
 rh -->> -ihm: 
@@ -7146,12 +7195,491 @@ adapter ->> +container: 获取 ModelAndView
 container -->> -adapter: 
 ```
 
-#### 收获💡
+```java
+@Configuration
+public class WebConfig {
 
-1. RequestMappingHandlerAdapter 初始化时会解析 @ControllerAdvice 中的 @ModelAttribute 方法
-2. RequestMappingHandlerAdapter 会以类为单位，在该类首次使用时，解析此类的 @ModelAttribute 方法
-3. 以上两种 @ModelAttribute 的解析结果都会缓存来避免重复解析
-4. 控制器方法调用时，会综合利用本类的 @ModelAttribute 方法和 @ControllerAdvice 中的 @ModelAttribute 方法创建模型工厂
+    @ControllerAdvice
+    static class MyControllerAdvice implements ResponseBodyAdvice<Object> {
+        // 满足条件才转换
+        public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
+            /**
+             * @ResponseBody
+             * @RestController
+             */
+            if (returnType.getMethodAnnotation(ResponseBody.class) != null ||
+                AnnotationUtils.findAnnotation(returnType.getContainingClass(), ResponseBody.class) != null) {
+                return true;
+            }
+            return false;
+        }
+
+        // 将 User 或其它类型统一为 Result 类型
+        public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType, Class<? extends HttpMessageConverter<?>> selectedConverterType, ServerHttpRequest request, ServerHttpResponse response) {
+            if (body instanceof Result) {
+                return body;
+            }
+            return Result.ok(body);
+        }
+    }
+
+    // @Controller
+    // @ResponseBody
+    @RestController
+    public static class MyController {
+        public User user() {
+            return new User("王五", 18);
+        }
+    }
+
+    public static class User {
+        private String name;
+        private int age;
+
+        public User(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+    }
+}
+```
+
+```java
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class Result {
+    private int code;
+    private String msg;
+    private Object data;
+
+    public int getCode() {
+        return code;
+    }
+
+    public void setCode(int code) {
+        this.code = code;
+    }
+
+    public String getMsg() {
+        return msg;
+    }
+
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
+
+    public Object getData() {
+        return data;
+    }
+
+    public void setData(Object data) {
+        this.data = data;
+    }
+
+    @JsonCreator
+    private Result(@JsonProperty("code") int code, @JsonProperty("data") Object data) {
+        this.code = code;
+        this.data = data;
+    }
+
+    private Result(int code, String msg) {
+        this.code = code;
+        this.msg = msg;
+    }
+
+    public static Result ok() {
+        return new Result(200, null);
+    }
+
+    public static Result ok(Object data) {
+        return new Result(200, data);
+    }
+
+    public static Result error(String msg) {
+        return new Result(500, "服务器内部错误:" + msg);
+    }
+}
+```
+
+```java
+public class Application {
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(WebConfig.class);
+
+        ServletInvocableHandlerMethod handlerMethod = new ServletInvocableHandlerMethod(
+                context.getBean(WebConfig.MyController.class),
+                WebConfig.MyController.class.getMethod("user")
+        );
+        handlerMethod.setDataBinderFactory(new ServletRequestDataBinderFactory(Collections.emptyList(), null));
+        handlerMethod.setParameterNameDiscoverer(new DefaultParameterNameDiscoverer());
+        handlerMethod.setHandlerMethodArgumentResolvers(getArgumentResolvers(context));
+        handlerMethod.setHandlerMethodReturnValueHandlers(getReturnValueHandlers(context));
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        ModelAndViewContainer container = new ModelAndViewContainer();
+        handlerMethod.invokeAndHandle(new ServletWebRequest(request, response), container);
+
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+    }
+
+    public static HandlerMethodArgumentResolverComposite getArgumentResolvers(AnnotationConfigApplicationContext context) {
+        HandlerMethodArgumentResolverComposite composite = new HandlerMethodArgumentResolverComposite();
+        composite.addResolvers(
+                new RequestParamMethodArgumentResolver(context.getDefaultListableBeanFactory(), false),
+                new PathVariableMethodArgumentResolver(),
+                new RequestHeaderMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ServletCookieValueMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ExpressionValueMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ServletRequestMethodArgumentResolver(),
+                new ServletModelAttributeMethodProcessor(false),
+                new RequestResponseBodyMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())),
+                new ServletModelAttributeMethodProcessor(true),
+                new RequestParamMethodArgumentResolver(context.getDefaultListableBeanFactory(), true)
+        );
+        return composite;
+    }
+
+    public static HandlerMethodReturnValueHandlerComposite getReturnValueHandlers(AnnotationConfigApplicationContext context) {
+        // 添加 advice
+        List<ControllerAdviceBean> annotatedBeans = ControllerAdviceBean.findAnnotatedBeans(context);
+        List<Object> collect = annotatedBeans.stream().filter(b -> ResponseBodyAdvice.class.isAssignableFrom(b.getBeanType()))
+                .collect(Collectors.toList());
+
+        HandlerMethodReturnValueHandlerComposite composite = new HandlerMethodReturnValueHandlerComposite();
+        composite.addHandler(new ModelAndViewMethodReturnValueHandler());
+        composite.addHandler(new ViewNameMethodReturnValueHandler());
+        composite.addHandler(new ServletModelAttributeMethodProcessor(false));
+        composite.addHandler(new HttpEntityMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())));
+        composite.addHandler(new HttpHeadersReturnValueHandler());
+        composite.addHandler(new RequestResponseBodyMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter()), collect));
+        composite.addHandler(new ServletModelAttributeMethodProcessor(true));
+        return composite;
+    }
+}
+```
+
+
+
+##### 总结
+
+1. ResponseBodyAdvice 返回响应体前包装
+
+
+
+#### 异常处理
+
+##### @ExceptionHandler
+
+ExceptionHandlerExceptionResolver
+
+###### 异常处理器调用过程
+
+```java
+public class DispatcherServlet extends FrameworkServlet {
+       protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        HttpServletRequest processedRequest = request;
+        HandlerExecutionChain mappedHandler = null;
+        try {
+            try {
+                try {
+                    processedRequest = this.checkMultipart(request);
+                    mappedHandler = this.getHandler(processedRequest);
+                    HandlerAdapter ha = this.getHandlerAdapter(mappedHandler.getHandler());
+                    // 控制器方法调用
+                    mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+                } catch (Exception var20) {
+                    dispatchException = var20;
+                } catch (Throwable var21) {
+                    dispatchException = new NestedServletException("Handler dispatch failed", var21);
+                }
+				// 处理调用结果
+                this.processDispatchResult(processedRequest, response, mappedHandler, mv, (Exception)dispatchException);
+            } catch (Exception var22) {
+			// ...
+            } catch (Throwable var23) {
+			// ...
+            }
+
+        } finally {
+			// ...
+        }
+    }
+    
+    private void processDispatchResult(HttpServletRequest request, HttpServletResponse response, @Nullable HandlerExecutionChain mappedHandler, @Nullable ModelAndView mv, @Nullable Exception exception) throws Exception {
+        boolean errorView = false;
+        // 发生异常，进行异常处理
+        if (exception != null) {
+            if (exception instanceof ModelAndViewDefiningException) {
+                this.logger.debug("ModelAndViewDefiningException encountered", exception);
+                mv = ((ModelAndViewDefiningException)exception).getModelAndView();
+            } else {
+                Object handler = mappedHandler != null ? mappedHandler.getHandler() : null;
+                mv = this.processHandlerException(request, response, handler, exception);
+                errorView = mv != null;
+            }
+        }
+
+        // ...
+    }
+    
+    @Nullable
+    protected ModelAndView processHandlerException(HttpServletRequest request, HttpServletResponse response, @Nullable Object handler, Exception ex) throws Exception {
+        request.removeAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE);
+        ModelAndView exMv = null;
+        // 查找异常处理器来处理异常
+        if (this.handlerExceptionResolvers != null) {
+            Iterator var6 = this.handlerExceptionResolvers.iterator();
+
+            while(var6.hasNext()) {
+                HandlerExceptionResolver resolver = (HandlerExceptionResolver)var6.next();
+                exMv = resolver.resolveException(request, response, handler, ex);
+                if (exMv != null) {
+                    break;
+                }
+            }
+        }
+		// ...
+    }
+}
+```
+
+
+
+###### 示例
+
+异常处理器 ExceptionHandlerExceptionResolver
+
+该异常处理器用来处理 `@ExceptionHandler` 的异常方法
+
+```java
+public class Application {
+    public static void main(String[] args) throws NoSuchMethodException {
+        ExceptionHandlerExceptionResolver resolver = new ExceptionHandlerExceptionResolver();
+        resolver.setMessageConverters(Collections.singletonList(new MappingJackson2HttpMessageConverter()));
+        // 添加参数、返回值处理器
+        resolver.afterPropertiesSet();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        System.out.println("1.测试 json");
+        HandlerMethod handlerMethod = new HandlerMethod(new Controller1(), Controller1.class.getMethod("foo"));
+        Exception e = new ArithmeticException("被零除");
+        resolver.resolveException(request, response, handlerMethod, e);
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+
+        System.out.println("2.测试 mav");
+        handlerMethod = new HandlerMethod(new Controller2(), Controller2.class.getMethod("foo"));
+        e = new ArithmeticException("被零除");
+        ModelAndView mav = resolver.resolveException(request, response, handlerMethod, e);
+        System.out.println(mav.getModel());
+        System.out.println(mav.getViewName());
+
+        System.out.println("3.测试嵌套异常");
+        handlerMethod = new HandlerMethod(new Controller3(), Controller3.class.getMethod("foo"));
+        e = new Exception("e1", new RuntimeException("e2", new IOException("e3")));
+        resolver.resolveException(request, response, handlerMethod, e);
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+
+        System.out.println("4.测试异常处理方法参数解析");
+
+        handlerMethod = new HandlerMethod(new Controller4(), Controller4.class.getMethod("foo"));
+        e = new Exception("e1");
+        resolver.resolveException(request, response, handlerMethod, e);
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+    }
+
+    static class Controller1 {
+        public void foo() {
+
+        }
+        @ExceptionHandler
+        @ResponseBody
+        public Map<String, Object> handle(ArithmeticException e) {
+            Map<String, Object> map = new HashMap<>(1);
+            map.put("error", e.getMessage());
+            return map;
+        }
+    }
+
+    static class Controller2 {
+        public void foo() {
+
+        }
+        @ExceptionHandler
+        public ModelAndView handle(ArithmeticException e) {
+            Map<String, Object> map = new HashMap<>(1);
+            map.put("error", e.getMessage());
+            return new ModelAndView("test2", map);
+        }
+    }
+
+    static class Controller3 {
+        public void foo() {
+
+        }
+        @ExceptionHandler
+        @ResponseBody
+        public Map<String, Object> handle(IOException e) {
+            Map<String, Object> map = new HashMap<>(1);
+            map.put("error", e.getMessage());
+            return map;
+        }
+    }
+
+    static class Controller4 {
+        public void foo() {}
+        @ExceptionHandler
+        @ResponseBody
+        public Map<String, Object> handler(Exception e, HttpServletRequest request) {
+            System.out.println(request);
+            Map<String, Object> map = new HashMap<>(1);
+            map.put("error", e.getMessage());
+            return map;
+        }
+    }
+}
+```
+
+
+
+###### afterPropertiesSet()
+
+Spring 初始化时调用
+
+```java
+public void afterPropertiesSet() {
+    // 缓存解析器
+    this.initExceptionHandlerAdviceCache();
+    List handlers;
+    // 添加常用参数解析器
+    if (this.argumentResolvers == null) {
+        handlers = this.getDefaultArgumentResolvers();
+        this.argumentResolvers = (new HandlerMethodArgumentResolverComposite()).addResolvers(handlers);
+    }
+
+    // 添加常用返回值处理器
+    if (this.returnValueHandlers == null) {
+        handlers = this.getDefaultReturnValueHandlers();
+        this.returnValueHandlers = (new HandlerMethodReturnValueHandlerComposite()).addHandlers(handlers);
+    }
+
+}
+
+private void initExceptionHandlerAdviceCache() {
+    if (this.getApplicationContext() != null) {
+        List<ControllerAdviceBean> adviceBeans = ControllerAdviceBean.findAnnotatedBeans(this.getApplicationContext());
+        Iterator var2 = adviceBeans.iterator();
+
+        while(var2.hasNext()) {
+            ControllerAdviceBean adviceBean = (ControllerAdviceBean)var2.next();
+            Class<?> beanType = adviceBean.getBeanType();
+            // ... 
+            ExceptionHandlerMethodResolver resolver = new ExceptionHandlerMethodResolver(beanType);
+            if (resolver.hasExceptionMappings()) {
+                this.exceptionHandlerAdviceCache.put(adviceBean, resolver);
+            }
+
+            if (ResponseBodyAdvice.class.isAssignableFrom(beanType)) {
+                this.responseBodyAdvice.add(adviceBean);
+            }
+            // ...
+        }
+    }
+}
+```
+
+
+
+###### 总结
+
+1. ExceptionHandlerExceptionResolver 能够重用参数解析器、返回值处理器，实现组件重用
+2. 能够支持嵌套异常，在解析异常时会将嵌套的异常展开为数组
+
+
+
+##### 全局@ExceptionHandler
+
+当我们没有在 Controller 中使用 `@ExceptionHandler` 进行异常处理时，希望有一个可以进行全局处理异常的 `@ExceptionHandler`
+
+###### 示例
+
+```java
+@Configuration
+public class WebConfig {
+    @ControllerAdvice
+    static class MyControllerAdvice {
+        @ExceptionHandler
+        @ResponseBody
+        public Map<String, Object> handle(Exception e) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("error", e.getMessage());
+            return map;
+        }
+    }
+
+    @Bean
+    public ExceptionHandlerExceptionResolver resolver() {
+        List list = new ArrayList();
+        list.add(new MappingJackson2HttpMessageConverter());
+        ExceptionHandlerExceptionResolver resolver = new ExceptionHandlerExceptionResolver();
+        resolver.setMessageConverters(list);
+        return resolver;
+    }
+}
+```
+
+```java
+public class Application {
+    public static void main(String[] args) throws NoSuchMethodException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+//        ExceptionHandlerExceptionResolver resolver = new ExceptionHandlerExceptionResolver();
+//        resolver.setMessageConverters(List.of(new MappingJackson2HttpMessageConverter()));
+//        resolver.afterPropertiesSet();
+
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(WebConfig.class);
+        ExceptionHandlerExceptionResolver resolver = context.getBean(ExceptionHandlerExceptionResolver.class);
+
+        HandlerMethod handlerMethod = new HandlerMethod(new Controller5(), Controller5.class.getMethod("foo"));
+        Exception e = new Exception("e1");
+        resolver.resolveException(request, response, handlerMethod, e);
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+    }
+
+    static class Controller5 {
+        public void foo() {
+
+        }
+    }
+}
+```
+
+
+
+###### 总结
+
+1. ExceptionHandlerExceptionResolver 初始化时会解析 @ControllerAdvice 中的 @ExceptionHandler 方法
+2. ExceptionHandlerExceptionResolver 会以类为单位，在该类首次处理异常时，解析此类的 @ExceptionHandler 方法
+3. 以上两种 @ExceptionHandler 的解析结果都会缓存来避免重复解析
 
 
 
@@ -7545,88 +8073,9 @@ public class Application {
 
 
 
-### 29) @ControllerAdvice 之 ResponseBodyAdvice
-
-#### 演示 - ResponseBodyAdvice 增强
-
-##### 代码参考
-
-**com.itheima.a29** 包
-
-**ResponseBodyAdvice 增强** 在整个 HandlerAdapter 调用过程中所处的位置
-
-```mermaid
-sequenceDiagram
-participant adapter as HandlerAdapter
-participant bf as WebDataBinderFactory
-participant mf as ModelFactory
-participant ihm as ServletInvocableHandlerMethod
-participant ar as ArgumentResolvers 
-participant rh as ReturnValueHandlers
-participant container as ModelAndViewContainer
-
-adapter ->> +bf: 准备 @InitBinder
-bf -->> -adapter: 
-adapter ->> +mf: 准备 @ModelAttribute
-mf ->> +container: 添加Model数据
-container -->> -mf: 
-mf -->> -adapter: 
-adapter ->> +ihm: invokeAndHandle
-ihm ->> +ar: 获取 args
-ar ->> ar: 有的解析器涉及 RequestBodyAdvice
-ar ->> container: 有的解析器涉及数据绑定生成Model数据
-ar -->> -ihm: args
-ihm ->> ihm: method.invoke(bean,args) 得到 returnValue
-ihm ->> +rh: 处理 returnValue
-rect rgb(200, 150, 255)
-rh ->> rh: 有的处理器涉及 ResponseBodyAdvice
-end
-rh ->> +container: 添加Model数据,处理视图名,是否渲染等
-container -->> -rh: 
-rh -->> -ihm: 
-ihm -->> -adapter: 
-adapter ->> +container: 获取 ModelAndView
-container -->> -adapter: 
-```
-
-#### 收获💡
-
-1. ResponseBodyAdvice 返回响应体前包装
 
 
-
-### 30) 异常解析器
-
-#### 演示 - ExceptionHandlerExceptionResolver
-
-##### 代码参考
-
-**com.itheima.a30.A30**
-
-#### 收获💡
-
-1. 它能够重用参数解析器、返回值处理器，实现组件重用
-2. 它能够支持嵌套异常
-
-
-
-### 31) @ControllerAdvice 之 @ExceptionHandler
-
-#### 演示 - 准备 @ExceptionHandler
-
-##### 代码参考
-
-**com.itheima.a31** 包
-
-#### 收获💡
-
-1. ExceptionHandlerExceptionResolver 初始化时会解析 @ControllerAdvice 中的 @ExceptionHandler 方法
-2. ExceptionHandlerExceptionResolver 会以类为单位，在该类首次处理异常时，解析此类的 @ExceptionHandler 方法
-3. 以上两种 @ExceptionHandler 的解析结果都会缓存来避免重复解析
-
-
-
-### 32) Tomcat 异常处理
+### Tomcat 异常处理
 
 * 我们知道 @ExceptionHandler 只能处理发生在 mvc 流程中的异常，例如控制器内、拦截器内，那么如果是 Filter 出现了异常，如何进行处理呢？
 
@@ -7644,73 +8093,153 @@ container -->> -adapter:
        * 配置了 ErrorViewResolver，根据状态码去找 View
        * 没配置或没找到，用 BeanNameViewResolver 根据一个固定为 error 的名字找到 View，即所谓的 WhitelabelErrorView
 
-> ***评价***
->
-> * 一个错误处理搞得这么复杂，就问恶心不？
 
 
-
-#### 演示1 - 错误页处理
-
-##### 关键代码
+#### 示例基础代码
 
 ```java
-@Bean // ⬅️修改了 Tomcat 服务器默认错误地址, 出错时使用请求转发方式跳转
-public ErrorPageRegistrar errorPageRegistrar() {
-    return webServerFactory -> webServerFactory.addErrorPages(new ErrorPage("/error"));
-}
+@Configuration
+public class WebConfig {
+    @Bean
+    public TomcatServletWebServerFactory servletWebServerFactory() {
+        return new TomcatServletWebServerFactory();
+    }
 
-@Bean // ⬅️TomcatServletWebServerFactory 初始化前用它增强, 注册所有 ErrorPageRegistrar
-public ErrorPageRegistrarBeanPostProcessor errorPageRegistrarBeanPostProcessor() {
-    return new ErrorPageRegistrarBeanPostProcessor();
+    @Bean
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
+
+    @Bean
+    public DispatcherServletRegistrationBean servletRegistrationBean(DispatcherServlet dispatcherServlet) {
+        DispatcherServletRegistrationBean registrationBean = new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+        registrationBean.setLoadOnStartup(1);
+        return registrationBean;
+    }
+
+    @Bean // @RequestMapping
+    public RequestMappingHandlerMapping requestMappingHandlerMapping() {
+        return new RequestMappingHandlerMapping();
+    }
+
+    @Bean // 注意默认的 RequestMappingHandlerAdapter 不会带 jackson 转换器
+    public RequestMappingHandlerAdapter requestMappingHandlerAdapter() {
+        RequestMappingHandlerAdapter handlerAdapter = new RequestMappingHandlerAdapter();
+        List list = new ArrayList();
+        list.add(new MappingJackson2HttpMessageConverter());
+        handlerAdapter.setMessageConverters(list);
+        return handlerAdapter;
+    }
+
+    @Controller
+    public static class MyController {
+        @RequestMapping("test")
+        public ModelAndView test() {
+            int i = 1 / 0;
+            return null;
+        }
 }
 ```
 
-#### 收获💡
+```java
+public class Application {
 
-1. Tomcat 的错误页处理手段
+    public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+        RequestMappingHandlerMapping handlerMapping = context.getBean(RequestMappingHandlerMapping.class);
+        handlerMapping.getHandlerMethods().forEach((RequestMappingInfo k, HandlerMethod v) -> {
+            System.out.println("映射路径:" + k + "\t方法信息:" + v);
+        });
+    }
+}
+```
 
 
 
-#### 演示2 - BasicErrorController
-
-##### 关键代码
+#### 示例 - Tomcat 的错误页处理
 
 ```java
-@Bean // ⬅️ErrorProperties 封装环境键值, ErrorAttributes 控制有哪些错误信息
+// 自定义错误处理 1.修改了 Tomcat 服务器默认错误地址
+// ErrorPageRegistrar 是 TomcatServletWebServerFactory 的父接口
+@Bean
+public ErrorPageRegistrar errorPageRegistrar() {
+    // 出现错误，会使用请求转发 forward 跳转到 error 地址
+    // error 地址可以是 servlet 地址、静态页面地址、Controller 地址
+    return webServerFactory -> webServerFactory.addErrorPages(new ErrorPage("/error"));
+}
+
+// 自定义错误处理 2.添加后处理器
+// TomcatServletWebServerFactory 初始化前调用用它增强，注册所有 ErrorPageRegistrar
+@Bean
+public ErrorPageRegistrarBeanPostProcessor errorPageRegistrarBeanPostProcessor() {
+    return new ErrorPageRegistrarBeanPostProcessor();
+}
+
+@Controller
+public static class MyController {
+//   自定义错误处理 3.异常展示
+    @RequestMapping("/error")
+    @ResponseBody
+    public Map<String, Object> error(HttpServletRequest request) {
+        // 出现异常时 tomcat 会把异常存储到 request 作用域中
+        Throwable e = (Throwable) request.getAttribute(RequestDispatcher.ERROR_EXCEPTION);
+        Map<String, Object> map = new HashMap<>();
+        map.put("error", e.getMessage());
+        return map;
+    }
+}
+```
+
+
+
+#### 示例 - Spring Boot 的 BasicErrorController
+
+```java
+// 自定义错误处理 1.修改了 Tomcat 服务器默认错误地址
+// ErrorPageRegistrar 是 TomcatServletWebServerFactory 的父接口
+@Bean
+public ErrorPageRegistrar errorPageRegistrar() {
+    // 出现错误，会使用请求转发 forward 跳转到 error 地址
+    // error 地址可以是 servlet 地址、静态页面地址、Controller 地址
+    return webServerFactory -> webServerFactory.addErrorPages(new ErrorPage("/error"));
+}
+
+// 自定义错误处理 2.添加后处理器
+// TomcatServletWebServerFactory 初始化前调用用它增强，注册所有 ErrorPageRegistrar
+@Bean
+public ErrorPageRegistrarBeanPostProcessor errorPageRegistrarBeanPostProcessor() {
+    return new ErrorPageRegistrarBeanPostProcessor();
+}
+
+//    自定义错误处理 3.SpringBoot 中的 BasicErrorController
+@Bean
 public BasicErrorController basicErrorController() {
     ErrorProperties errorProperties = new ErrorProperties();
     errorProperties.setIncludeException(true);
     return new BasicErrorController(new DefaultErrorAttributes(), errorProperties);
 }
 
-@Bean // ⬅️名称为 error 的视图, 作为 BasicErrorController 的 text/html 响应结果
+//    提供视图
+@Bean
 public View error() {
     return new View() {
         @Override
-        public void render(
-            Map<String, ?> model, 
-            HttpServletRequest request, 
-            HttpServletResponse response
-        ) throws Exception {
+        public void render(Map<String, ?> model, HttpServletRequest request, HttpServletResponse response) throws Exception {
             System.out.println(model);
             response.setContentType("text/html;charset=utf-8");
-            response.getWriter().print("""
-                    <h3>服务器内部错误</h3>
-                    """);
+            response.getWriter().print("<h3>服务器内部错误</h3>");
         }
     };
 }
 
-@Bean // ⬅️收集容器中所有 View 对象, bean 的名字作为视图名
+//    视图解析器
+@Bean
 public ViewResolver viewResolver() {
+    // 按照视图名找到对应名字的视图对象
     return new BeanNameViewResolver();
 }
 ```
-
-#### 收获💡
-
-1. Spring Boot 中 BasicErrorController 如何工作
 
 
 
