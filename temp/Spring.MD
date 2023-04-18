@@ -5289,7 +5289,7 @@ public class Application {
 
 
 
-## WEB MVC
+## Spring MVC
 
 ### RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter
 
@@ -8243,70 +8243,229 @@ public ViewResolver viewResolver() {
 
 
 
-### 33) BeanNameUrlHandlerMapping 与 SimpleControllerHandlerAdapter
+### BeanNameUrlHandlerMapping 与 SimpleControllerHandlerAdapter
 
-#### 演示 - 本组映射器和适配器
+路径映射和控制器方法调用，属于 Spring MVC 早期的实现
 
-##### 关键代码
+#### 示例
 
 ```java
-@Bean
-public BeanNameUrlHandlerMapping beanNameUrlHandlerMapping() {
-    return new BeanNameUrlHandlerMapping();
-}
+@Configuration
+public class WebConfig {
+    @Bean // 内嵌 web 容器工厂
+    public TomcatServletWebServerFactory servletWebServerFactory() {
+        return new TomcatServletWebServerFactory(8080);
+    }
 
-@Bean
-public SimpleControllerHandlerAdapter simpleControllerHandlerAdapter() {
-    return new SimpleControllerHandlerAdapter();
-}
+    @Bean // 创建 DispatcherServlet
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
 
-@Bean("/c3")
-public Controller controller3() {
-    return (request, response) -> {
-        response.getWriter().print("this is c3");
-        return null;
-    };
+    @Bean // 注册 DispatcherServlet, Spring MVC 的入口
+    public DispatcherServletRegistrationBean servletRegistrationBean(DispatcherServlet dispatcherServlet) {
+        return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+    }
+
+    // /c1  -->  /c1
+    // /c2  -->  /c2
+    @Bean
+    public BeanNameUrlHandlerMapping beanNameUrlHandlerMapping() {
+        return new BeanNameUrlHandlerMapping();
+    }
+
+    @Bean
+    public SimpleControllerHandlerAdapter simpleControllerHandlerAdapter() {
+        return new SimpleControllerHandlerAdapter();
+    }
+
+    @Component("/c1")
+    public static class Controller1 implements Controller {
+        @Override
+        public ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+            response.getWriter().print("this is c1");
+            return null;
+        }
+    }
+
+    @Component("/c2")
+    public static class Controller2 implements Controller {
+        @Override
+        public ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+            response.getWriter().print("this is c2");
+            return null;
+        }
+    }
+
+    @Bean("/c3")
+    public Controller controller3() {
+        return (request, response) -> {
+            response.getWriter().print("this is c3");
+            return null;
+        };
+    }
 }
 ```
 
-#### 收获💡
+```java
+public class Application {
+    public static void main(String[] args) {
+        AnnotationConfigServletWebServerApplicationContext context
+                = new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+    }
+}
+```
 
-1. BeanNameUrlHandlerMapping，以 / 开头的 bean 的名字会被当作映射路径
+
+
+#### 自定义 HandlerMapping 和 HandlerAdapter
+
+将上例中创建 HandlerMapping 和 HandlerAdapter 的方法改为如下
+
+```java
+// /c1  -->  /c1
+// /c2  -->  /c2
+@Component
+static class MyHandlerMapping implements HandlerMapping {
+    @Override
+    public HandlerExecutionChain getHandler(HttpServletRequest request) throws Exception {
+        String key = request.getRequestURI();
+        Controller controller = collect.get(key);
+        if (controller == null) {
+            return null;
+        }
+        return new HandlerExecutionChain(controller);
+    }
+
+    @Autowired
+    private ApplicationContext context;
+    private Map<String, Controller> collect;
+
+    @PostConstruct
+    public void init() {
+        collect = context.getBeansOfType(Controller.class).entrySet()
+                .stream().filter(e -> e.getKey().startsWith("/"))
+                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+        System.out.println(collect);
+    }
+}
+
+@Component
+static class MyHandlerAdapter implements HandlerAdapter {
+
+    @Override
+    public boolean supports(Object handler) {
+        return handler instanceof Controller;
+    }
+
+    @Override
+    public ModelAndView handle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        if (handler instanceof Controller) {
+            Controller controller = (Controller) handler;
+            controller.handleRequest(request, response);
+        }
+        return null;
+    }
+
+    @Override
+    public long getLastModified(HttpServletRequest request, Object handler) {
+        return -1;
+    }
+}
+```
+
+
+
+#### 总结
+
+1. BeanNameUrlHandlerMapping，以  `/` 开头的 bean 的名字会被当作映射路径
 2. 这些 bean 本身当作 handler，要求实现 Controller 接口
 3. SimpleControllerHandlerAdapter，调用 handler
 4. 模拟实现这组映射器和适配器
+5. 对比 RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter
+	- RequestMappingHandlerAdapter, 以 @RequestMapping 作为映射路径
+	- 控制器的具体方法会被当作 handler
+	- RequestMappingHandlerAdapter, 调用 handler
 
 
 
-### 34) RouterFunctionMapping 与 HandlerFunctionAdapter
 
-#### 演示 - 本组映射器和适配器
 
-##### 关键代码
+### RouterFunctionMapping 与 HandlerFunctionAdapter
+
+Spring 5.2 开始才引入
+
+#### 示例
 
 ```java
-@Bean
-public RouterFunctionMapping routerFunctionMapping() {
-    return new RouterFunctionMapping();
-}
+@Configuration
+public class WebConfig {
+    @Bean // 内嵌 web 容器工厂
+    public TomcatServletWebServerFactory servletWebServerFactory() {
+        return new TomcatServletWebServerFactory(8080);
+    }
 
-@Bean
-public HandlerFunctionAdapter handlerFunctionAdapter() {
-    return new HandlerFunctionAdapter();
-}
+    @Bean // 创建 DispatcherServlet
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
 
-@Bean
-public RouterFunction<ServerResponse> r1() {
-    //           ⬇️映射条件   ⬇️handler
-    return route(GET("/r1"), request -> ok().body("this is r1"));
+    @Bean // 注册 DispatcherServlet, Spring MVC 的入口
+    public DispatcherServletRegistrationBean servletRegistrationBean(DispatcherServlet dispatcherServlet) {
+        return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+    }
+
+    // RouterFunctionMapping 初始化时会收集所有 RouterFunction 建立映射
+    // 请求到达之后根据请求信息找到对应 HandlerFunction
+    @Bean
+    public RouterFunctionMapping routerFunctionMapping() {
+        return new RouterFunctionMapping();
+    }
+
+    // 找到 HandlerFunction 之后调用 HandlerFunction
+    @Bean
+    public HandlerFunctionAdapter handlerFunctionAdapter() {
+        return new HandlerFunctionAdapter();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> r1() {
+        return RouterFunctions.route(RequestPredicates.GET("/r1"), new HandlerFunction<ServerResponse>() {
+            @Override
+            public ServerResponse handle(ServerRequest serverRequest) throws Exception {
+                return ServerResponse.ok().body("this is r1");
+            }
+        });
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> r2() {
+        return route(GET("/r2"), request -> ok().body("this is r2"));
+    }
+
 }
 ```
 
-#### 收获💡
+```java
+public class Application {
+    public static void main(String[] args) {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+    }
+}
+```
+
+
+
+#### 总结
 
 1. RouterFunctionMapping, 通过 RequestPredicate 条件映射
 2. handler 要实现 HandlerFunction 接口
 3. HandlerFunctionAdapter, 调用 handler
+4. 对比 RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter
+   - RequestMappingHandlerAdapter, 以 @RequestMapping 作为映射路径
+   - 控制器的具体方法会被当作 handler
+   - RequestMappingHandlerAdapter, 调用 handler
 
 
 
