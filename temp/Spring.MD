@@ -8469,101 +8469,168 @@ public class Application {
 
 
 
-### 35) SimpleUrlHandlerMapping 与 HttpRequestHandlerAdapter
+### SimpleUrlHandlerMapping 与 HttpRequestHandlerAdapter
 
-#### 演示1 - 本组映射器和适配器
+静态资源处理
 
-##### 代码参考
-
-**org.springframework.boot.autoconfigure.web.servlet.A35**
-
-##### 关键代码
+#### 示例
 
 ```java
-@Bean
-public SimpleUrlHandlerMapping simpleUrlHandlerMapping(ApplicationContext context) {
-    SimpleUrlHandlerMapping handlerMapping = new SimpleUrlHandlerMapping();
-    Map<String, ResourceHttpRequestHandler> map 
-        = context.getBeansOfType(ResourceHttpRequestHandler.class);
-    handlerMapping.setUrlMap(map);
-    return handlerMapping;
-}
+@Configuration
+public class WebConfig {
+    @Bean // 内嵌 web 容器工厂
+    public TomcatServletWebServerFactory servletWebServerFactory() {
+        return new TomcatServletWebServerFactory(8080);
+    }
 
-@Bean
-public HttpRequestHandlerAdapter httpRequestHandlerAdapter() {
-    return new HttpRequestHandlerAdapter();
-}
+    @Bean // 创建 DispatcherServlet
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
 
-@Bean("/**")
-public ResourceHttpRequestHandler handler1() {
-    ResourceHttpRequestHandler handler = new ResourceHttpRequestHandler();
-    handler.setLocations(List.of(new ClassPathResource("static/")));
-    return handler;
-}
+    @Bean // 注册 DispatcherServlet, Spring MVC 的入口
+    public DispatcherServletRegistrationBean servletRegistrationBean(DispatcherServlet dispatcherServlet) {
+        return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+    }
 
-@Bean("/img/**")
-public ResourceHttpRequestHandler handler2() {
-    ResourceHttpRequestHandler handler = new ResourceHttpRequestHandler();
-    handler.setLocations(List.of(new ClassPathResource("images/")));
-    return handler;
+    /**
+     * 映射路径
+     */
+    @Bean
+    public SimpleUrlHandlerMapping simpleUrlHandlerMapping(ApplicationContext context) {
+        SimpleUrlHandlerMapping handlerMapping = new SimpleUrlHandlerMapping();
+        Map<String, ResourceHttpRequestHandler> map = context.getBeansOfType(ResourceHttpRequestHandler.class);
+        handlerMapping.setUrlMap(map);
+        System.out.println(map);
+        return handlerMapping;
+    }
+
+    /**
+     * 调用 handler
+     */
+    @Bean
+    public HttpRequestHandlerAdapter httpRequestHandlerAdapter() {
+        return new HttpRequestHandlerAdapter();
+    }
+
+    /**
+     * 作为静态资源 handler
+     *
+     * /** ->
+     *       /index.html
+     *       /r1.html
+     *       /r2.html
+     */
+    @Bean("/**")
+    public ResourceHttpRequestHandler handler1() {
+        ResourceHttpRequestHandler handler = new ResourceHttpRequestHandler();
+        List classPathResourceList = new ArrayList();
+        List resourceResolver = new ArrayList();
+        classPathResourceList.add(new ClassPathResource("static/"));
+        // 用于缓存静态资源，第一次从磁盘读取静态资源后缓存下来
+        resourceResolver.add(new CachingResourceResolver(new ConcurrentMapCache("cache1")));
+        // 用于读取压缩静态资源，需要先将静态资源压缩，例：initGzip
+        resourceResolver.add(new EncodedResourceResolver());
+        resourceResolver.add(new PathResourceResolver());
+        handler.setLocations(classPathResourceList);
+        handler.setResourceResolvers(resourceResolver);
+        return handler;
+    }
+
+    /**
+     * /img/** ->
+     *          /img/1.jpg
+     *          /img/2.jpg
+     *          /img/3.jpg
+     */
+    @Bean("/img/**")
+    public ResourceHttpRequestHandler handler2() {
+        ResourceHttpRequestHandler handler = new ResourceHttpRequestHandler();
+        List classPathResourceList = new ArrayList();
+        classPathResourceList.add(new ClassPathResource("images/"));
+        handler.setLocations(classPathResourceList);
+        return handler;
+    }
+
+    /**
+     * 欢迎页
+     * WelcomePageHandlerMapping 由 Spring Boot 提供
+     * 可以映射到静态资源和 Controller
+     *
+     * a. WelcomePageHandlerMapping, 映射欢迎页(即只映射 '/')
+     *     - 它内置了 handler ParameterizableViewController 作用是不执行逻辑, 仅根据视图名找视图
+     *     - 视图名固定为 forward:index.html       /**
+     * b. SimpleControllerHandlerAdapter, 调用 handler
+     *     - 转发至 /index.html
+     *     - 处理 /index.html 又会走上面的静态资源处理流程
+     */
+    @Bean
+    public WelcomePageHandlerMapping welcomePageHandlerMapping(ApplicationContext context) {
+        Resource resource = context.getResource("classpath:static/index.html");
+        return new WelcomePageHandlerMapping(null, context, resource, "/**");
+        // 生成实现了 Controller 接口的处理器
+    }
+
+    /**
+     * 识别调用 Controller 接口的处理器
+     */
+    @Bean
+    public SimpleControllerHandlerAdapter simpleControllerHandlerAdapter() {
+        return new SimpleControllerHandlerAdapter();
+    }
+
+    /**
+     * 压缩静态资源
+     */
+    @PostConstruct
+    @SuppressWarnings("all")
+    public void initGzip() throws IOException {
+        Resource resource = new ClassPathResource("static");
+        File dir = resource.getFile();
+        for (File file : dir.listFiles(pathname -> pathname.getName().endsWith(".html"))) {
+            System.out.println(file);
+            try (FileInputStream fis = new FileInputStream(file); GZIPOutputStream fos = new GZIPOutputStream(new FileOutputStream(file.getAbsoluteFile() + ".gz"))) {
+                byte[] bytes = new byte[8 * 1024];
+                int len;
+                while ((len = fis.read(bytes)) != -1) {
+                    fos.write(bytes, 0, len);
+                }
+            }
+        }
+    }
 }
 ```
 
-#### 收获💡
+```java
+public class Application {
+    public static void main(String[] args) {
+        AnnotationConfigServletWebServerApplicationContext context
+                = new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+    }
+}
+```
+
+
+
+#### 总结
+
+##### 静态资源处理
 
 1. SimpleUrlHandlerMapping 不会在初始化时收集映射信息，需要手动收集
 2. SimpleUrlHandlerMapping 映射路径
 3. ResourceHttpRequestHandler 作为静态资源 handler
-4. HttpRequestHandlerAdapter, 调用此 handler
+4. HttpRequestHandlerAdapter, 调用 handler
 
 
 
-#### 演示2 - 静态资源解析优化
-
-##### 关键代码
-
-```java
-@Bean("/**")
-public ResourceHttpRequestHandler handler1() {
-    ResourceHttpRequestHandler handler = new ResourceHttpRequestHandler();
-    handler.setLocations(List.of(new ClassPathResource("static/")));
-    handler.setResourceResolvers(List.of(
-        	// ⬇️缓存优化
-            new CachingResourceResolver(new ConcurrentMapCache("cache1")),
-        	// ⬇️压缩优化
-            new EncodedResourceResolver(),
-        	// ⬇️原始资源解析
-            new PathResourceResolver()
-    ));
-    return handler;
-}
-```
-
-#### 收获💡
+##### 静态资源解析优化
 
 1. 责任链模式体现
 2. 压缩文件需要手动生成
 
 
 
-#### 演示3 - 欢迎页
-
-##### 关键代码
-
-```java
-@Bean
-public WelcomePageHandlerMapping welcomePageHandlerMapping(ApplicationContext context) {
-    Resource resource = context.getResource("classpath:static/index.html");
-    return new WelcomePageHandlerMapping(null, context, resource, "/**");
-}
-
-@Bean
-public SimpleControllerHandlerAdapter simpleControllerHandlerAdapter() {
-    return new SimpleControllerHandlerAdapter();
-}
-```
-
-#### 收获💡
+##### 欢迎页
 
 1. 欢迎页支持静态欢迎页与动态欢迎页
 2. WelcomePageHandlerMapping 映射欢迎页（即只映射 '/'）
