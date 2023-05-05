@@ -8661,7 +8661,7 @@ public class Application {
 
 
 
-### 36) mvc 处理流程
+### MVC 处理流程
 
 当浏览器发送一个请求 `http://localhost:8080/hello` 后，请求到达服务器，其处理流程是：
 
@@ -8709,7 +8709,7 @@ public class Application {
 
 ## Spring Boot
 
-### 37) Boot 骨架项目
+### Boot 骨架项目
 
 如果是 linux 环境，用以下命令即可获取 spring boot 的骨架 pom.xml
 
