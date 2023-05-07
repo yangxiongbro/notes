@@ -8727,15 +8727,15 @@ curl https://start.spring.io
 
 
 
-### 38) Boot War项目
+### Boot War项目
 
 步骤1：创建模块，区别在于打包方式选择 war
 
-<img src="D:/documents/资料/Spring/文档/文档/img/image-20211021160145072.png" alt="image-20211021160145072" style="zoom: 50%;" />
+<img src="..\pictures\20230507\001.png" alt="image-20211021160145072" style="zoom: 50%;" />
 
 接下来勾选 Spring Web 支持
 
-<img src="D:/documents/资料/Spring/文档/文档/img/image-20211021162416525.png" alt="image-20211021162416525" style="zoom:50%;" />
+<img src="..\pictures\20230507\002.png" alt="image-20211021162416525" style="zoom:50%;" />
 
 步骤2：编写控制器
 
@@ -8799,7 +8799,7 @@ spring.mvc.view.suffix=.jsp
 
 
 
-### 39) Boot 启动过程
+### Boot 启动过程
 
 阶段一：SpringApplication 构造
 
@@ -8810,6 +8810,8 @@ spring.mvc.view.suffix=.jsp
 5. 推断主启动类
 
 阶段二：执行 run 方法
+
+12 个步骤，7个事件
 
 1. 得到 SpringApplicationRunListeners，名字取得不好，实际是事件发布器
 
@@ -8853,9 +8855,119 @@ spring.mvc.view.suffix=.jsp
 
 > 带 * 的有独立的示例
 
-#### 演示 - 启动过程
+#### 启动过程
 
-**com.itheima.a39.A39_1** 对应 SpringApplication 构造
+##### SpringApplication 构造
+
+###### 源码
+
+```java
+public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
+    this.sources = new LinkedHashSet();
+    this.bannerMode = Mode.CONSOLE;
+    this.logStartupInfo = true;
+    this.addCommandLineProperties = true;
+    this.addConversionService = true;
+    this.headless = true;
+    this.registerShutdownHook = true;
+    this.additionalProfiles = new HashSet();
+    this.isCustomEnvironment = false;
+    this.lazyInitialization = false;
+    this.resourceLoader = resourceLoader;
+    Assert.notNull(primarySources, "PrimarySources must not be null");
+    // 获取 Bean Definition 源，Bean 可以来自配置类，配置文件...
+    this.primarySources = new LinkedHashSet(Arrays.asList(primarySources));
+    // 推断应用类型，Spring Boot 支持三种应用类型。非 WEB 应用程序，基于 Servlet 的应用程序，基于 reactive 的应用程序
+    // 后续需要根据不同应用类型创建不同类型的 ApplicationConetxt
+    this.webApplicationType = WebApplicationType.deduceFromClasspath();
+    // 添加 ApplicationContext 初始化器
+    // 		作用
+    // 		调用 SpringApplication.run 的时候创建 ApplicationContext
+    // 		调用初始化器，对 ApplicationContext 进行扩展
+    // 		调用 ApplicationContext.reflush 完成 ApplicationContext 初始化
+    this.setInitializers(this.getSpringFactoriesInstances(ApplicationContextInitializer.class));
+    // 监听器与事件
+    //		作用
+    //		Spring Boot 程序启动和运行过程中会发布一些事件，监听器就是用来相应这些事件并且做出处理
+    this.setListeners(this.getSpringFactoriesInstances(ApplicationListener.class));
+    // 主类推断。获取 main 方法所在类
+    this.mainApplicationClass = this.deduceMainApplicationClass();
+}
+```
+
+
+
+###### 演示
+
+```java
+@Configuration
+public class Application {
+
+    public static void main(String[] args) throws Exception {
+        System.out.println("1. 演示获取 Bean Definition 源");
+        SpringApplication spring = new SpringApplication(Application.class);
+        Set sourcesSet = new HashSet();
+        sourcesSet.add("classpath:b01.xml");
+        spring.setSources(sourcesSet);
+
+        System.out.println("2. 演示推断应用类型");
+        Method deduceFromClasspath = WebApplicationType.class.getDeclaredMethod("deduceFromClasspath");
+        deduceFromClasspath.setAccessible(true);
+        System.out.println("\t应用类型为:"+deduceFromClasspath.invoke(null));
+
+        System.out.println("3. 演示 ApplicationContext 初始化器");
+        spring.addInitializers(new ApplicationContextInitializer<ConfigurableApplicationContext>() {
+            @Override
+            public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
+                if (configurableApplicationContext instanceof GenericApplicationContext) {
+                    GenericApplicationContext gac = (GenericApplicationContext) configurableApplicationContext;
+                    gac.registerBean("bean3", Bean3.class);
+                }
+            }
+        });
+        System.out.println("4. 演示监听器与事件");
+        spring.addListeners(event -> System.out.println("\t事件为:" + event.getClass()));
+        System.out.println("5. 演示主类推断");
+        Method deduceMainApplicationClass = SpringApplication.class.getDeclaredMethod("deduceMainApplicationClass");
+        deduceMainApplicationClass.setAccessible(true);
+        System.out.println("\t主类是："+deduceMainApplicationClass.invoke(spring));
+
+        ConfigurableApplicationContext context = spring.run(args);
+
+        // 创建 ApplicationContext
+        // 调用初始化器 对 ApplicationContext 做扩展
+        // ApplicationContext.refresh
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println("name: " + name + " 来源：" + context.getBeanFactory().getBeanDefinition(name).getResourceDescription());
+        }
+        context.close();
+    }
+
+    static class Bean1 {
+
+    }
+
+    static class Bean2 {
+
+    }
+
+    static class Bean3 {
+
+    }
+
+    @Bean
+    public Bean2 bean2() {
+        return new Bean2();
+    }
+
+    @Bean
+    public TomcatServletWebServerFactory servletWebServerFactory() {
+        return new TomcatServletWebServerFactory();
+    }
+}
+```
+
+
 
 **com.itheima.a39.A39_2** 对应第1步，并演示 7 个事件
 
