@@ -8801,7 +8801,11 @@ spring.mvc.view.suffix=.jsp
 
 ### Boot 启动过程
 
-阶段一：SpringApplication 构造
+
+
+#### 启动过程
+
+##### 阶段一：SpringApplication 构造
 
 1. 记录 BeanDefinition 源
 2. 推断应用类型
@@ -8809,55 +8813,7 @@ spring.mvc.view.suffix=.jsp
 4. 记录监听器
 5. 推断主启动类
 
-阶段二：执行 run 方法
 
-12 个步骤，7个事件
-
-1. 得到 SpringApplicationRunListeners，名字取得不好，实际是事件发布器
-
-   * 发布 application starting 事件1️⃣
-
-2. 封装启动 args
-
-3. 准备 Environment 添加命令行参数（*）
-
-4. ConfigurationPropertySources 处理（*）
-
-   * 发布 application environment 已准备事件2️⃣
-
-5. 通过 EnvironmentPostProcessorApplicationListener 进行 env 后处理（*）
-   * application.properties，由 StandardConfigDataLocationResolver 解析
-   * spring.application.json
-
-6. 绑定 spring.main 到 SpringApplication 对象（*）
-
-7. 打印 banner（*）
-
-8. 创建容器
-
-9. 准备容器
-
-   * 发布 application context 已初始化事件3️⃣
-
-10. 加载 bean 定义
-
-    * 发布 application prepared 事件4️⃣
-
-11. refresh 容器
-
-    * 发布 application started 事件5️⃣
-
-12. 执行 runner
-
-    * 发布 application ready 事件6️⃣
-
-    * 这其中有异常，发布 application failed 事件7️⃣
-
-> 带 * 的有独立的示例
-
-#### 启动过程
-
-##### SpringApplication 构造
 
 ###### 源码
 
@@ -8982,9 +8938,302 @@ public class Application {
 
 
 
-**com.itheima.a39.A39_2** 对应第1步，并演示 7 个事件
+##### 阶段二：执行 run 方法
 
-**com.itheima.a39.A39_3** 对应第2、8到12步
+12 个步骤，7个事件
+
+1. 得到 SpringApplicationRunListeners，名字取得不好，实际是事件发布器
+
+   * 发布 application starting 事件1️⃣
+
+2. 封装启动 args
+
+3. 准备 Environment 添加命令行参数（*）
+
+4. ConfigurationPropertySources 处理（*）
+
+   * 发布 application environment 已准备事件2️⃣
+
+5. 通过 EnvironmentPostProcessorApplicationListener 进行 env 后处理（*）
+   * application.properties，由 StandardConfigDataLocationResolver 解析
+   * spring.application.json
+
+6. 绑定 spring.main 到 SpringApplication 对象（*）
+
+7. 打印 banner（*）
+
+8. 创建容器
+
+9. 准备容器
+
+   * 发布 application context 已初始化事件3️⃣
+
+10. 加载 bean 定义
+
+    * 发布 application prepared 事件4️⃣
+
+11. refresh 容器
+
+    * 发布 application started 事件5️⃣
+
+12. 执行 runner
+
+    * 发布 application ready 事件6️⃣
+
+    * 这其中有异常，发布 application failed 事件7️⃣
+
+> 带 * 的有独立的示例
+
+
+
+###### 源码
+
+```java
+public class SpringApplication {
+	public ConfigurableApplicationContext run(String... args) {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        ConfigurableApplicationContext context = null;
+        this.configureHeadlessProperty();
+        // s1.
+        SpringApplicationRunListeners listeners = this.getRunListeners(args);
+        listeners.starting();
+
+        try {
+            ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+            ConfigurableEnvironment environment = this.prepareEnvironment(listeners, applicationArguments);
+            this.configureIgnoreBeanInfo(environment);
+            Banner printedBanner = this.printBanner(environment);
+            // s8.
+            context = this.createApplicationContext();
+            this.prepareContext(context, environment, listeners, applicationArguments, printedBanner);
+            this.refreshContext(context);
+            this.afterRefresh(context, applicationArguments);
+            stopWatch.stop();
+            if (this.logStartupInfo) {
+                (new StartupInfoLogger(this.mainApplicationClass)).logStarted(this.getApplicationLog(), stopWatch);
+            }
+
+            listeners.started(context);
+            this.callRunners(context, applicationArguments);
+        } catch (Throwable var9) {
+            this.handleRunFailure(context, var9, listeners);
+            throw new IllegalStateException(var9);
+        }
+
+        try {
+            listeners.running(context);
+            return context;
+        } catch (Throwable var8) {
+            this.handleRunFailure(context, var8, (SpringApplicationRunListeners)null);
+            throw new IllegalStateException(var8);
+        }
+    }
+}
+```
+
+
+
+###### 第1步，7 个事件
+
+```java
+public class Application {
+    public static void main(String[] args) throws Exception{
+
+        // 添加 app 监听器
+        SpringApplication app = new SpringApplication();
+        app.addListeners(e -> System.out.println(e.getClass()));
+
+        // 获取事件发送器实现类名
+        // 如何读取 spring.factories 中的配置
+        List<String> names = SpringFactoriesLoader.loadFactoryNames(SpringApplicationRunListener.class, Application.class.getClassLoader());
+        for (String name : names) {
+            System.out.println(name);
+            Class<?> clazz = Class.forName(name);
+            Constructor<?> constructor = clazz.getConstructor(SpringApplication.class, String[].class);
+            SpringApplicationRunListener publisher = (SpringApplicationRunListener) constructor.newInstance(app, args);
+
+            // 发布事件
+            // DefaultBootstrapContext 需要 Spring Boot 版本 2.5.5
+            DefaultBootstrapContext bootstrapContext = new DefaultBootstrapContext();
+            // spring boot 开始启动
+            // e1.发布 application starting 事件
+            publisher.starting(bootstrapContext);
+            // 环境信息准备完毕
+            // e2.发布 application environment 已准备事件
+            publisher.environmentPrepared(bootstrapContext, new StandardEnvironment());
+            // 在 spring 容器创建，并调用初始化器之后，发送此事件
+            // e3.发布 application context 已初始化事件
+            GenericApplicationContext context = new GenericApplicationContext();
+            publisher.contextPrepared(context);
+            // 所有 bean definition 加载完毕
+            // e4.发布 application prepared 事件
+            publisher.contextLoaded(context);
+            context.refresh();
+            // spring 容器初始化完成(refresh 方法调用完毕)
+            // e5.发布 application started 事件
+            publisher.started(context);
+            // spring boot 启动完毕
+            // e6.发布 application ready 事件
+            publisher.running(context);
+            // spring boot 启动出错
+            // e7.这其中有异常，发布 application failed 事件
+            publisher.failed(context, new Exception("出错了"));
+        }
+    }
+}
+```
+
+
+
+###### 第2、8到12步
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="bean4" class="cn.example.uums.test.a39.Application.Bean4"/>
+
+</beans>
+```
+
+
+
+```java
+@Component
+public class Bean7 {
+}
+```
+
+
+
+```java
+// 运行时请添加运行参数 --server.port=8080 debug
+public class Application {
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws Exception {
+        SpringApplication app = new SpringApplication();
+        app.addInitializers(new ApplicationContextInitializer<ConfigurableApplicationContext>() {
+            @Override
+            public void initialize(ConfigurableApplicationContext applicationContext) {
+                System.out.println("执行初始化器增强...");
+            }
+        });
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 2. 封装启动 args");
+        DefaultApplicationArguments arguments = new DefaultApplicationArguments(args);
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 8. 创建容器");
+        GenericApplicationContext context = createApplicationContext(WebApplicationType.SERVLET);
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 9. 准备容器");
+        for (ApplicationContextInitializer initializer : app.getInitializers()) {
+            initializer.initialize(context);
+        }
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 10. 加载 bean definition");
+        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+        AnnotatedBeanDefinitionReader reader1 = new AnnotatedBeanDefinitionReader(beanFactory);
+        XmlBeanDefinitionReader reader2 = new XmlBeanDefinitionReader(beanFactory);
+        ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(beanFactory);
+
+        reader1.register(Config.class);
+        reader2.loadBeanDefinitions(new ClassPathResource("b03.xml"));
+        scanner.scan("cn.example.uums.test.a39.sub");
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 11. refresh 容器");
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println("name:" + name + " 来源：" + beanFactory.getBeanDefinition(name).getResourceDescription());
+        }
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 12. 执行 runner");
+        // runner 是实现了特定接口的 Bean
+        for (CommandLineRunner runner : context.getBeansOfType(CommandLineRunner.class).values()) {
+            runner.run(args);
+        }
+
+        for (ApplicationRunner runner : context.getBeansOfType(ApplicationRunner.class).values()) {
+            runner.run(arguments);
+        }
+
+        /*
+            学到了什么
+            a. 创建容器、加载 bean 定义、refresh, 对应的步骤
+
+         */
+    }
+
+    /**
+     * SpringApplication 构造时已经推断出了应用类型，需要根据不同应用类型创建不同类型的 ApplicationConetxt
+     */
+    private static GenericApplicationContext createApplicationContext(WebApplicationType type) {
+        GenericApplicationContext context = null;
+        switch (type) {
+            case SERVLET:
+                context = new AnnotationConfigServletWebServerApplicationContext();
+            case REACTIVE:
+                context = new AnnotationConfigReactiveWebServerApplicationContext();
+            case NONE:
+                context = new AnnotationConfigApplicationContext();
+        }
+        return context;
+    }
+
+    static class Bean4 {
+
+    }
+
+    static class Bean5 {
+
+    }
+
+    static class Bean6 {
+
+    }
+
+    @Configuration
+    static class Config {
+        @Bean
+        public Bean5 bean5() {
+            return new Bean5();
+        }
+
+        @Bean
+        public ServletWebServerFactory servletWebServerFactory() {
+            return new TomcatServletWebServerFactory();
+        }
+
+        @Bean
+        public CommandLineRunner commandLineRunner() {
+            return new CommandLineRunner() {
+                @Override
+                public void run(String... args) throws Exception {
+                    System.out.println("commandLineRunner()..." + Arrays.toString(args));
+                }
+            };
+        }
+
+        @Bean
+        public ApplicationRunner applicationRunner() {
+            return new ApplicationRunner() {
+                @Override
+                public void run(ApplicationArguments args) throws Exception {
+                    System.out.println("applicationRunner()..." + Arrays.toString(args.getSourceArgs()));
+                    System.out.println(args.getOptionNames());
+                    System.out.println(args.getOptionValues("server.port"));
+                    System.out.println(args.getNonOptionArgs());
+                }
+            };
+        }
+    }
+}
+```
+
+
 
 **org.springframework.boot.Step3**
 
