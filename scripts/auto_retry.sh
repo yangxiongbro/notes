@@ -23,10 +23,11 @@ echo "$command"
 index=0
 `touch $temp_output_file_name`
 while true; do
-  eval "$command"
-  result=`cat $temp_output_file_name`
   let index++
   echo "try count:$index"
+
+  eval "$command"
+  result=`cat $temp_output_file_name`
   echo "$result"
   if [[ $result != *$retry_result* || $index -ge $fail_retry_count ]]; then
     break
