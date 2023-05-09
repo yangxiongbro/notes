@@ -9040,7 +9040,7 @@ public class SpringApplication {
 public class Application {
     public static void main(String[] args) throws Exception{
 
-        // 添加 app 监听器
+        System.out.println("----------------step 1 添加 app 监听器--------------------");
         SpringApplication app = new SpringApplication();
         app.addListeners(e -> System.out.println(e.getClass()));
 
@@ -9057,27 +9057,27 @@ public class Application {
             // DefaultBootstrapContext 需要 Spring Boot 版本 2.5.5
             DefaultBootstrapContext bootstrapContext = new DefaultBootstrapContext();
             // spring boot 开始启动
-            // e1.发布 application starting 事件
+        	System.out.println("----------------e1.发布 application starting 事件--------------------");
             publisher.starting(bootstrapContext);
             // 环境信息准备完毕
-            // e2.发布 application environment 已准备事件
+        	System.out.println("----------------e2.发布 application environment 已准备事件--------------------");
             publisher.environmentPrepared(bootstrapContext, new StandardEnvironment());
             // 在 spring 容器创建，并调用初始化器之后，发送此事件
-            // e3.发布 application context 已初始化事件
+        	System.out.println("----------------e3.发布 application context 已初始化事件--------------------");
             GenericApplicationContext context = new GenericApplicationContext();
             publisher.contextPrepared(context);
             // 所有 bean definition 加载完毕
-            // e4.发布 application prepared 事件
+        	System.out.println("----------------e4.发布 application prepared 事件--------------------");
             publisher.contextLoaded(context);
             context.refresh();
             // spring 容器初始化完成(refresh 方法调用完毕)
-            // e5.发布 application started 事件
+        	System.out.println("----------------e5.发布 application started 事件--------------------");
             publisher.started(context);
             // spring boot 启动完毕
-            // e6.发布 application ready 事件
+            System.out.println("----------------e6.发布 application ready 事件--------------------");
             publisher.running(context);
             // spring boot 启动出错
-            // e7.这其中有异常，发布 application failed 事件
+            System.out.println("----------------e7.这其中有异常，发布 application failed 事件--------------------");
             publisher.failed(context, new Exception("出错了"));
         }
     }
@@ -9122,18 +9122,18 @@ public class Application {
             }
         });
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 2. 封装启动 args");
+        System.out.println("----------------step 2 封装启动 args--------------------");
         DefaultApplicationArguments arguments = new DefaultApplicationArguments(args);
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 8. 创建容器");
+        System.out.println("----------------step 8 创建容器--------------------");
         GenericApplicationContext context = createApplicationContext(WebApplicationType.SERVLET);
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 9. 准备容器");
+        System.out.println("----------------step 9 准备容器--------------------");
         for (ApplicationContextInitializer initializer : app.getInitializers()) {
             initializer.initialize(context);
         }
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 10. 加载 bean definition");
+        System.out.println("----------------step 10 加载 bean definition--------------------");
         DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
         AnnotatedBeanDefinitionReader reader1 = new AnnotatedBeanDefinitionReader(beanFactory);
         XmlBeanDefinitionReader reader2 = new XmlBeanDefinitionReader(beanFactory);
@@ -9143,14 +9143,14 @@ public class Application {
         reader2.loadBeanDefinitions(new ClassPathResource("b03.xml"));
         scanner.scan("cn.example.uums.test.a39.sub");
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 11. refresh 容器");
+        System.out.println("----------------step 11 refresh 容器--------------------");
         context.refresh();
 
         for (String name : context.getBeanDefinitionNames()) {
             System.out.println("name:" + name + " 来源：" + beanFactory.getBeanDefinition(name).getResourceDescription());
         }
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 12. 执行 runner");
+        System.out.println("----------------step 12 执行 runner--------------------");
         // runner 是实现了特定接口的 Bean
         for (CommandLineRunner runner : context.getBeansOfType(CommandLineRunner.class).values()) {
             runner.run(args);
@@ -9235,17 +9235,210 @@ public class Application {
 
 
 
-**org.springframework.boot.Step3**
+###### 第3到7步
 
-**org.springframework.boot.Step4**
+step3.properties
 
-**org.springframework.boot.Step5**
+```properties
+server.port=8080
+```
 
-**org.springframework.boot.Step6**
+step4.properties
 
-**org.springframework.boot.Step7**
+```properties
+user.first-name=George
+user.middle_name=Walker
+user.lastName=Bush
+```
 
-#### 收获💡
+step6.properties
+
+```properties
+spring.main.banner-mode=off
+spring.main.lazy-initialization=true
+```
+
+banner1.txt
+
+```txt
+  _____            _             ____              _
+ / ____|          (_)           |  _ \            | |
+| (___  _ __  _ __ _ _ __   __ _| |_) | ___   ___ | |_
+ \___ \| '_ \| '__| | '_ \ / _` |  _ < / _ \ / _ \| __|
+ ____) | |_) | |  | | | | | (_| | |_) | (_) | (_) | |_
+|_____/| .__/|_|  |_|_| |_|\__, |____/ \___/ \___/ \__|
+       | |                  __/ |
+       |_|                 |___/
+```
+
+[banner2.png](../pictures/20230507/003.png)
+
+```java
+public class Application {
+    public static void main(String[] args) throws IOException {
+        step3(args);
+        step4();
+        step5(args);
+        step6();
+        step7();
+    }
+
+    private static void step3(String[] args) throws IOException {
+        System.out.println("----------------step 3 准备 Environment 添加命令行参数--------------------");
+        ApplicationEnvironment env = new ApplicationEnvironment(); // 系统环境变量, properties, yaml
+        env.getPropertySources().addLast(new ResourcePropertySource(new ClassPathResource("step3.properties")));
+        env.getPropertySources().addFirst(new SimpleCommandLinePropertySource(args));
+        // 环境变量来源
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        System.out.println(env.getProperty("JAVA_HOME"));
+        System.out.println(env.getProperty("server.port"));
+    }
+
+    private static void step4() throws IOException {
+        System.out.println("----------------step 4 ConfigurationPropertySources 处理--------------------");
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        env.getPropertySources().addLast(
+                new ResourcePropertySource("step4", new ClassPathResource("step4.properties"))
+        );
+        ConfigurationPropertySources.attach(env);
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+
+        System.out.println(env.getProperty("user.first-name"));
+        System.out.println(env.getProperty("user.middle-name"));
+        System.out.println(env.getProperty("user.last-name"));
+    }
+
+    private static void step5(String[] args){
+        System.out.println("----------------step 5 通过 EnvironmentPostProcessorApplicationListener 进行 env 后处理--------------------");
+        // application.properties 在这步被添加到环境
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        SpringApplication app = new SpringApplication();
+        app.addListeners(new EnvironmentPostProcessorApplicationListener());
+
+        /*List<String> names = SpringFactoriesLoader.loadFactoryNames(EnvironmentPostProcessor.class, Application.class.getClassLoader());
+        for (String name : names) {
+            System.out.println(name);
+        }*/
+
+        EventPublishingRunListener publisher = new EventPublishingRunListener(app, args);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强前");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        publisher.environmentPrepared(new DefaultBootstrapContext(), env);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强后");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        step5Test();
+    }
+
+    private static void step6() throws IOException {
+        System.out.println("----------------step 6 绑定 spring.main 前缀的 key value 至 SpringApplication--------------------");
+        SpringApplication application = new SpringApplication();
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        env.getPropertySources().addLast(new ResourcePropertySource("step4", new ClassPathResource("step4.properties")));
+        env.getPropertySources().addLast(new ResourcePropertySource("step6", new ClassPathResource("step6.properties")));
+
+//        User user = Binder.get(env).bind("user", User.class).get();
+//        System.out.println(user);
+
+//        User user = new User();
+//        Binder.get(env).bind("user", Bindable.ofInstance(user));
+//        System.out.println(user);
+
+        // 属性为 SpringApplication 的私有属性, 请通过 debug 查看
+        System.out.println(application);
+        Binder.get(env).bind("spring.main", Bindable.ofInstance(application));
+        System.out.println(application);
+    }
+
+    private static void step7(){
+        System.out.println("----------------step 7 打印 banner--------------------");
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        SpringApplicationBannerPrinter printer = new SpringApplicationBannerPrinter(
+                new DefaultResourceLoader(),
+                new SpringBootBanner()
+        );
+        // 测试文字 banner
+//        env.getPropertySources().addLast(new MapPropertySource("custom", Map.of("spring.banner.location","banner1.txt")));
+        // 测试图片 banner
+//        env.getPropertySources().addLast(new MapPropertySource("custom", Map.of("spring.banner.image.location","banner2.png")));
+        // 版本号的获取
+        System.out.println(SpringBootVersion.getVersion());
+        printer.print(env, Application.class, System.out);
+    }
+
+    private static void step5Test() {
+        SpringApplication app = new SpringApplication();
+        ApplicationEnvironment env = new ApplicationEnvironment();
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强前");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        ConfigDataEnvironmentPostProcessor postProcessor1 = new ConfigDataEnvironmentPostProcessor(new DeferredLogs(), new DefaultBootstrapContext());
+        postProcessor1.postProcessEnvironment(env, app);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强后");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        RandomValuePropertySourceEnvironmentPostProcessor postProcessor2 = new RandomValuePropertySourceEnvironmentPostProcessor(new DeferredLog());
+        postProcessor2.postProcessEnvironment(env, app);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强后");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        System.out.println(env.getProperty("server.port"));
+        System.out.println(env.getProperty("random.int"));
+        System.out.println(env.getProperty("random.int"));
+        System.out.println(env.getProperty("random.int"));
+        System.out.println(env.getProperty("random.uuid"));
+        System.out.println(env.getProperty("random.uuid"));
+        System.out.println(env.getProperty("random.uuid"));
+    }
+
+    static class User {
+        private String firstName;
+        private String middleName;
+        private String lastName;
+        public String getFirstName() {
+            return firstName;
+        }
+        public void setFirstName(String firstName) {
+            this.firstName = firstName;
+        }
+        public String getMiddleName() {
+            return middleName;
+        }
+        public void setMiddleName(String middleName) {
+            this.middleName = middleName;
+        }
+        public String getLastName() {
+            return lastName;
+        }
+        public void setLastName(String lastName) {
+            this.lastName = lastName;
+        }
+        @Override
+        public String toString() {
+            return "User{" +
+                    "firstName='" + firstName + '\'' +
+                    ", middleName='" + middleName + '\'' +
+                    ", lastName='" + lastName + '\'' +
+                    '}';
+        }
+    }
+}
+```
+
+
+
+#### 收获
 
 1. SpringApplication 构造方法中所做的操作
    * 可以有多种源用来加载 bean 定义
