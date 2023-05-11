@@ -29,7 +29,8 @@ while true; do
   eval "$command"
   result=`cat $temp_output_file_name`
   echo "$result"
-  if [[ $result != *$retry_result* || $index -ge $fail_retry_count ]]; then
+#  if [[ $result != *$retry_result* || $index -ge $fail_retry_count ]]; then
+  if [[ $index -ge $fail_retry_count ]]; then
     break
   fi
 done
