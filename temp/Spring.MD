@@ -9460,7 +9460,7 @@ public class Application {
 
 
 
-### 40) Tomcat 内嵌容器
+### Tomcat 内嵌容器
 
 Tomcat 基本结构
 
@@ -9483,63 +9483,200 @@ Server
                         web.xml
 ```
 
-#### 演示1 - Tomcat 内嵌容器
+#### Tomcat 内嵌容器
 
-##### 关键代码
+
 
 ```java
-public static void main(String[] args) throws LifecycleException, IOException {
-    // 1.创建 Tomcat 对象
-    Tomcat tomcat = new Tomcat();
-    tomcat.setBaseDir("tomcat");
+public class TestTomcat {
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws LifecycleException, IOException {
+        // 1.创建 Tomcat 对象
+        Tomcat tomcat = new Tomcat();
+        tomcat.setBaseDir("tomcat");
 
-    // 2.创建项目文件夹, 即 docBase 文件夹
-    File docBase = Files.createTempDirectory("boot.").toFile();
-    docBase.deleteOnExit();
+        // 2.创建项目文件夹, 即 docBase 文件夹
+        File docBase = Files.createTempDirectory("boot.").toFile();
+        docBase.deleteOnExit();
 
-    // 3.创建 Tomcat 项目, 在 Tomcat 中称为 Context
-    Context context = tomcat.addContext("", docBase.getAbsolutePath());
+        // 3.创建 Tomcat 项目, 在 Tomcat 中称为 Context
+        Context context = tomcat.addContext("test/", docBase.getAbsolutePath());
+        
+        // 4.编程添加 Servlet
+        context.addServletContainerInitializer(new ServletContainerInitializer() {
+            @Override
+            public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
+                HelloServlet helloServlet = new HelloServlet();
+                ctx.addServlet("aaa", helloServlet).addMapping("/hello");
+            }
+        }, Collections.emptySet());
 
-    // 4.编程添加 Servlet
-    context.addServletContainerInitializer(new ServletContainerInitializer() {
-        @Override
-        public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
-            HelloServlet helloServlet = new HelloServlet();
-            ctx.addServlet("aaa", helloServlet).addMapping("/hello");
-        }
-    }, Collections.emptySet());
+        // 5.启动 Tomcat
+        tomcat.start();
 
-    // 5.启动 Tomcat
-    tomcat.start();
-
-    // 6.创建连接器, 设置监听端口
-    Connector connector = new Connector(new Http11Nio2Protocol());
-    connector.setPort(8080);
-    tomcat.setConnector(connector);
+        // 6.创建连接器, 设置监听端口
+        Connector connector = new Connector(new Http11Nio2Protocol());
+        connector.setPort(8080);
+        tomcat.setConnector(connector);
+    }
 }
 ```
 
 
 
-#### 演示2 - 集成 Spring 容器
+```java
+public class HelloServlet extends HttpServlet {
 
-##### 关键代码
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.setContentType("text/html;charset=utf-8");
+        resp.getWriter().print("<h3>hello</h3>");
+    }
+}
+```
+
+
+
+#### 集成 Spring 容器
+
+##### Tomcat 在 Spring 容器中的初始化
+
+创建 Spring 容器时执行 refresh 方法会初始化 Tomcat
 
 ```java
-WebApplicationContext springContext = getApplicationContext();
+public abstract class AbstractApplicationContext extends DefaultResourceLoader implements ConfigurableApplicationContext {
+    public void refresh() throws BeansException, IllegalStateException {
+        synchronized(this.startupShutdownMonitor) {
+            StartupStep contextRefresh = this.applicationStartup.start("spring.context.refresh");
+            this.prepareRefresh();
+            ConfigurableListableBeanFactory beanFactory = this.obtainFreshBeanFactory();
+            this.prepareBeanFactory(beanFactory);
 
-// 4.编程添加 Servlet
-context.addServletContainerInitializer(new ServletContainerInitializer() {
-    @Override
-    public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
-        // ⬇️通过 ServletRegistrationBean 添加 DispatcherServlet 等
-        for (ServletRegistrationBean registrationBean : 
-             springContext.getBeansOfType(ServletRegistrationBean.class).values()) {
-            registrationBean.onStartup(ctx);
+            try {
+                this.postProcessBeanFactory(beanFactory);
+                StartupStep beanPostProcess = this.applicationStartup.start("spring.context.beans.post-process");
+                this.invokeBeanFactoryPostProcessors(beanFactory);
+                this.registerBeanPostProcessors(beanFactory);
+                beanPostProcess.end();
+                this.initMessageSource();
+                this.initApplicationEventMulticaster();
+                // onRefresh 创建 Tomcat 步骤 1、2、3、4
+                this.onRefresh();
+                this.registerListeners();
+                this.finishBeanFactoryInitialization(beanFactory);
+                // 启动 Tomcat 步骤 5、6
+                this.finishRefresh();
+            } catch (BeansException var10) {
+                if (this.logger.isWarnEnabled()) {
+                    this.logger.warn("Exception encountered during context initialization - cancelling refresh attempt: " + var10);
+                }
+
+                this.destroyBeans();
+                this.cancelRefresh(var10);
+                throw var10;
+            } finally {
+                this.resetCommonCaches();
+                contextRefresh.end();
+            }
+
         }
     }
-}, Collections.emptySet());
+}
 ```
+
+
+
+##### 示例
+
+```java
+@Configuration
+static class Config {
+    @Bean
+    public DispatcherServletRegistrationBean registrationBean(DispatcherServlet dispatcherServlet) {
+        return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+    }
+
+    @Bean
+    // 这个例子中必须为 DispatcherServlet 提供 AnnotationConfigWebApplicationContext, 否则会选择 XmlWebApplicationContext 实现
+    public DispatcherServlet dispatcherServlet(WebApplicationContext applicationContext) {
+        return new DispatcherServlet(applicationContext);
+    }
+
+    @Bean
+    public RequestMappingHandlerAdapter requestMappingHandlerAdapter() {
+        RequestMappingHandlerAdapter handlerAdapter = new RequestMappingHandlerAdapter();
+        List list = new ArrayList();
+        list.add(new MappingJackson2HttpMessageConverter());
+        handlerAdapter.setMessageConverters(list);
+        return handlerAdapter;
+    }
+
+    @RestController
+    static class MyController {
+        @GetMapping("hello2")
+        public Map<String,Object> hello() {
+            Map<String, Object> map = new HashMap<>();
+            map.put("hello2", "hello2, spring!");
+            return map;
+        }
+    }
+}
+```
+
+
+
+```java
+public class TestTomcat {
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws LifecycleException, IOException {
+        // 1.创建 Tomcat 对象
+        Tomcat tomcat = new Tomcat();
+        tomcat.setBaseDir("tomcat");
+
+        // 2.创建项目文件夹, 即 docBase 文件夹
+        File docBase = Files.createTempDirectory("boot.").toFile();
+        docBase.deleteOnExit();
+
+        // 3.创建 Tomcat 项目, 在 Tomcat 中称为 Context
+        Context context = tomcat.addContext("test/", docBase.getAbsolutePath());
+
+        WebApplicationContext springContext = getApplicationContext();
+
+        // 4.编程添加 Servlet
+        context.addServletContainerInitializer(new ServletContainerInitializer() {
+            @Override
+            public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
+                HelloServlet helloServlet = new HelloServlet();
+                ctx.addServlet("aaa", helloServlet).addMapping("/hello");
+
+//                DispatcherServlet dispatcherServlet = springContext.getBean(DispatcherServlet.class);
+//                ctx.addServlet("dispatcherServlet", dispatcherServlet).addMapping("/");
+                for (ServletRegistrationBean registrationBean : springContext.getBeansOfType(ServletRegistrationBean.class).values()) {
+                    registrationBean.onStartup(ctx);
+                }
+            }
+        }, Collections.emptySet());
+
+        // 5.启动 Tomcat
+        tomcat.start();
+
+        // 6.创建连接器, 设置监听端口
+        Connector connector = new Connector(new Http11Nio2Protocol());
+        connector.setPort(8080);
+        tomcat.setConnector(connector);
+    }
+
+    public static WebApplicationContext getApplicationContext() {
+//        AnnotationConfigServletWebServerApplicationContext
+        AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
+        context.register(Config.class);
+        context.refresh();
+        return context;
+    }
+}
+```
+
+
 
 
 
