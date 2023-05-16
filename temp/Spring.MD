@@ -9794,23 +9794,24 @@ PooledDataSource 又支持如下数据源
 
 
 
-#### 演示 - 自动配置类原理
+#### 自动配置类原理
 
-##### 关键代码
+##### 示例
 
 假设已有第三方的两个自动配置类
 
 ```java
-@Configuration // ⬅️第三方的配置类
-static class AutoConfiguration1 {
+// @Configuration // 第三方的配置类
+public class AutoConfiguration1 {
     @Bean
+    @ConditionalOnMissingBean
     public Bean1 bean1() {
-        return new Bean1();
+        return new Bean1("第三方");
     }
 }
 
-@Configuration // ⬅️第三方的配置类
-static class AutoConfiguration2 {
+// @Configuration // 第三方的配置类
+public class AutoConfiguration2 {
     @Bean
     public Bean2 bean2() {
         return new Bean2();
@@ -9821,32 +9822,69 @@ static class AutoConfiguration2 {
 提供一个配置文件 META-INF/spring.factories，key 为导入器类名，值为多个自动配置类名，用逗号分隔
 
 ```properties
-MyImportSelector=\
-AutoConfiguration1,\
-AutoConfiguration2
+cn.example.uums.test.a41.MyImportSelector=\
+cn.example.uums.test.a41.AutoConfiguration1,\
+cn.example.uums.test.a41.AutoConfiguration2
 ```
 
-> ***注意***
->
-> * 上述配置文件中 MyImportSelector 与 AutoConfiguration1，AutoConfiguration2 为简洁均省略了包名，自己测试时请将包名根据情况补全
+
 
 引入自动配置
 
 ```java
-@Configuration // ⬅️本项目的配置类
+@Configuration // 本项目的配置类
+// @Import({AutoConfiguration1.class, AutoConfiguration2.class})
 @Import(MyImportSelector.class)
-static class Config { }
+public class Config {
+    @Bean
+    public Bean1 bean1() {
+        return new Bean1("本项目");
+    }
+}
 
-static class MyImportSelector implements DeferredImportSelector {
-    // ⬇️该方法从 META-INF/spring.factories 读取自动配置类名，返回的 String[] 即为要导入的配置类
+public class MyImportSelector implements DeferredImportSelector { // ImportSelector
+    // 该方法从 META-INF/spring.factories 读取自动配置类名，返回的 String[] 即为要导入的配置类
+    @Override
     public String[] selectImports(AnnotationMetadata importingClassMetadata) {
-        return SpringFactoriesLoader
-            .loadFactoryNames(MyImportSelector.class, null).toArray(new String[0]);
+        // return new String[]{AutoConfiguration1.class.getName(), AutoConfiguration2.class.getName()};
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>> 自动配置类 >>>>>>>>>>>>>>>>>>>>>>>");
+        for (String name : SpringFactoriesLoader.loadFactoryNames(EnableAutoConfiguration.class, null)) {
+            System.out.println(name);
+        }
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+
+        List<String> names = SpringFactoriesLoader.loadFactoryNames(MyImportSelector.class, null);
+        return names.toArray(new String[0]);
     }
 }
 ```
 
-#### 收获💡
+
+
+```java
+public class Application {
+
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws IOException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.getDefaultListableBeanFactory().setAllowBeanDefinitionOverriding(false);
+        context.registerBean("config", Config.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>");
+        System.out.println(context.getBean(Bean1.class));
+    }
+}
+```
+
+
+
+#### 总结
 
 1. 自动配置类本质上就是一个配置类而已，只是用 META-INF/spring.factories 管理，与应用配置类解耦
 2. @Enable 打头的注解本质是利用了 @Import
