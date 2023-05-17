@@ -9680,7 +9680,7 @@ public class TestTomcat {
 
 
 
-### 41) Boot 自动配置
+### Boot 自动配置
 
 #### AopAutoConfiguration
 
@@ -9690,6 +9690,135 @@ Spring Boot 是利用了自动配置类来简化了 aop 相关配置
 * 可以通过 `spring.aop.auto=false` 禁用 aop 自动配置
 * AOP 自动配置的本质是通过 `@EnableAspectJAutoProxy` 来开启了自动代理，如果在引导类上自己添加了 `@EnableAspectJAutoProxy` 那么以自己添加的为准
 * `@EnableAspectJAutoProxy` 的本质是向容器中添加了 `AnnotationAwareAspectJAutoProxyCreator` 这个 bean 后处理器，它能够找到容器中所有切面，并为匹配切点的目标类创建代理，创建代理的工作一般是在 bean 的初始化阶段完成的
+
+
+
+##### 源码
+
+```java
+@Configuration(
+    proxyBeanMethods = false
+)
+@ConditionalOnProperty(
+    prefix = "spring.aop",
+    name = {"auto"},
+    havingValue = "true",
+    matchIfMissing = true
+)
+public class AopAutoConfiguration {
+    public AopAutoConfiguration() {
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @ConditionalOnMissingClass({"org.aspectj.weaver.Advice"})
+    @ConditionalOnProperty(
+        prefix = "spring.aop",
+        name = {"proxy-target-class"},
+        havingValue = "true",
+        matchIfMissing = true
+    )
+    static class ClassProxyingConfiguration {
+        ClassProxyingConfiguration() {
+        }
+
+        @Bean
+        static BeanFactoryPostProcessor forceAutoProxyCreatorToUseClassProxying() {
+            return (beanFactory) -> {
+                if (beanFactory instanceof BeanDefinitionRegistry) {
+                    BeanDefinitionRegistry registry = (BeanDefinitionRegistry)beanFactory;
+                    AopConfigUtils.registerAutoProxyCreatorIfNecessary(registry);
+                    AopConfigUtils.forceAutoProxyCreatorToUseClassProxying(registry);
+                }
+
+            };
+        }
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @ConditionalOnClass({Advice.class})
+    static class AspectJAutoProxyingConfiguration {
+        AspectJAutoProxyingConfiguration() {
+        }
+
+        @Configuration(
+            proxyBeanMethods = false
+        )
+        @EnableAspectJAutoProxy(
+            proxyTargetClass = true
+        )
+        @ConditionalOnProperty(
+            prefix = "spring.aop",
+            name = {"proxy-target-class"},
+            havingValue = "true",
+            matchIfMissing = true
+        )
+        static class CglibAutoProxyConfiguration {
+            CglibAutoProxyConfiguration() {
+            }
+        }
+
+        @Configuration(
+            proxyBeanMethods = false
+        )
+        @EnableAspectJAutoProxy(
+            proxyTargetClass = false
+        )
+        @ConditionalOnProperty(
+            prefix = "spring.aop",
+            name = {"proxy-target-class"},
+            havingValue = "false"
+        )
+        static class JdkDynamicAutoProxyConfiguration {
+            JdkDynamicAutoProxyConfiguration() {
+            }
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class TestAopAuto {
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        StandardEnvironment env = new StandardEnvironment();
+//        env.getPropertySources().addLast(new SimpleCommandLinePropertySource("--spring.aop.auto=false"));
+        context.setEnvironment(env);
+        // 注册常见的后处理器
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(Config.class);
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+        System.out.println(">>>>>>>>>>>>>>>");
+        AnnotationAwareAspectJAutoProxyCreator creator = context.getBean(
+                "org.springframework.aop.config.internalAutoProxyCreator", AnnotationAwareAspectJAutoProxyCreator.class);
+        System.out.println(creator.isProxyTargetClass());
+
+    }
+
+    @Configuration
+    @Import(MyImportSelector.class)
+    static class Config {
+
+    }
+
+    static class MyImportSelector implements DeferredImportSelector {
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{AopAutoConfiguration.class.getName()};
+        }
+    }
+}
+```
 
 
 
@@ -9714,6 +9843,155 @@ PooledDataSource 又支持如下数据源
 
 
 
+##### 源码
+
+```java
+@Configuration(
+    proxyBeanMethods = false
+)
+@ConditionalOnClass({DataSource.class, EmbeddedDatabaseType.class})
+@ConditionalOnMissingBean(
+    type = {"io.r2dbc.spi.ConnectionFactory"}
+)
+@EnableConfigurationProperties({DataSourceProperties.class})
+@Import({DataSourcePoolMetadataProvidersConfiguration.class, InitializationSpecificCredentialsDataSourceInitializationConfiguration.class, SharedCredentialsDataSourceInitializationConfiguration.class})
+public class DataSourceAutoConfiguration {
+    public DataSourceAutoConfiguration() {
+    }
+
+    static class EmbeddedDatabaseCondition extends SpringBootCondition {
+        private static final String DATASOURCE_URL_PROPERTY = "spring.datasource.url";
+        private final SpringBootCondition pooledCondition = new DataSourceAutoConfiguration.PooledDataSourceCondition();
+
+        EmbeddedDatabaseCondition() {
+        }
+
+        public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            Builder message = ConditionMessage.forCondition("EmbeddedDataSource", new Object[0]);
+            if (this.hasDataSourceUrlProperty(context)) {
+                return ConditionOutcome.noMatch(message.because("spring.datasource.url is set"));
+            } else if (this.anyMatches(context, metadata, new Condition[]{this.pooledCondition})) {
+                return ConditionOutcome.noMatch(message.foundExactly("supported pooled data source"));
+            } else {
+                EmbeddedDatabaseType type = EmbeddedDatabaseConnection.get(context.getClassLoader()).getType();
+                return type == null ? ConditionOutcome.noMatch(message.didNotFind("embedded database").atAll()) : ConditionOutcome.match(message.found("embedded database").items(new Object[]{type}));
+            }
+        }
+
+        private boolean hasDataSourceUrlProperty(ConditionContext context) {
+            Environment environment = context.getEnvironment();
+            if (environment.containsProperty("spring.datasource.url")) {
+                try {
+                    return StringUtils.hasText(environment.getProperty("spring.datasource.url"));
+                } catch (IllegalArgumentException var4) {
+                }
+            }
+
+            return false;
+        }
+    }
+
+    static class PooledDataSourceAvailableCondition extends SpringBootCondition {
+        PooledDataSourceAvailableCondition() {
+        }
+
+        public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            Builder message = ConditionMessage.forCondition("PooledDataSource", new Object[0]);
+            return DataSourceBuilder.findType(context.getClassLoader()) != null ? ConditionOutcome.match(message.foundExactly("supported DataSource")) : ConditionOutcome.noMatch(message.didNotFind("supported DataSource").atAll());
+        }
+    }
+
+    static class PooledDataSourceCondition extends AnyNestedCondition {
+        PooledDataSourceCondition() {
+            super(ConfigurationPhase.PARSE_CONFIGURATION);
+        }
+
+        @Conditional({DataSourceAutoConfiguration.PooledDataSourceAvailableCondition.class})
+        static class PooledDataSourceAvailable {
+            PooledDataSourceAvailable() {
+            }
+        }
+
+        @ConditionalOnProperty(
+            prefix = "spring.datasource",
+            name = {"type"}
+        )
+        static class ExplicitType {
+            ExplicitType() {
+            }
+        }
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @Conditional({DataSourceAutoConfiguration.PooledDataSourceCondition.class})
+    @ConditionalOnMissingBean({DataSource.class, XADataSource.class})
+    @Import({Hikari.class, Tomcat.class, Dbcp2.class, OracleUcp.class, Generic.class, DataSourceJmxConfiguration.class})
+    protected static class PooledDataSourceConfiguration {
+        protected PooledDataSourceConfiguration() {
+        }
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @Conditional({DataSourceAutoConfiguration.EmbeddedDatabaseCondition.class})
+    @ConditionalOnMissingBean({DataSource.class, XADataSource.class})
+    @Import({EmbeddedDataSourceConfiguration.class})
+    protected static class EmbeddedDatabaseConfiguration {
+        protected EmbeddedDatabaseConfiguration() {
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class TestDataSourceAuto {
+    @SuppressWarnings("all")
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        StandardEnvironment env = new StandardEnvironment();
+        env.getPropertySources().addLast(new SimpleCommandLinePropertySource(
+                "--spring.datasource.url=jdbc:mysql://localhost:3306/test",
+                "--spring.datasource.username=root",
+                "--spring.datasource.password=root"
+        ));
+        context.setEnvironment(env);
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(Config.class);
+
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            String resourceDescription = context.getBeanDefinition(name).getResourceDescription();
+            if (resourceDescription != null)
+                System.out.println(name + " 来源:" + resourceDescription);
+        }
+    }
+
+    @Configuration
+    @Import(MyImportSelector.class)
+    static class Config {
+
+    }
+
+    static class MyImportSelector implements DeferredImportSelector {
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{
+                    DataSourceAutoConfiguration.class.getName()
+            };
+        }
+    }
+}
+```
+
+
+
 #### MybatisAutoConfiguration
 
 * MyBatis 自动配置类为 `org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration`
@@ -9733,6 +10011,238 @@ PooledDataSource 又支持如下数据源
 这里有同学有疑问，之前介绍的都是将具体类交给 Spring 管理，怎么到了 MyBatis 这儿，接口就可以被管理呢？
 
 * 其实并非将接口交给 Spring 管理，而是每个接口会对应一个 MapperFactoryBean，是后者被 Spring 所管理，接口只是作为 MapperFactoryBean 的一个属性来配置
+
+
+
+##### 源码
+
+```java
+@Configuration
+@ConditionalOnClass({SqlSessionFactory.class, SqlSessionFactoryBean.class})
+@ConditionalOnSingleCandidate(DataSource.class)
+@EnableConfigurationProperties({MybatisProperties.class})
+@AutoConfigureAfter({DataSourceAutoConfiguration.class, MybatisLanguageDriverAutoConfiguration.class})
+public class MybatisAutoConfiguration implements InitializingBean {
+    private static final Logger logger = LoggerFactory.getLogger(MybatisAutoConfiguration.class);
+    private final MybatisProperties properties;
+    private final Interceptor[] interceptors;
+    private final TypeHandler[] typeHandlers;
+    private final LanguageDriver[] languageDrivers;
+    private final ResourceLoader resourceLoader;
+    private final DatabaseIdProvider databaseIdProvider;
+    private final List<ConfigurationCustomizer> configurationCustomizers;
+
+    public MybatisAutoConfiguration(MybatisProperties properties, ObjectProvider<Interceptor[]> interceptorsProvider, ObjectProvider<TypeHandler[]> typeHandlersProvider, ObjectProvider<LanguageDriver[]> languageDriversProvider, ResourceLoader resourceLoader, ObjectProvider<DatabaseIdProvider> databaseIdProvider, ObjectProvider<List<ConfigurationCustomizer>> configurationCustomizersProvider) {
+        this.properties = properties;
+        this.interceptors = (Interceptor[])interceptorsProvider.getIfAvailable();
+        this.typeHandlers = (TypeHandler[])typeHandlersProvider.getIfAvailable();
+        this.languageDrivers = (LanguageDriver[])languageDriversProvider.getIfAvailable();
+        this.resourceLoader = resourceLoader;
+        this.databaseIdProvider = (DatabaseIdProvider)databaseIdProvider.getIfAvailable();
+        this.configurationCustomizers = (List)configurationCustomizersProvider.getIfAvailable();
+    }
+
+    public void afterPropertiesSet() {
+        this.checkConfigFileExists();
+    }
+
+    private void checkConfigFileExists() {
+        if (this.properties.isCheckConfigLocation() && StringUtils.hasText(this.properties.getConfigLocation())) {
+            Resource resource = this.resourceLoader.getResource(this.properties.getConfigLocation());
+            Assert.state(resource.exists(), "Cannot find config location: " + resource + " (please add config file or check your Mybatis configuration)");
+        }
+
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+        SqlSessionFactoryBean factory = new SqlSessionFactoryBean();
+        factory.setDataSource(dataSource);
+        factory.setVfs(SpringBootVFS.class);
+        if (StringUtils.hasText(this.properties.getConfigLocation())) {
+            factory.setConfigLocation(this.resourceLoader.getResource(this.properties.getConfigLocation()));
+        }
+
+        this.applyConfiguration(factory);
+        if (this.properties.getConfigurationProperties() != null) {
+            factory.setConfigurationProperties(this.properties.getConfigurationProperties());
+        }
+
+        if (!ObjectUtils.isEmpty(this.interceptors)) {
+            factory.setPlugins(this.interceptors);
+        }
+
+        if (this.databaseIdProvider != null) {
+            factory.setDatabaseIdProvider(this.databaseIdProvider);
+        }
+
+        if (StringUtils.hasLength(this.properties.getTypeAliasesPackage())) {
+            factory.setTypeAliasesPackage(this.properties.getTypeAliasesPackage());
+        }
+
+        if (this.properties.getTypeAliasesSuperType() != null) {
+            factory.setTypeAliasesSuperType(this.properties.getTypeAliasesSuperType());
+        }
+
+        if (StringUtils.hasLength(this.properties.getTypeHandlersPackage())) {
+            factory.setTypeHandlersPackage(this.properties.getTypeHandlersPackage());
+        }
+
+        if (!ObjectUtils.isEmpty(this.typeHandlers)) {
+            factory.setTypeHandlers(this.typeHandlers);
+        }
+
+        if (!ObjectUtils.isEmpty(this.properties.resolveMapperLocations())) {
+            factory.setMapperLocations(this.properties.resolveMapperLocations());
+        }
+
+        Set<String> factoryPropertyNames = (Set)Stream.of((new BeanWrapperImpl(SqlSessionFactoryBean.class)).getPropertyDescriptors()).map(FeatureDescriptor::getName).collect(Collectors.toSet());
+        Class<? extends LanguageDriver> defaultLanguageDriver = this.properties.getDefaultScriptingLanguageDriver();
+        if (factoryPropertyNames.contains("scriptingLanguageDrivers") && !ObjectUtils.isEmpty(this.languageDrivers)) {
+            factory.setScriptingLanguageDrivers(this.languageDrivers);
+            if (defaultLanguageDriver == null && this.languageDrivers.length == 1) {
+                defaultLanguageDriver = this.languageDrivers[0].getClass();
+            }
+        }
+
+        if (factoryPropertyNames.contains("defaultScriptingLanguageDriver")) {
+            factory.setDefaultScriptingLanguageDriver(defaultLanguageDriver);
+        }
+
+        return factory.getObject();
+    }
+
+    private void applyConfiguration(SqlSessionFactoryBean factory) {
+        org.apache.ibatis.session.Configuration configuration = this.properties.getConfiguration();
+        if (configuration == null && !StringUtils.hasText(this.properties.getConfigLocation())) {
+            configuration = new org.apache.ibatis.session.Configuration();
+        }
+
+        if (configuration != null && !CollectionUtils.isEmpty(this.configurationCustomizers)) {
+            Iterator var3 = this.configurationCustomizers.iterator();
+
+            while(var3.hasNext()) {
+                ConfigurationCustomizer customizer = (ConfigurationCustomizer)var3.next();
+                customizer.customize(configuration);
+            }
+        }
+
+        factory.setConfiguration(configuration);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+        ExecutorType executorType = this.properties.getExecutorType();
+        return executorType != null ? new SqlSessionTemplate(sqlSessionFactory, executorType) : new SqlSessionTemplate(sqlSessionFactory);
+    }
+
+    @Configuration
+    @Import({MybatisAutoConfiguration.AutoConfiguredMapperScannerRegistrar.class})
+    @ConditionalOnMissingBean({MapperFactoryBean.class, MapperScannerConfigurer.class})
+    public static class MapperScannerRegistrarNotFoundConfiguration implements InitializingBean {
+        public MapperScannerRegistrarNotFoundConfiguration() {
+        }
+
+        public void afterPropertiesSet() {
+            MybatisAutoConfiguration.logger.debug("Not found configuration for registering mapper bean using @MapperScan, MapperFactoryBean and MapperScannerConfigurer.");
+        }
+    }
+
+    public static class AutoConfiguredMapperScannerRegistrar implements BeanFactoryAware, ImportBeanDefinitionRegistrar {
+        private BeanFactory beanFactory;
+
+        public AutoConfiguredMapperScannerRegistrar() {
+        }
+
+        public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+            if (!AutoConfigurationPackages.has(this.beanFactory)) {
+                MybatisAutoConfiguration.logger.debug("Could not determine auto-configuration package, automatic mapper scanning disabled.");
+            } else {
+                MybatisAutoConfiguration.logger.debug("Searching for mappers annotated with @Mapper");
+                List<String> packages = AutoConfigurationPackages.get(this.beanFactory);
+                if (MybatisAutoConfiguration.logger.isDebugEnabled()) {
+                    packages.forEach((pkg) -> {
+                        MybatisAutoConfiguration.logger.debug("Using auto-configuration base package '{}'", pkg);
+                    });
+                }
+
+                BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(MapperScannerConfigurer.class);
+                builder.addPropertyValue("processPropertyPlaceHolders", true);
+                builder.addPropertyValue("annotationClass", Mapper.class);
+                builder.addPropertyValue("basePackage", StringUtils.collectionToCommaDelimitedString(packages));
+                BeanWrapper beanWrapper = new BeanWrapperImpl(MapperScannerConfigurer.class);
+                Set<String> propertyNames = (Set)Stream.of(beanWrapper.getPropertyDescriptors()).map(FeatureDescriptor::getName).collect(Collectors.toSet());
+                if (propertyNames.contains("lazyInitialization")) {
+                    builder.addPropertyValue("lazyInitialization", "${mybatis.lazy-initialization:false}");
+                }
+
+                if (propertyNames.contains("defaultScope")) {
+                    builder.addPropertyValue("defaultScope", "${mybatis.mapper-default-scope:}");
+                }
+
+                registry.registerBeanDefinition(MapperScannerConfigurer.class.getName(), builder.getBeanDefinition());
+            }
+        }
+
+        public void setBeanFactory(BeanFactory beanFactory) {
+            this.beanFactory = beanFactory;
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class TestDataSourceAuto {
+    @SuppressWarnings("all")
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        StandardEnvironment env = new StandardEnvironment();
+        env.getPropertySources().addLast(new SimpleCommandLinePropertySource(
+                "--spring.datasource.url=jdbc:mysql://localhost:3306/test",
+                "--spring.datasource.username=root",
+                "--spring.datasource.password=root"
+        ));
+        context.setEnvironment(env);
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(Config.class);
+
+        // 注册要扫描的包范围
+        String packageName = TestDataSourceAuto.class.getPackage().getName();
+        System.out.println("当前包名:" + packageName);
+        AutoConfigurationPackages.register(context.getDefaultListableBeanFactory(),
+                packageName);
+
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            String resourceDescription = context.getBeanDefinition(name).getResourceDescription();
+            if (resourceDescription != null)
+                System.out.println(name + " 来源:" + resourceDescription);
+        }
+    }
+
+    @Configuration
+    @Import(MyImportSelector.class)
+    static class Config {
+
+    }
+
+    static class MyImportSelector implements DeferredImportSelector {
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{
+                    DataSourceAutoConfiguration.class.getName(),
+                    MybatisAutoConfiguration.class.getName()
+            };
+        }
+    }
+}
+```
 
 
 
@@ -9893,7 +10403,7 @@ public class Application {
 
 
 
-### 42) 条件装配底层
+### 条件装配底层
 
 条件装配的底层是本质上是 @Conditional 与 Condition，这两个注解。引入自动配置类时，期望满足一定条件才能被 Spring 管理，不满足则不管理，怎么做呢？
 
