@@ -9040,7 +9040,7 @@ public class SpringApplication {
 public class Application {
     public static void main(String[] args) throws Exception{
 
-        // 添加 app 监听器
+        System.out.println("----------------step 1 添加 app 监听器--------------------");
         SpringApplication app = new SpringApplication();
         app.addListeners(e -> System.out.println(e.getClass()));
 
@@ -9057,27 +9057,27 @@ public class Application {
             // DefaultBootstrapContext 需要 Spring Boot 版本 2.5.5
             DefaultBootstrapContext bootstrapContext = new DefaultBootstrapContext();
             // spring boot 开始启动
-            // e1.发布 application starting 事件
+        	System.out.println("----------------e1.发布 application starting 事件--------------------");
             publisher.starting(bootstrapContext);
             // 环境信息准备完毕
-            // e2.发布 application environment 已准备事件
+        	System.out.println("----------------e2.发布 application environment 已准备事件--------------------");
             publisher.environmentPrepared(bootstrapContext, new StandardEnvironment());
             // 在 spring 容器创建，并调用初始化器之后，发送此事件
-            // e3.发布 application context 已初始化事件
+        	System.out.println("----------------e3.发布 application context 已初始化事件--------------------");
             GenericApplicationContext context = new GenericApplicationContext();
             publisher.contextPrepared(context);
             // 所有 bean definition 加载完毕
-            // e4.发布 application prepared 事件
+        	System.out.println("----------------e4.发布 application prepared 事件--------------------");
             publisher.contextLoaded(context);
             context.refresh();
             // spring 容器初始化完成(refresh 方法调用完毕)
-            // e5.发布 application started 事件
+        	System.out.println("----------------e5.发布 application started 事件--------------------");
             publisher.started(context);
             // spring boot 启动完毕
-            // e6.发布 application ready 事件
+            System.out.println("----------------e6.发布 application ready 事件--------------------");
             publisher.running(context);
             // spring boot 启动出错
-            // e7.这其中有异常，发布 application failed 事件
+            System.out.println("----------------e7.这其中有异常，发布 application failed 事件--------------------");
             publisher.failed(context, new Exception("出错了"));
         }
     }
@@ -9122,18 +9122,18 @@ public class Application {
             }
         });
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 2. 封装启动 args");
+        System.out.println("----------------step 2 封装启动 args--------------------");
         DefaultApplicationArguments arguments = new DefaultApplicationArguments(args);
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 8. 创建容器");
+        System.out.println("----------------step 8 创建容器--------------------");
         GenericApplicationContext context = createApplicationContext(WebApplicationType.SERVLET);
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 9. 准备容器");
+        System.out.println("----------------step 9 准备容器--------------------");
         for (ApplicationContextInitializer initializer : app.getInitializers()) {
             initializer.initialize(context);
         }
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 10. 加载 bean definition");
+        System.out.println("----------------step 10 加载 bean definition--------------------");
         DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
         AnnotatedBeanDefinitionReader reader1 = new AnnotatedBeanDefinitionReader(beanFactory);
         XmlBeanDefinitionReader reader2 = new XmlBeanDefinitionReader(beanFactory);
@@ -9143,14 +9143,14 @@ public class Application {
         reader2.loadBeanDefinitions(new ClassPathResource("b03.xml"));
         scanner.scan("cn.example.uums.test.a39.sub");
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 11. refresh 容器");
+        System.out.println("----------------step 11 refresh 容器--------------------");
         context.refresh();
 
         for (String name : context.getBeanDefinitionNames()) {
             System.out.println("name:" + name + " 来源：" + beanFactory.getBeanDefinition(name).getResourceDescription());
         }
 
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> 12. 执行 runner");
+        System.out.println("----------------step 12 执行 runner--------------------");
         // runner 是实现了特定接口的 Bean
         for (CommandLineRunner runner : context.getBeansOfType(CommandLineRunner.class).values()) {
             runner.run(args);
@@ -9235,17 +9235,210 @@ public class Application {
 
 
 
-**org.springframework.boot.Step3**
+###### 第3到7步
 
-**org.springframework.boot.Step4**
+step3.properties
 
-**org.springframework.boot.Step5**
+```properties
+server.port=8080
+```
 
-**org.springframework.boot.Step6**
+step4.properties
 
-**org.springframework.boot.Step7**
+```properties
+user.first-name=George
+user.middle_name=Walker
+user.lastName=Bush
+```
 
-#### 收获💡
+step6.properties
+
+```properties
+spring.main.banner-mode=off
+spring.main.lazy-initialization=true
+```
+
+banner1.txt
+
+```txt
+  _____            _             ____              _
+ / ____|          (_)           |  _ \            | |
+| (___  _ __  _ __ _ _ __   __ _| |_) | ___   ___ | |_
+ \___ \| '_ \| '__| | '_ \ / _` |  _ < / _ \ / _ \| __|
+ ____) | |_) | |  | | | | | (_| | |_) | (_) | (_) | |_
+|_____/| .__/|_|  |_|_| |_|\__, |____/ \___/ \___/ \__|
+       | |                  __/ |
+       |_|                 |___/
+```
+
+[banner2.png](../pictures/20230507/003.png)
+
+```java
+public class Application {
+    public static void main(String[] args) throws IOException {
+        step3(args);
+        step4();
+        step5(args);
+        step6();
+        step7();
+    }
+
+    private static void step3(String[] args) throws IOException {
+        System.out.println("----------------step 3 准备 Environment 添加命令行参数--------------------");
+        ApplicationEnvironment env = new ApplicationEnvironment(); // 系统环境变量, properties, yaml
+        env.getPropertySources().addLast(new ResourcePropertySource(new ClassPathResource("step3.properties")));
+        env.getPropertySources().addFirst(new SimpleCommandLinePropertySource(args));
+        // 环境变量来源
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        System.out.println(env.getProperty("JAVA_HOME"));
+        System.out.println(env.getProperty("server.port"));
+    }
+
+    private static void step4() throws IOException {
+        System.out.println("----------------step 4 ConfigurationPropertySources 处理--------------------");
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        env.getPropertySources().addLast(
+                new ResourcePropertySource("step4", new ClassPathResource("step4.properties"))
+        );
+        ConfigurationPropertySources.attach(env);
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+
+        System.out.println(env.getProperty("user.first-name"));
+        System.out.println(env.getProperty("user.middle-name"));
+        System.out.println(env.getProperty("user.last-name"));
+    }
+
+    private static void step5(String[] args){
+        System.out.println("----------------step 5 通过 EnvironmentPostProcessorApplicationListener 进行 env 后处理--------------------");
+        // application.properties 在这步被添加到环境
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        SpringApplication app = new SpringApplication();
+        app.addListeners(new EnvironmentPostProcessorApplicationListener());
+
+        /*List<String> names = SpringFactoriesLoader.loadFactoryNames(EnvironmentPostProcessor.class, Application.class.getClassLoader());
+        for (String name : names) {
+            System.out.println(name);
+        }*/
+
+        EventPublishingRunListener publisher = new EventPublishingRunListener(app, args);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强前");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        publisher.environmentPrepared(new DefaultBootstrapContext(), env);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强后");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        step5Test();
+    }
+
+    private static void step6() throws IOException {
+        System.out.println("----------------step 6 绑定 spring.main 前缀的 key value 至 SpringApplication--------------------");
+        SpringApplication application = new SpringApplication();
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        env.getPropertySources().addLast(new ResourcePropertySource("step4", new ClassPathResource("step4.properties")));
+        env.getPropertySources().addLast(new ResourcePropertySource("step6", new ClassPathResource("step6.properties")));
+
+//        User user = Binder.get(env).bind("user", User.class).get();
+//        System.out.println(user);
+
+//        User user = new User();
+//        Binder.get(env).bind("user", Bindable.ofInstance(user));
+//        System.out.println(user);
+
+        // 属性为 SpringApplication 的私有属性, 请通过 debug 查看
+        System.out.println(application);
+        Binder.get(env).bind("spring.main", Bindable.ofInstance(application));
+        System.out.println(application);
+    }
+
+    private static void step7(){
+        System.out.println("----------------step 7 打印 banner--------------------");
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        SpringApplicationBannerPrinter printer = new SpringApplicationBannerPrinter(
+                new DefaultResourceLoader(),
+                new SpringBootBanner()
+        );
+        // 测试文字 banner
+//        env.getPropertySources().addLast(new MapPropertySource("custom", Map.of("spring.banner.location","banner1.txt")));
+        // 测试图片 banner
+//        env.getPropertySources().addLast(new MapPropertySource("custom", Map.of("spring.banner.image.location","banner2.png")));
+        // 版本号的获取
+        System.out.println(SpringBootVersion.getVersion());
+        printer.print(env, Application.class, System.out);
+    }
+
+    private static void step5Test() {
+        SpringApplication app = new SpringApplication();
+        ApplicationEnvironment env = new ApplicationEnvironment();
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强前");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        ConfigDataEnvironmentPostProcessor postProcessor1 = new ConfigDataEnvironmentPostProcessor(new DeferredLogs(), new DefaultBootstrapContext());
+        postProcessor1.postProcessEnvironment(env, app);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强后");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        RandomValuePropertySourceEnvironmentPostProcessor postProcessor2 = new RandomValuePropertySourceEnvironmentPostProcessor(new DeferredLog());
+        postProcessor2.postProcessEnvironment(env, app);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强后");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        System.out.println(env.getProperty("server.port"));
+        System.out.println(env.getProperty("random.int"));
+        System.out.println(env.getProperty("random.int"));
+        System.out.println(env.getProperty("random.int"));
+        System.out.println(env.getProperty("random.uuid"));
+        System.out.println(env.getProperty("random.uuid"));
+        System.out.println(env.getProperty("random.uuid"));
+    }
+
+    static class User {
+        private String firstName;
+        private String middleName;
+        private String lastName;
+        public String getFirstName() {
+            return firstName;
+        }
+        public void setFirstName(String firstName) {
+            this.firstName = firstName;
+        }
+        public String getMiddleName() {
+            return middleName;
+        }
+        public void setMiddleName(String middleName) {
+            this.middleName = middleName;
+        }
+        public String getLastName() {
+            return lastName;
+        }
+        public void setLastName(String lastName) {
+            this.lastName = lastName;
+        }
+        @Override
+        public String toString() {
+            return "User{" +
+                    "firstName='" + firstName + '\'' +
+                    ", middleName='" + middleName + '\'' +
+                    ", lastName='" + lastName + '\'' +
+                    '}';
+        }
+    }
+}
+```
+
+
+
+#### 收获
 
 1. SpringApplication 构造方法中所做的操作
    * 可以有多种源用来加载 bean 定义
@@ -9267,7 +9460,7 @@ public class Application {
 
 
 
-### 40) Tomcat 内嵌容器
+### Tomcat 内嵌容器
 
 Tomcat 基本结构
 
@@ -9290,67 +9483,204 @@ Server
                         web.xml
 ```
 
-#### 演示1 - Tomcat 内嵌容器
+#### Tomcat 内嵌容器
 
-##### 关键代码
+
 
 ```java
-public static void main(String[] args) throws LifecycleException, IOException {
-    // 1.创建 Tomcat 对象
-    Tomcat tomcat = new Tomcat();
-    tomcat.setBaseDir("tomcat");
+public class TestTomcat {
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws LifecycleException, IOException {
+        // 1.创建 Tomcat 对象
+        Tomcat tomcat = new Tomcat();
+        tomcat.setBaseDir("tomcat");
 
-    // 2.创建项目文件夹, 即 docBase 文件夹
-    File docBase = Files.createTempDirectory("boot.").toFile();
-    docBase.deleteOnExit();
+        // 2.创建项目文件夹, 即 docBase 文件夹
+        File docBase = Files.createTempDirectory("boot.").toFile();
+        docBase.deleteOnExit();
 
-    // 3.创建 Tomcat 项目, 在 Tomcat 中称为 Context
-    Context context = tomcat.addContext("", docBase.getAbsolutePath());
+        // 3.创建 Tomcat 项目, 在 Tomcat 中称为 Context
+        Context context = tomcat.addContext("test/", docBase.getAbsolutePath());
+        
+        // 4.编程添加 Servlet
+        context.addServletContainerInitializer(new ServletContainerInitializer() {
+            @Override
+            public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
+                HelloServlet helloServlet = new HelloServlet();
+                ctx.addServlet("aaa", helloServlet).addMapping("/hello");
+            }
+        }, Collections.emptySet());
 
-    // 4.编程添加 Servlet
-    context.addServletContainerInitializer(new ServletContainerInitializer() {
-        @Override
-        public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
-            HelloServlet helloServlet = new HelloServlet();
-            ctx.addServlet("aaa", helloServlet).addMapping("/hello");
-        }
-    }, Collections.emptySet());
+        // 5.启动 Tomcat
+        tomcat.start();
 
-    // 5.启动 Tomcat
-    tomcat.start();
-
-    // 6.创建连接器, 设置监听端口
-    Connector connector = new Connector(new Http11Nio2Protocol());
-    connector.setPort(8080);
-    tomcat.setConnector(connector);
+        // 6.创建连接器, 设置监听端口
+        Connector connector = new Connector(new Http11Nio2Protocol());
+        connector.setPort(8080);
+        tomcat.setConnector(connector);
+    }
 }
 ```
 
 
 
-#### 演示2 - 集成 Spring 容器
-
-##### 关键代码
-
 ```java
-WebApplicationContext springContext = getApplicationContext();
+public class HelloServlet extends HttpServlet {
 
-// 4.编程添加 Servlet
-context.addServletContainerInitializer(new ServletContainerInitializer() {
     @Override
-    public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
-        // ⬇️通过 ServletRegistrationBean 添加 DispatcherServlet 等
-        for (ServletRegistrationBean registrationBean : 
-             springContext.getBeansOfType(ServletRegistrationBean.class).values()) {
-            registrationBean.onStartup(ctx);
-        }
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.setContentType("text/html;charset=utf-8");
+        resp.getWriter().print("<h3>hello</h3>");
     }
-}, Collections.emptySet());
+}
 ```
 
 
 
-### 41) Boot 自动配置
+#### 集成 Spring 容器
+
+##### Tomcat 在 Spring 容器中的初始化
+
+创建 Spring 容器时执行 refresh 方法会初始化 Tomcat
+
+```java
+public abstract class AbstractApplicationContext extends DefaultResourceLoader implements ConfigurableApplicationContext {
+    public void refresh() throws BeansException, IllegalStateException {
+        synchronized(this.startupShutdownMonitor) {
+            StartupStep contextRefresh = this.applicationStartup.start("spring.context.refresh");
+            this.prepareRefresh();
+            ConfigurableListableBeanFactory beanFactory = this.obtainFreshBeanFactory();
+            this.prepareBeanFactory(beanFactory);
+
+            try {
+                this.postProcessBeanFactory(beanFactory);
+                StartupStep beanPostProcess = this.applicationStartup.start("spring.context.beans.post-process");
+                this.invokeBeanFactoryPostProcessors(beanFactory);
+                this.registerBeanPostProcessors(beanFactory);
+                beanPostProcess.end();
+                this.initMessageSource();
+                this.initApplicationEventMulticaster();
+                // onRefresh 创建 Tomcat 步骤 1、2、3、4
+                this.onRefresh();
+                this.registerListeners();
+                this.finishBeanFactoryInitialization(beanFactory);
+                // 启动 Tomcat 步骤 5、6
+                this.finishRefresh();
+            } catch (BeansException var10) {
+                if (this.logger.isWarnEnabled()) {
+                    this.logger.warn("Exception encountered during context initialization - cancelling refresh attempt: " + var10);
+                }
+
+                this.destroyBeans();
+                this.cancelRefresh(var10);
+                throw var10;
+            } finally {
+                this.resetCommonCaches();
+                contextRefresh.end();
+            }
+
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+@Configuration
+static class Config {
+    @Bean
+    public DispatcherServletRegistrationBean registrationBean(DispatcherServlet dispatcherServlet) {
+        return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+    }
+
+    @Bean
+    // 这个例子中必须为 DispatcherServlet 提供 AnnotationConfigWebApplicationContext, 否则会选择 XmlWebApplicationContext 实现
+    public DispatcherServlet dispatcherServlet(WebApplicationContext applicationContext) {
+        return new DispatcherServlet(applicationContext);
+    }
+
+    @Bean
+    public RequestMappingHandlerAdapter requestMappingHandlerAdapter() {
+        RequestMappingHandlerAdapter handlerAdapter = new RequestMappingHandlerAdapter();
+        List list = new ArrayList();
+        list.add(new MappingJackson2HttpMessageConverter());
+        handlerAdapter.setMessageConverters(list);
+        return handlerAdapter;
+    }
+
+    @RestController
+    static class MyController {
+        @GetMapping("hello2")
+        public Map<String,Object> hello() {
+            Map<String, Object> map = new HashMap<>();
+            map.put("hello2", "hello2, spring!");
+            return map;
+        }
+    }
+}
+```
+
+
+
+```java
+public class TestTomcat {
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws LifecycleException, IOException {
+        // 1.创建 Tomcat 对象
+        Tomcat tomcat = new Tomcat();
+        tomcat.setBaseDir("tomcat");
+
+        // 2.创建项目文件夹, 即 docBase 文件夹
+        File docBase = Files.createTempDirectory("boot.").toFile();
+        docBase.deleteOnExit();
+
+        // 3.创建 Tomcat 项目, 在 Tomcat 中称为 Context
+        Context context = tomcat.addContext("test/", docBase.getAbsolutePath());
+
+        WebApplicationContext springContext = getApplicationContext();
+
+        // 4.编程添加 Servlet
+        context.addServletContainerInitializer(new ServletContainerInitializer() {
+            @Override
+            public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
+                HelloServlet helloServlet = new HelloServlet();
+                ctx.addServlet("aaa", helloServlet).addMapping("/hello");
+
+//                DispatcherServlet dispatcherServlet = springContext.getBean(DispatcherServlet.class);
+//                ctx.addServlet("dispatcherServlet", dispatcherServlet).addMapping("/");
+                for (ServletRegistrationBean registrationBean : springContext.getBeansOfType(ServletRegistrationBean.class).values()) {
+                    registrationBean.onStartup(ctx);
+                }
+            }
+        }, Collections.emptySet());
+
+        // 5.启动 Tomcat
+        tomcat.start();
+
+        // 6.创建连接器, 设置监听端口
+        Connector connector = new Connector(new Http11Nio2Protocol());
+        connector.setPort(8080);
+        tomcat.setConnector(connector);
+    }
+
+    public static WebApplicationContext getApplicationContext() {
+//        AnnotationConfigServletWebServerApplicationContext
+        AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
+        context.register(Config.class);
+        context.refresh();
+        return context;
+    }
+}
+```
+
+
+
+
+
+### Boot 自动配置
 
 #### AopAutoConfiguration
 
@@ -9360,6 +9690,135 @@ Spring Boot 是利用了自动配置类来简化了 aop 相关配置
 * 可以通过 `spring.aop.auto=false` 禁用 aop 自动配置
 * AOP 自动配置的本质是通过 `@EnableAspectJAutoProxy` 来开启了自动代理，如果在引导类上自己添加了 `@EnableAspectJAutoProxy` 那么以自己添加的为准
 * `@EnableAspectJAutoProxy` 的本质是向容器中添加了 `AnnotationAwareAspectJAutoProxyCreator` 这个 bean 后处理器，它能够找到容器中所有切面，并为匹配切点的目标类创建代理，创建代理的工作一般是在 bean 的初始化阶段完成的
+
+
+
+##### 源码
+
+```java
+@Configuration(
+    proxyBeanMethods = false
+)
+@ConditionalOnProperty(
+    prefix = "spring.aop",
+    name = {"auto"},
+    havingValue = "true",
+    matchIfMissing = true
+)
+public class AopAutoConfiguration {
+    public AopAutoConfiguration() {
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @ConditionalOnMissingClass({"org.aspectj.weaver.Advice"})
+    @ConditionalOnProperty(
+        prefix = "spring.aop",
+        name = {"proxy-target-class"},
+        havingValue = "true",
+        matchIfMissing = true
+    )
+    static class ClassProxyingConfiguration {
+        ClassProxyingConfiguration() {
+        }
+
+        @Bean
+        static BeanFactoryPostProcessor forceAutoProxyCreatorToUseClassProxying() {
+            return (beanFactory) -> {
+                if (beanFactory instanceof BeanDefinitionRegistry) {
+                    BeanDefinitionRegistry registry = (BeanDefinitionRegistry)beanFactory;
+                    AopConfigUtils.registerAutoProxyCreatorIfNecessary(registry);
+                    AopConfigUtils.forceAutoProxyCreatorToUseClassProxying(registry);
+                }
+
+            };
+        }
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @ConditionalOnClass({Advice.class})
+    static class AspectJAutoProxyingConfiguration {
+        AspectJAutoProxyingConfiguration() {
+        }
+
+        @Configuration(
+            proxyBeanMethods = false
+        )
+        @EnableAspectJAutoProxy(
+            proxyTargetClass = true
+        )
+        @ConditionalOnProperty(
+            prefix = "spring.aop",
+            name = {"proxy-target-class"},
+            havingValue = "true",
+            matchIfMissing = true
+        )
+        static class CglibAutoProxyConfiguration {
+            CglibAutoProxyConfiguration() {
+            }
+        }
+
+        @Configuration(
+            proxyBeanMethods = false
+        )
+        @EnableAspectJAutoProxy(
+            proxyTargetClass = false
+        )
+        @ConditionalOnProperty(
+            prefix = "spring.aop",
+            name = {"proxy-target-class"},
+            havingValue = "false"
+        )
+        static class JdkDynamicAutoProxyConfiguration {
+            JdkDynamicAutoProxyConfiguration() {
+            }
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class TestAopAuto {
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        StandardEnvironment env = new StandardEnvironment();
+//        env.getPropertySources().addLast(new SimpleCommandLinePropertySource("--spring.aop.auto=false"));
+        context.setEnvironment(env);
+        // 注册常见的后处理器
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(Config.class);
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+        System.out.println(">>>>>>>>>>>>>>>");
+        AnnotationAwareAspectJAutoProxyCreator creator = context.getBean(
+                "org.springframework.aop.config.internalAutoProxyCreator", AnnotationAwareAspectJAutoProxyCreator.class);
+        System.out.println(creator.isProxyTargetClass());
+
+    }
+
+    @Configuration
+    @Import(MyImportSelector.class)
+    static class Config {
+
+    }
+
+    static class MyImportSelector implements DeferredImportSelector {
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{AopAutoConfiguration.class.getName()};
+        }
+    }
+}
+```
 
 
 
@@ -9384,6 +9843,155 @@ PooledDataSource 又支持如下数据源
 
 
 
+##### 源码
+
+```java
+@Configuration(
+    proxyBeanMethods = false
+)
+@ConditionalOnClass({DataSource.class, EmbeddedDatabaseType.class})
+@ConditionalOnMissingBean(
+    type = {"io.r2dbc.spi.ConnectionFactory"}
+)
+@EnableConfigurationProperties({DataSourceProperties.class})
+@Import({DataSourcePoolMetadataProvidersConfiguration.class, InitializationSpecificCredentialsDataSourceInitializationConfiguration.class, SharedCredentialsDataSourceInitializationConfiguration.class})
+public class DataSourceAutoConfiguration {
+    public DataSourceAutoConfiguration() {
+    }
+
+    static class EmbeddedDatabaseCondition extends SpringBootCondition {
+        private static final String DATASOURCE_URL_PROPERTY = "spring.datasource.url";
+        private final SpringBootCondition pooledCondition = new DataSourceAutoConfiguration.PooledDataSourceCondition();
+
+        EmbeddedDatabaseCondition() {
+        }
+
+        public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            Builder message = ConditionMessage.forCondition("EmbeddedDataSource", new Object[0]);
+            if (this.hasDataSourceUrlProperty(context)) {
+                return ConditionOutcome.noMatch(message.because("spring.datasource.url is set"));
+            } else if (this.anyMatches(context, metadata, new Condition[]{this.pooledCondition})) {
+                return ConditionOutcome.noMatch(message.foundExactly("supported pooled data source"));
+            } else {
+                EmbeddedDatabaseType type = EmbeddedDatabaseConnection.get(context.getClassLoader()).getType();
+                return type == null ? ConditionOutcome.noMatch(message.didNotFind("embedded database").atAll()) : ConditionOutcome.match(message.found("embedded database").items(new Object[]{type}));
+            }
+        }
+
+        private boolean hasDataSourceUrlProperty(ConditionContext context) {
+            Environment environment = context.getEnvironment();
+            if (environment.containsProperty("spring.datasource.url")) {
+                try {
+                    return StringUtils.hasText(environment.getProperty("spring.datasource.url"));
+                } catch (IllegalArgumentException var4) {
+                }
+            }
+
+            return false;
+        }
+    }
+
+    static class PooledDataSourceAvailableCondition extends SpringBootCondition {
+        PooledDataSourceAvailableCondition() {
+        }
+
+        public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            Builder message = ConditionMessage.forCondition("PooledDataSource", new Object[0]);
+            return DataSourceBuilder.findType(context.getClassLoader()) != null ? ConditionOutcome.match(message.foundExactly("supported DataSource")) : ConditionOutcome.noMatch(message.didNotFind("supported DataSource").atAll());
+        }
+    }
+
+    static class PooledDataSourceCondition extends AnyNestedCondition {
+        PooledDataSourceCondition() {
+            super(ConfigurationPhase.PARSE_CONFIGURATION);
+        }
+
+        @Conditional({DataSourceAutoConfiguration.PooledDataSourceAvailableCondition.class})
+        static class PooledDataSourceAvailable {
+            PooledDataSourceAvailable() {
+            }
+        }
+
+        @ConditionalOnProperty(
+            prefix = "spring.datasource",
+            name = {"type"}
+        )
+        static class ExplicitType {
+            ExplicitType() {
+            }
+        }
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @Conditional({DataSourceAutoConfiguration.PooledDataSourceCondition.class})
+    @ConditionalOnMissingBean({DataSource.class, XADataSource.class})
+    @Import({Hikari.class, Tomcat.class, Dbcp2.class, OracleUcp.class, Generic.class, DataSourceJmxConfiguration.class})
+    protected static class PooledDataSourceConfiguration {
+        protected PooledDataSourceConfiguration() {
+        }
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @Conditional({DataSourceAutoConfiguration.EmbeddedDatabaseCondition.class})
+    @ConditionalOnMissingBean({DataSource.class, XADataSource.class})
+    @Import({EmbeddedDataSourceConfiguration.class})
+    protected static class EmbeddedDatabaseConfiguration {
+        protected EmbeddedDatabaseConfiguration() {
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class TestDataSourceAuto {
+    @SuppressWarnings("all")
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        StandardEnvironment env = new StandardEnvironment();
+        env.getPropertySources().addLast(new SimpleCommandLinePropertySource(
+                "--spring.datasource.url=jdbc:mysql://localhost:3306/test",
+                "--spring.datasource.username=root",
+                "--spring.datasource.password=root"
+        ));
+        context.setEnvironment(env);
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(Config.class);
+
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            String resourceDescription = context.getBeanDefinition(name).getResourceDescription();
+            if (resourceDescription != null)
+                System.out.println(name + " 来源:" + resourceDescription);
+        }
+    }
+
+    @Configuration
+    @Import(MyImportSelector.class)
+    static class Config {
+
+    }
+
+    static class MyImportSelector implements DeferredImportSelector {
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{
+                    DataSourceAutoConfiguration.class.getName()
+            };
+        }
+    }
+}
+```
+
+
+
 #### MybatisAutoConfiguration
 
 * MyBatis 自动配置类为 `org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration`
@@ -9403,6 +10011,238 @@ PooledDataSource 又支持如下数据源
 这里有同学有疑问，之前介绍的都是将具体类交给 Spring 管理，怎么到了 MyBatis 这儿，接口就可以被管理呢？
 
 * 其实并非将接口交给 Spring 管理，而是每个接口会对应一个 MapperFactoryBean，是后者被 Spring 所管理，接口只是作为 MapperFactoryBean 的一个属性来配置
+
+
+
+##### 源码
+
+```java
+@Configuration
+@ConditionalOnClass({SqlSessionFactory.class, SqlSessionFactoryBean.class})
+@ConditionalOnSingleCandidate(DataSource.class)
+@EnableConfigurationProperties({MybatisProperties.class})
+@AutoConfigureAfter({DataSourceAutoConfiguration.class, MybatisLanguageDriverAutoConfiguration.class})
+public class MybatisAutoConfiguration implements InitializingBean {
+    private static final Logger logger = LoggerFactory.getLogger(MybatisAutoConfiguration.class);
+    private final MybatisProperties properties;
+    private final Interceptor[] interceptors;
+    private final TypeHandler[] typeHandlers;
+    private final LanguageDriver[] languageDrivers;
+    private final ResourceLoader resourceLoader;
+    private final DatabaseIdProvider databaseIdProvider;
+    private final List<ConfigurationCustomizer> configurationCustomizers;
+
+    public MybatisAutoConfiguration(MybatisProperties properties, ObjectProvider<Interceptor[]> interceptorsProvider, ObjectProvider<TypeHandler[]> typeHandlersProvider, ObjectProvider<LanguageDriver[]> languageDriversProvider, ResourceLoader resourceLoader, ObjectProvider<DatabaseIdProvider> databaseIdProvider, ObjectProvider<List<ConfigurationCustomizer>> configurationCustomizersProvider) {
+        this.properties = properties;
+        this.interceptors = (Interceptor[])interceptorsProvider.getIfAvailable();
+        this.typeHandlers = (TypeHandler[])typeHandlersProvider.getIfAvailable();
+        this.languageDrivers = (LanguageDriver[])languageDriversProvider.getIfAvailable();
+        this.resourceLoader = resourceLoader;
+        this.databaseIdProvider = (DatabaseIdProvider)databaseIdProvider.getIfAvailable();
+        this.configurationCustomizers = (List)configurationCustomizersProvider.getIfAvailable();
+    }
+
+    public void afterPropertiesSet() {
+        this.checkConfigFileExists();
+    }
+
+    private void checkConfigFileExists() {
+        if (this.properties.isCheckConfigLocation() && StringUtils.hasText(this.properties.getConfigLocation())) {
+            Resource resource = this.resourceLoader.getResource(this.properties.getConfigLocation());
+            Assert.state(resource.exists(), "Cannot find config location: " + resource + " (please add config file or check your Mybatis configuration)");
+        }
+
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+        SqlSessionFactoryBean factory = new SqlSessionFactoryBean();
+        factory.setDataSource(dataSource);
+        factory.setVfs(SpringBootVFS.class);
+        if (StringUtils.hasText(this.properties.getConfigLocation())) {
+            factory.setConfigLocation(this.resourceLoader.getResource(this.properties.getConfigLocation()));
+        }
+
+        this.applyConfiguration(factory);
+        if (this.properties.getConfigurationProperties() != null) {
+            factory.setConfigurationProperties(this.properties.getConfigurationProperties());
+        }
+
+        if (!ObjectUtils.isEmpty(this.interceptors)) {
+            factory.setPlugins(this.interceptors);
+        }
+
+        if (this.databaseIdProvider != null) {
+            factory.setDatabaseIdProvider(this.databaseIdProvider);
+        }
+
+        if (StringUtils.hasLength(this.properties.getTypeAliasesPackage())) {
+            factory.setTypeAliasesPackage(this.properties.getTypeAliasesPackage());
+        }
+
+        if (this.properties.getTypeAliasesSuperType() != null) {
+            factory.setTypeAliasesSuperType(this.properties.getTypeAliasesSuperType());
+        }
+
+        if (StringUtils.hasLength(this.properties.getTypeHandlersPackage())) {
+            factory.setTypeHandlersPackage(this.properties.getTypeHandlersPackage());
+        }
+
+        if (!ObjectUtils.isEmpty(this.typeHandlers)) {
+            factory.setTypeHandlers(this.typeHandlers);
+        }
+
+        if (!ObjectUtils.isEmpty(this.properties.resolveMapperLocations())) {
+            factory.setMapperLocations(this.properties.resolveMapperLocations());
+        }
+
+        Set<String> factoryPropertyNames = (Set)Stream.of((new BeanWrapperImpl(SqlSessionFactoryBean.class)).getPropertyDescriptors()).map(FeatureDescriptor::getName).collect(Collectors.toSet());
+        Class<? extends LanguageDriver> defaultLanguageDriver = this.properties.getDefaultScriptingLanguageDriver();
+        if (factoryPropertyNames.contains("scriptingLanguageDrivers") && !ObjectUtils.isEmpty(this.languageDrivers)) {
+            factory.setScriptingLanguageDrivers(this.languageDrivers);
+            if (defaultLanguageDriver == null && this.languageDrivers.length == 1) {
+                defaultLanguageDriver = this.languageDrivers[0].getClass();
+            }
+        }
+
+        if (factoryPropertyNames.contains("defaultScriptingLanguageDriver")) {
+            factory.setDefaultScriptingLanguageDriver(defaultLanguageDriver);
+        }
+
+        return factory.getObject();
+    }
+
+    private void applyConfiguration(SqlSessionFactoryBean factory) {
+        org.apache.ibatis.session.Configuration configuration = this.properties.getConfiguration();
+        if (configuration == null && !StringUtils.hasText(this.properties.getConfigLocation())) {
+            configuration = new org.apache.ibatis.session.Configuration();
+        }
+
+        if (configuration != null && !CollectionUtils.isEmpty(this.configurationCustomizers)) {
+            Iterator var3 = this.configurationCustomizers.iterator();
+
+            while(var3.hasNext()) {
+                ConfigurationCustomizer customizer = (ConfigurationCustomizer)var3.next();
+                customizer.customize(configuration);
+            }
+        }
+
+        factory.setConfiguration(configuration);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+        ExecutorType executorType = this.properties.getExecutorType();
+        return executorType != null ? new SqlSessionTemplate(sqlSessionFactory, executorType) : new SqlSessionTemplate(sqlSessionFactory);
+    }
+
+    @Configuration
+    @Import({MybatisAutoConfiguration.AutoConfiguredMapperScannerRegistrar.class})
+    @ConditionalOnMissingBean({MapperFactoryBean.class, MapperScannerConfigurer.class})
+    public static class MapperScannerRegistrarNotFoundConfiguration implements InitializingBean {
+        public MapperScannerRegistrarNotFoundConfiguration() {
+        }
+
+        public void afterPropertiesSet() {
+            MybatisAutoConfiguration.logger.debug("Not found configuration for registering mapper bean using @MapperScan, MapperFactoryBean and MapperScannerConfigurer.");
+        }
+    }
+
+    public static class AutoConfiguredMapperScannerRegistrar implements BeanFactoryAware, ImportBeanDefinitionRegistrar {
+        private BeanFactory beanFactory;
+
+        public AutoConfiguredMapperScannerRegistrar() {
+        }
+
+        public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+            if (!AutoConfigurationPackages.has(this.beanFactory)) {
+                MybatisAutoConfiguration.logger.debug("Could not determine auto-configuration package, automatic mapper scanning disabled.");
+            } else {
+                MybatisAutoConfiguration.logger.debug("Searching for mappers annotated with @Mapper");
+                List<String> packages = AutoConfigurationPackages.get(this.beanFactory);
+                if (MybatisAutoConfiguration.logger.isDebugEnabled()) {
+                    packages.forEach((pkg) -> {
+                        MybatisAutoConfiguration.logger.debug("Using auto-configuration base package '{}'", pkg);
+                    });
+                }
+
+                BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(MapperScannerConfigurer.class);
+                builder.addPropertyValue("processPropertyPlaceHolders", true);
+                builder.addPropertyValue("annotationClass", Mapper.class);
+                builder.addPropertyValue("basePackage", StringUtils.collectionToCommaDelimitedString(packages));
+                BeanWrapper beanWrapper = new BeanWrapperImpl(MapperScannerConfigurer.class);
+                Set<String> propertyNames = (Set)Stream.of(beanWrapper.getPropertyDescriptors()).map(FeatureDescriptor::getName).collect(Collectors.toSet());
+                if (propertyNames.contains("lazyInitialization")) {
+                    builder.addPropertyValue("lazyInitialization", "${mybatis.lazy-initialization:false}");
+                }
+
+                if (propertyNames.contains("defaultScope")) {
+                    builder.addPropertyValue("defaultScope", "${mybatis.mapper-default-scope:}");
+                }
+
+                registry.registerBeanDefinition(MapperScannerConfigurer.class.getName(), builder.getBeanDefinition());
+            }
+        }
+
+        public void setBeanFactory(BeanFactory beanFactory) {
+            this.beanFactory = beanFactory;
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class TestDataSourceAuto {
+    @SuppressWarnings("all")
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        StandardEnvironment env = new StandardEnvironment();
+        env.getPropertySources().addLast(new SimpleCommandLinePropertySource(
+                "--spring.datasource.url=jdbc:mysql://localhost:3306/test",
+                "--spring.datasource.username=root",
+                "--spring.datasource.password=root"
+        ));
+        context.setEnvironment(env);
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(Config.class);
+
+        // 注册要扫描的包范围
+        String packageName = TestDataSourceAuto.class.getPackage().getName();
+        System.out.println("当前包名:" + packageName);
+        AutoConfigurationPackages.register(context.getDefaultListableBeanFactory(),
+                packageName);
+
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            String resourceDescription = context.getBeanDefinition(name).getResourceDescription();
+            if (resourceDescription != null)
+                System.out.println(name + " 来源:" + resourceDescription);
+        }
+    }
+
+    @Configuration
+    @Import(MyImportSelector.class)
+    static class Config {
+
+    }
+
+    static class MyImportSelector implements DeferredImportSelector {
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{
+                    DataSourceAutoConfiguration.class.getName(),
+                    MybatisAutoConfiguration.class.getName()
+            };
+        }
+    }
+}
+```
 
 
 
@@ -9464,23 +10304,24 @@ PooledDataSource 又支持如下数据源
 
 
 
-#### 演示 - 自动配置类原理
+#### 自动配置类原理
 
-##### 关键代码
+##### 示例
 
 假设已有第三方的两个自动配置类
 
 ```java
-@Configuration // ⬅️第三方的配置类
-static class AutoConfiguration1 {
+// @Configuration // 第三方的配置类
+public class AutoConfiguration1 {
     @Bean
+    @ConditionalOnMissingBean
     public Bean1 bean1() {
-        return new Bean1();
+        return new Bean1("第三方");
     }
 }
 
-@Configuration // ⬅️第三方的配置类
-static class AutoConfiguration2 {
+// @Configuration // 第三方的配置类
+public class AutoConfiguration2 {
     @Bean
     public Bean2 bean2() {
         return new Bean2();
@@ -9491,32 +10332,69 @@ static class AutoConfiguration2 {
 提供一个配置文件 META-INF/spring.factories，key 为导入器类名，值为多个自动配置类名，用逗号分隔
 
 ```properties
-MyImportSelector=\
-AutoConfiguration1,\
-AutoConfiguration2
+cn.example.uums.test.a41.MyImportSelector=\
+cn.example.uums.test.a41.AutoConfiguration1,\
+cn.example.uums.test.a41.AutoConfiguration2
 ```
 
-> ***注意***
->
-> * 上述配置文件中 MyImportSelector 与 AutoConfiguration1，AutoConfiguration2 为简洁均省略了包名，自己测试时请将包名根据情况补全
+
 
 引入自动配置
 
 ```java
-@Configuration // ⬅️本项目的配置类
+@Configuration // 本项目的配置类
+// @Import({AutoConfiguration1.class, AutoConfiguration2.class})
 @Import(MyImportSelector.class)
-static class Config { }
+public class Config {
+    @Bean
+    public Bean1 bean1() {
+        return new Bean1("本项目");
+    }
+}
 
-static class MyImportSelector implements DeferredImportSelector {
-    // ⬇️该方法从 META-INF/spring.factories 读取自动配置类名，返回的 String[] 即为要导入的配置类
+public class MyImportSelector implements DeferredImportSelector { // ImportSelector
+    // 该方法从 META-INF/spring.factories 读取自动配置类名，返回的 String[] 即为要导入的配置类
+    @Override
     public String[] selectImports(AnnotationMetadata importingClassMetadata) {
-        return SpringFactoriesLoader
-            .loadFactoryNames(MyImportSelector.class, null).toArray(new String[0]);
+        // return new String[]{AutoConfiguration1.class.getName(), AutoConfiguration2.class.getName()};
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>> 自动配置类 >>>>>>>>>>>>>>>>>>>>>>>");
+        for (String name : SpringFactoriesLoader.loadFactoryNames(EnableAutoConfiguration.class, null)) {
+            System.out.println(name);
+        }
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+
+        List<String> names = SpringFactoriesLoader.loadFactoryNames(MyImportSelector.class, null);
+        return names.toArray(new String[0]);
     }
 }
 ```
 
-#### 收获💡
+
+
+```java
+public class Application {
+
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws IOException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.getDefaultListableBeanFactory().setAllowBeanDefinitionOverriding(false);
+        context.registerBean("config", Config.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>");
+        System.out.println(context.getBean(Bean1.class));
+    }
+}
+```
+
+
+
+#### 总结
 
 1. 自动配置类本质上就是一个配置类而已，只是用 META-INF/spring.factories 管理，与应用配置类解耦
 2. @Enable 打头的注解本质是利用了 @Import
@@ -9525,7 +10403,7 @@ static class MyImportSelector implements DeferredImportSelector {
 
 
 
-### 42) 条件装配底层
+### 条件装配底层
 
 条件装配的底层是本质上是 @Conditional 与 Condition，这两个注解。引入自动配置类时，期望满足一定条件才能被 Spring 管理，不满足则不管理，怎么做呢？
 
