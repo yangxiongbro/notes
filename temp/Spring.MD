@@ -10248,6 +10248,100 @@ public class TestDataSourceAuto {
 
 #### TransactionAutoConfiguration
 
+##### 源码
+
+```java
+@Configuration(
+    proxyBeanMethods = false
+)
+@Role(2)
+public class ProxyTransactionManagementConfiguration extends AbstractTransactionManagementConfiguration {
+    public ProxyTransactionManagementConfiguration() {
+    }
+
+    @Bean(
+        name = {"org.springframework.transaction.config.internalTransactionAdvisor"}
+    )
+    @Role(2)
+    public BeanFactoryTransactionAttributeSourceAdvisor transactionAdvisor(TransactionAttributeSource transactionAttributeSource, TransactionInterceptor transactionInterceptor) {
+        BeanFactoryTransactionAttributeSourceAdvisor advisor = new BeanFactoryTransactionAttributeSourceAdvisor();
+        advisor.setTransactionAttributeSource(transactionAttributeSource);
+        advisor.setAdvice(transactionInterceptor);
+        if (this.enableTx != null) {
+            advisor.setOrder((Integer)this.enableTx.getNumber("order"));
+        }
+
+        return advisor;
+    }
+
+    @Bean
+    @Role(2)
+    public TransactionAttributeSource transactionAttributeSource() {
+        return new AnnotationTransactionAttributeSource();
+    }
+
+    @Bean
+    @Role(2)
+    public TransactionInterceptor transactionInterceptor(TransactionAttributeSource transactionAttributeSource) {
+        TransactionInterceptor interceptor = new TransactionInterceptor();
+        interceptor.setTransactionAttributeSource(transactionAttributeSource);
+        if (this.txManager != null) {
+            interceptor.setTransactionManager(this.txManager);
+        }
+
+        return interceptor;
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class TestDataSourceAuto {
+    @SuppressWarnings("all")
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        StandardEnvironment env = new StandardEnvironment();
+        env.getPropertySources().addLast(new SimpleCommandLinePropertySource(
+                "--spring.datasource.url=jdbc:mysql://localhost:3306/test",
+                "--spring.datasource.username=root",
+                "--spring.datasource.password=root"
+        ));
+        context.setEnvironment(env);
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(Config.class);
+
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            String resourceDescription = context.getBeanDefinition(name).getResourceDescription();
+            if (resourceDescription != null)
+                System.out.println(name + " 来源:" + resourceDescription);
+        }
+    }
+
+    @Configuration
+    @Import(MyImportSelector.class)
+    static class Config {
+
+    }
+
+    static class MyImportSelector implements DeferredImportSelector {
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{
+                    DataSourceAutoConfiguration.class.getName(),
+                    DataSourceTransactionManagerAutoConfiguration.class.getName(),
+                    TransactionAutoConfiguration.class.getName()
+            };
+        }
+    }
+}
+```
+
+
+
 * 事务自动配置类有两个：
   * `org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration`
   * `org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration`
