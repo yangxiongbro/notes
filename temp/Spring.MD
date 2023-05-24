@@ -10499,30 +10499,84 @@ public class Application {
 
 ### 条件装配底层
 
-条件装配的底层是本质上是 @Conditional 与 Condition，这两个注解。引入自动配置类时，期望满足一定条件才能被 Spring 管理，不满足则不管理，怎么做呢？
+#### 基础
+
+条件装配的底层是本质上是 @Conditional 与 @Condition，这两个注解。引入自动配置类时，期望满足一定条件才能被 Spring 管理，不满足则不管理，怎么做呢？
 
 比如条件是【类路径下必须有 dataSource】这个 bean ，怎么做呢？
 
 首先编写条件判断类，它实现 Condition 接口，编写条件判断逻辑
 
-```java
-static class MyCondition1 implements Condition { 
-    // ⬇️如果存在 Druid 依赖，条件成立
-    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
-        return ClassUtils.isPresent("com.alibaba.druid.pool.DruidDataSource", null);
-    }
-}
-```
-
 其次，在要导入的自动配置类上添加 `@Conditional(MyCondition1.class)`，将来此类被导入时就会做条件检查
 
 ```java
 @Configuration // 第三方的配置类
-@Conditional(MyCondition1.class) // ⬅️加入条件
-static class AutoConfiguration1 {
+@Conditional(MyCondition1.class)
+public class AutoConfiguration1 {
     @Bean
     public Bean1 bean1() {
         return new Bean1();
+    }
+}
+
+@Configuration // 第三方的配置类
+@Conditional(MyCondition2.class)
+public class AutoConfiguration2 {
+    @Bean
+    public Bean2 bean2() {
+        return new Bean2();
+    }
+}
+
+public class MyCondition1 implements Condition { // 存在 Druid 依赖
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        return ClassUtils.isPresent("com.alibaba.druid.pool.DruidDataSource", null);
+    }
+}
+
+public class MyCondition2 implements Condition { // 不存在 Druid 依赖
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        return !ClassUtils.isPresent("com.alibaba.druid.pool.DruidDataSource", null);
+    }
+}
+
+public class Bean1 {}
+public class Bean2 {}
+```
+
+
+
+```java
+@Configuration // 本项目的配置类
+@Import(MyImportSelector.class)
+public class Config {
+}
+
+public class MyImportSelector implements DeferredImportSelector {
+    @Override
+    public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+        return new String[]{AutoConfiguration1.class.getName(), AutoConfiguration2.class.getName()};
+    }
+}
+```
+
+
+
+```java
+public class Application {
+
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws IOException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
     }
 }
 ```
@@ -10537,23 +10591,222 @@ static class AutoConfiguration1 {
 </dependency>
 ```
 
-#### 收获💡
+##### 总结
 
 1. 学习一种特殊的 if - else
 
 
 
+#### 进阶
+
+```java
+@Configuration // 第三方的配置类
+@ConditionalOnClass(className = "com.alibaba.druid.pool.DruidDataSource", exists = false)
+public class AutoConfiguration1 {
+    @Bean
+    public Bean1 bean1() {
+        return new Bean1();
+    }
+}
+
+@Configuration // 第三方的配置类
+@ConditionalOnClass(className = "com.alibaba.druid.pool.DruidDataSource", exists = true)
+public class AutoConfiguration2 {
+    @Bean
+    public Bean2 bean2() {
+        return new Bean2();
+    }
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.METHOD, ElementType.TYPE})
+@Conditional(MyCondition.class)
+@interface ConditionalOnClass {
+    boolean exists(); // true 判断存在 false 判断不存在
+
+    String className(); // 要判断的类名
+}
+
+public class MyCondition implements Condition { // 存在 Druid 依赖
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        Map<String, Object> attributes = metadata.getAnnotationAttributes(ConditionalOnClass.class.getName());
+        String className = attributes.get("className").toString();
+        boolean exists = (boolean) attributes.get("exists");
+        boolean present = ClassUtils.isPresent(className, null);
+        return exists ? present : !present;
+    }
+}
+
+public class Bean1 {}
+public class Bean2 {}
+```
+
+
+
+```java
+@Configuration // 本项目的配置类
+@Import(MyImportSelector.class)
+public class Config {
+}
+
+public class MyImportSelector implements DeferredImportSelector {
+    @Override
+    public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+        return new String[]{AutoConfiguration1.class.getName(), AutoConfiguration2.class.getName()};
+    }
+}
+```
+
+
+
+```java
+public class Application {
+
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws IOException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+    }
+}
+```
+
+
+
 ## 其它
 
-### 43) FactoryBean
+### FactoryBean
 
-#### 演示 - FactoryBean
+#### 示例
 
-##### 代码参考
 
-**com.itheima.a43** 包
 
-#### 收获💡
+```java
+@Component
+public class Bean2 {
+}
+
+public class Bean1 implements BeanFactoryAware {
+    private static final Logger log = LoggerFactory.getLogger(Bean1.class);
+
+    private Bean2 bean2;
+
+    @Autowired
+    public void setBean2(Bean2 bean2) {
+        log.debug("setBean2({})", bean2);
+        this.bean2 = bean2;
+    }
+
+    public Bean2 getBean2() {
+        return bean2;
+    }
+
+    @PostConstruct
+    public void init() {
+        log.debug("init");
+    }
+
+    @Override
+    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        log.debug("setBeanFactory({})", beanFactory);
+    }
+}
+```
+
+
+
+```java
+@Component("bean1")
+public class Bean1FactoryBean implements FactoryBean<Bean1> {
+
+    private static final Logger log = LoggerFactory.getLogger(Bean1FactoryBean.class);
+
+    // 决定了根据【类型】获取或依赖注入能否成功
+    @Override
+    public Class<?> getObjectType() {
+        return Bean1.class;
+    }
+
+    // 决定了 getObject() 方法被调用一次还是多次
+    @Override
+    public boolean isSingleton() {
+        return true;
+    }
+
+    @Override
+    public Bean1 getObject() throws Exception {
+        Bean1 bean1 = new Bean1();
+        log.debug("create bean: {}", bean1);
+        return bean1;
+    }
+}
+```
+
+
+
+```java
+@Component
+public class Bean1PostProcessor implements BeanPostProcessor {
+
+    private static final Logger log = LoggerFactory.getLogger(Bean1PostProcessor.class);
+
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("bean1") && bean instanceof Bean1) {
+            log.debug("before [{}] init", beanName);
+        }
+        return bean;
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("bean1") && bean instanceof Bean1) {
+            log.debug("after [{}] init", beanName);
+        }
+        return bean;
+    }
+}
+```
+
+
+
+```java
+@ComponentScan
+public class Application {
+
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+
+        Bean1 bean1 = (Bean1) context.getBean("bean1");
+        Bean1 bean2 = (Bean1) context.getBean("bean1");
+        Bean1 bean3 = (Bean1) context.getBean("bean1");
+        System.out.println(bean1);
+        System.out.println(bean2);
+        System.out.println(bean3);
+
+        System.out.println(context.getBean(Bean1.class));
+
+        System.out.println(context.getBean(Bean1FactoryBean.class));
+        System.out.println(context.getBean("&bean1"));
+
+        context.close();
+    }
+
+}
+```
+
+
+
+#### 总结
+
+一个在 Spring 发展阶段中重要, 但目前已经很鸡肋的接口 FactoryBean 的使用要点
+说它鸡肋有两点:
 
 1. 它的作用是用制造创建过程较为复杂的产品, 如 SqlSessionFactory, 但 @Bean 已具备等价功能
 2. 使用上较为古怪, 一不留神就会用错
@@ -10562,6 +10815,8 @@ static class AutoConfiguration1 {
       * 唯有后初始化的流程会走, 也就是产品可以被代理增强
       * 单例的产品不会存储于 BeanFactory 的 singletonObjects 成员中, 而是另一个 factoryBeanObjectCache 成员中
    2. 按名字去获取时, 拿到的是产品对象, 名字前面加 & 获取的是工厂对象
+
+但目前此接口的实现仍被大量使用, 想被全面废弃很难
 
 
 
