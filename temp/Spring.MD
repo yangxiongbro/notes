@@ -10820,7 +10820,7 @@ public class Application {
 
 
 
-### 44) @Indexed 原理
+### @Indexed 原理
 
 真实项目中，只需要加入以下依赖即可
 
@@ -10834,13 +10834,42 @@ public class Application {
 
 
 
-#### 演示 - @Indexed
+#### 示例
 
-##### 代码参考
+```java
+@Component
+public class Bean1 {
+}
+@Component
+public class Bean2 {
+}
+@Component
+public class Bean3 {
+}
 
-**com.itheima.a44** 包
+```
 
-#### 收获💡
+
+
+```java
+public class Application {
+    public static void main(String[] args) throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+        // 组件扫描的核心类
+        ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(beanFactory);
+
+        scanner.scan(A44.class.getPackage().getName());
+
+        for (String name : beanFactory.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+    }
+}
+```
+
+
+
+#### 总结
 
 1. 在编译时就根据 @Indexed 生成 META-INF/spring.components 文件
 2. 扫描时
@@ -10850,15 +10879,140 @@ public class Application {
 
 
 
-### 45) 代理进一步理解
+### 代理进一步理解
 
-#### 演示 - 代理
+#### 示例
 
-##### 代码参考
+```java
 
-**com.itheima.a45** 包
+@Component
+public class Bean2 {
+}
 
-#### 收获💡
+@Component
+public class Bean1 {
+
+    private static final Logger log = LoggerFactory.getLogger(Bean1.class);
+
+    protected Bean2 bean2;
+
+    protected boolean initialized;
+
+    @Autowired
+    public void setBean2(Bean2 bean2) {
+        log.debug("setBean2(Bean2 bean2)");
+        this.bean2 = bean2;
+    }
+
+    @PostConstruct
+    public void init() {
+        log.debug("init");
+        initialized = true;
+    }
+
+    public Bean2 getBean2() {
+        log.debug("getBean2()");
+        return bean2;
+    }
+
+    public boolean isInitialized() {
+        log.debug("isInitialized()");
+        return initialized;
+    }
+
+    public void m1() {
+        System.out.println("m1() 成员方法");
+    }
+
+    final public void m2() {
+        System.out.println("m2() final 方法");
+    }
+
+    static public void m3() {
+        System.out.println("m3() static 方法");
+    }
+
+    private void m4() {
+        System.out.println("m4() private 方法");
+    }
+
+}
+```
+
+
+
+```java
+@Aspect
+@Component
+public class MyAspect {
+
+    // 故意对所有方法增强
+    @Before("execution(* cn.example.uums.test.a45.Bean1.*(..))")
+    public void before() {
+        System.out.println("before");
+    }
+}
+```
+
+
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) throws Exception {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+
+        Bean1 proxy = context.getBean(Bean1.class);
+
+
+
+        /*
+            1.演示 spring 代理的设计特点
+                依赖注入和初始化影响的是原始对象
+                代理与目标是两个对象，二者成员变量并不共用数据
+         */
+        showProxyAndTarget(proxy);
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>");
+        System.out.println(proxy.getBean2());
+        System.out.println(proxy.isInitialized());
+
+        /*
+            2.演示 static 方法、final 方法、private 方法均无法增强
+         */
+
+        proxy.m1();
+        proxy.m2();
+        proxy.m3();
+        Method m4 = Bean1.class.getDeclaredMethod("m4");
+        m4.setAccessible(true);
+        m4.invoke(proxy);
+
+        context.close();
+    }
+
+
+    public static void showProxyAndTarget(Bean1 proxy) throws Exception {
+        System.out.println(">>>>> 代理中的成员变量");
+        System.out.println("\tinitialized=" + proxy.initialized);
+        System.out.println("\tbean2=" + proxy.bean2);
+
+        if (proxy instanceof Advised) {
+            Advised advised = (Advised) proxy;
+            System.out.println(">>>>> 目标中的成员变量");
+            Bean1 target = (Bean1) advised.getTargetSource().getTarget();
+            System.out.println("\tinitialized=" + target.initialized);
+            System.out.println("\tbean2=" + target.bean2);
+        }
+    }
+
+}
+```
+
+
+
+#### 总结
 
 1. spring 代理的设计特点
 
@@ -10873,7 +11027,7 @@ public class Application {
 
 
 
-### 46) @Value 装配底层
+### @Value 装配底层
 
 #### 按类型装配的步骤
 
@@ -10893,13 +11047,100 @@ public class Application {
 
 
 
-#### 演示 - @Value 装配过程
+#### 示例
 
-##### 代码参考
+```java
+@Configuration
+@SuppressWarnings("all")
+public class Application {
 
-**com.itheima.a46** 包
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
 
-#### 收获💡
+        ContextAnnotationAutowireCandidateResolver resolver = new ContextAnnotationAutowireCandidateResolver();
+        resolver.setBeanFactory(beanFactory);
+
+        System.out.println(">>>>>>>>>>>>>>>@Value(\"${MAVEN_HOME}\")");
+        test1(context, resolver, Bean1.class.getDeclaredField("home"));
+        System.out.println(">>>>>>>>>>>>>>>@Value(\"18\")");
+        test2(context, resolver, Bean1.class.getDeclaredField("age"));
+        System.out.println(">>>>>>>>>>>>>>>@Value(\"#{@bean3}\")");
+        test3(context, resolver, Bean2.class.getDeclaredField("bean3"));
+        System.out.println(">>>>>>>>>>>>>>>@Value(\"#{'hello, ' + '${MAVEN_HOME}'}\")");
+        test3(context, resolver, Bean4.class.getDeclaredField("value"));
+    }
+
+    private static void test3(AnnotationConfigApplicationContext context, ContextAnnotationAutowireCandidateResolver resolver, Field field) {
+        DependencyDescriptor dd1 = new DependencyDescriptor(field, false);
+        // 获取 @Value 的内容
+        String value = resolver.getSuggestedValue(dd1).toString();
+        System.out.println(value);
+
+        // 解析 ${}
+        value = context.getEnvironment().resolvePlaceholders(value);
+        System.out.println(value);
+        System.out.println(value.getClass());
+
+        // 解析 #{} @bean3
+        Object bean3 = context.getBeanFactory().getBeanExpressionResolver().evaluate(value, new BeanExpressionContext(context.getBeanFactory(), null));
+
+        // 类型转换
+        Object result = context.getBeanFactory().getTypeConverter().convertIfNecessary(bean3, dd1.getDependencyType());
+        System.out.println(result);
+    }
+
+    private static void test2(AnnotationConfigApplicationContext context, ContextAnnotationAutowireCandidateResolver resolver, Field field) {
+        DependencyDescriptor dd1 = new DependencyDescriptor(field, false);
+        // 获取 @Value 的内容
+        String value = resolver.getSuggestedValue(dd1).toString();
+        System.out.println(value);
+
+        // 解析 ${}
+        value = context.getEnvironment().resolvePlaceholders(value);
+        System.out.println(value);
+        System.out.println(value.getClass());
+        Object age = context.getBeanFactory().getTypeConverter().convertIfNecessary(value, dd1.getDependencyType());
+        System.out.println(age.getClass());
+    }
+
+    private static void test1(AnnotationConfigApplicationContext context, ContextAnnotationAutowireCandidateResolver resolver, Field field) {
+        DependencyDescriptor dd1 = new DependencyDescriptor(field, false);
+        // 获取 @Value 的内容
+        String value = resolver.getSuggestedValue(dd1).toString();
+        System.out.println(value);
+
+        // 解析 ${}
+        value = context.getEnvironment().resolvePlaceholders(value);
+        System.out.println(value);
+    }
+
+    public class Bean1 {
+        @Value("${MAVEN_HOME}")
+        private String home;
+        @Value("18")
+        private int age;
+    }
+
+    public class Bean2 {
+        @Value("#{@bean3}") // SpringEL       #{SpEL}
+        private Bean3 bean3;
+    }
+
+    @Component("bean3")
+    public class Bean3 {
+    }
+
+    static class Bean4 {
+        @Value("#{'hello, ' + '${MAVEN_HOME}'}")
+        private String value;
+    }
+}
+```
+
+
+
+#### 总结
 
 1. ContextAnnotationAutowireCandidateResolver 作用之一，获取 @Value 的值
 2. 了解 ${ } 对应的解析器
