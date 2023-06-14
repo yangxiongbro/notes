@@ -43,7 +43,7 @@ CREATE TABLE `tb_user` (
     `balance` decimal(10,2) DEFAULT NULL COMMENT '余额',  
     `address` varchar(80) DEFAULT NULL COMMENT '地址',  
     PRIMARY KEY (`id`) 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `tb_product` (  
     `id` bigint NOT NULL AUTO_INCREMENT,  
@@ -54,7 +54,7 @@ CREATE TABLE `tb_product` (
     `caption` varchar(255) DEFAULT NULL COMMENT '标题',  
     `inventory` int(11) DEFAULT NULL COMMENT '库存',  
     PRIMARY KEY (`id`) 
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `tb_order` (  
     `id` bigint NOT NULL AUTO_INCREMENT,  
@@ -66,7 +66,7 @@ CREATE TABLE `tb_order` (
     PRIMARY KEY (`id`),
     FOREIGN KEY (user_id) REFERENCES tb_user(id),
     FOREIGN KEY (product_id) REFERENCES tb_product(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 #### 
@@ -893,13 +893,15 @@ eureka.instance.instanceId=${spring.cloud.client.ip-address}:${server.port}
 
 ### Nacos
 
-#### 下载安装
+#### 下载安装及使用配置
+
+##### 安装
 
 [GitHub 的 Release 下载页](https://github.com/alibaba/nacos/releases)，下载完成后，解压文件，启动 /bin/startup 脚本
 
 
 
-#### 使用
+##### 使用
 
 startup.cmd -m standalone
 
@@ -911,7 +913,7 @@ sh startup.sh -m standalone
 
 
 
-#### 配置 Mysql
+##### 配置 Mysql
 
 默认使用嵌入式数据库，0.7版本以后增加支持mysql数据源能力
 
@@ -920,7 +922,7 @@ sh startup.sh -m standalone
 2.修改 **conf/application.properties** 文件，增加支持 Mysql 数据源配置（目前只支持 Mysql），添加 Mysql 数据源的 url、用户名和密码
 
 ```
-spring.datasource.platform=mysql
+spring.sql.init.platform=mysql
 db.num=1
 db.url.0=jdbc:mysql://127.0.0.1:3306/nacos?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true
 db.user=user
@@ -931,7 +933,7 @@ db.password=password
 
 
 
-#### 自定义账号密码
+##### 自定义账号密码
 
 配置好 Mysql 之后，在数据库中，找到users表，即用户表，就可以修改其中的账号和密码。
 
@@ -949,7 +951,7 @@ public static void main(String[] args) {
 
 
 
-#### 配置集群
+##### 配置集群
 
 注意：3个或3个以上Nacos节点才能构成集群，仅支持linux/unix/mac
 
@@ -1496,6 +1498,14 @@ Feign 是在 Ribbon的基础上进行了一次改进，是一个使用起来更�
 ##### 负载均衡
 
 Feign中本身已经集成了Ribbon依赖和自动配置，因此我们不需要额外引入依赖，也不需要再注册 RestTemplate 对象。另外，我们可以像Ribbon一样去配置Ribbon，可以通过 ribbon.xx 来进 行全局配置。也可以通过 服务名.ribbon.xx 来对指定服务配置。
+
+
+
+### OpenFeign
+
+
+
+
 
 ## 服务熔断
 
