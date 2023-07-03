@@ -893,7 +893,7 @@ eureka.instance.instanceId=${spring.cloud.client.ip-address}:${server.port}
 
 ### Nacos
 
-#### 下载安装及使用配置
+#### 下载安装及配置
 
 ##### 安装
 
@@ -965,6 +965,40 @@ public static void main(String[] args) {
 ```
 
 2.配置后在各个节点服务器输入命令启动所有服务
+
+
+
+#### 服务注册到 Nacos 注册中心
+
+##### 导包
+
+```xml
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+</dependency>
+```
+
+
+
+##### 配置
+
+```yaml
+spring:
+  cloud:
+    nacos:
+      config:
+        server-addr: localhost:8848
+        file-extension: yaml
+        # 需要在 Nacos 的页面创建好对应的 namespace
+        namespace: ed2069f3-cc54-4a62-b044-95061643ae84
+        # 随便填,注意服务之间进行调用需要在同一组
+        group: MY_GROUP
+```
+
+
+
+
 
 
 
@@ -1341,7 +1375,7 @@ public class ProductController {
 
 Feign是Netflix开发的声明式，模板化的HTTP客户端，其灵感来自Retrofit,JAXRS-2.0以及WebSocket. Feign可帮助我们更加便捷，优雅的调用HTTP API。 在SpringCloud中，使用Feign非常简单——创建一个接口，并在接口上添加一些注解，代码就完 成了。 Feign支持多种注解，例如Feign自带的注解或者JAX-RS注解等。 SpringCloud对Feign进行了增强，使Feign支持了SpringMVC注解，并整合了Ribbon和Eureka， 从而让Feign的使用更加方便。
 
-#### 集成Feign
+#### Eureka集成Feign
 
 ##### pom.xml
 
@@ -1502,6 +1536,93 @@ Feign中本身已经集成了Ribbon依赖和自动配置，因此我们不需要
 
 
 ### OpenFeign
+
+#### 导包
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+    <version>3.1.6</version>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+    <version>3.1.7</version>
+</dependency>
+```
+
+
+
+#### Nacos 集成 OpenFeign
+
+##### 调用服务
+
+```java
+@Component
+@FeignClient(name = "Product", path = "/product/product")
+// name 为服务名
+public interface ProductFeignService {
+    @GetMapping("/{id}")
+    ProductVO findById(@PathVariable("id") Long id);
+}
+```
+
+
+
+##### 配置日志
+
+###### 局部配置
+
+```yaml
+feign:
+  client:
+    config:
+      # NONE: 不记录任何日志，是OpenFeign默认日志级别（性能最佳，适用于生产环境）。
+      # BASIC: 仅记录请求方法、URL、响应状态码、执行时间（适用于生产环境追踪问题）。
+      # HEADERS: 在记录BASIC级别的基础上，记录请求和响应的header头部信息。
+      # FULL: 记录请求响应的header、body 和 元数据（适用于开发和测试环境定位问题）。
+      Product:
+        loggerLevel: full
+      Order:
+        loggerLevel: full
+logging:
+  level:
+    # Feign 调试日志是 debug 级别输出，SpringBoot 默认日志级别是 info，所以 Feign 的 debug 日志级别就不会输出
+    com.example.order.ms: debug
+```
+
+
+
+###### 全局配置
+
+对所有服务配置日志记录
+
+```java
+import feign.Logger;
+import  org.springframework.context.annotation.Bean;
+/**
+ * 全局配置：加了 @Configuration 注解表示全局配置，对所有服务起作用
+ * 局部配置：不加 @Configuration 注解表示局部配置，只针对指定的一个服务起作用
+ */
+public class FeignConfig {
+    @Bean
+    public Logger.Level feignLoggerLevel(){
+        return Logger.Level.FULL;
+    }
+}
+
+/**
+ * 局部配置
+ */
+@Component
+@FeignClient(name = "Product", path = "/product/product" configuration = FeignConfig.class)
+// name 为服务名
+public interface ProductFeignService {
+    @GetMapping("/{id}")
+    ProductVO findById(@PathVariable("id") Long id);
+}
+```
 
 
 
@@ -4073,6 +4194,62 @@ spring.cloud.config.discovery.serviceId=shop-server-config
 
 
 ### Disconf
+
+
+
+### Nacos
+
+#### 导包
+
+```xml
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+</dependency>
+```
+
+
+
+#### 配置
+
+创建配置文件 boostrap.yaml
+
+只保留以下配置
+
+```yaml
+spring:
+  application:
+    name: User
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      config:
+        server-addr: localhost:8848
+        file-extension: yaml
+        namespace: ed2069f3-cc54-4a62-b044-95061643ae84
+        group: MY_GROUP
+```
+
+
+
+在 Nacos -> 配置管理 -> 配置列表 中新建对应的主配置和环境配置
+
+DataId 的格式如下
+
+${prefix}-${spring.profile.active}.${file-extension]
+
+prefix:  默认为 spring.application.name 的值，也可以通过配置项 spring.cloud.nacos.config.prefix 来配置
+
+spring.profile.active: 为当前环境对应的 profile
+
+file-extension: 配置内容的数据格式，目前只支持 properties 和 yaml 类型。要与 boostrap.yaml 中的一致
+
+
+
+Group
+
+要与 boostrap.yaml 中的一致
 
 
 
