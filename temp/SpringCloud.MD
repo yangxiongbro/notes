@@ -922,11 +922,13 @@ sh startup.sh -m standalone
 2.修改 **conf/application.properties** 文件，增加支持 Mysql 数据源配置（目前只支持 Mysql），添加 Mysql 数据源的 url、用户名和密码
 
 ```
+spring.datasource.platform=mysql
 spring.sql.init.platform=mysql
+
 db.num=1
 db.url.0=jdbc:mysql://127.0.0.1:3306/nacos?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true
-db.user=user
-db.password=password
+db.user.0=user
+db.password.0=password
 ```
 
 3.配置后输入命令启动服务
@@ -951,7 +953,7 @@ public static void main(String[] args) {
 
 
 
-##### 配置集群
+##### Nacos 高可用集群
 
 注意：3个或3个以上Nacos节点才能构成集群，仅支持linux/unix/mac
 
@@ -959,12 +961,39 @@ public static void main(String[] args) {
 
 ```conf
 #cluster.conf
-192.168.0.1:8848
-192.168.0.2:8848
-192.168.0.3:8848
+192.168.31.100:8840
+192.168.31.100:8844
+192.168.31.100:8842
 ```
 
 2.配置后在各个节点服务器输入命令启动所有服务
+
+3.配置 nginx 负载均衡
+
+```conf
+http {
+    upstream nacoscluster {
+    server 192.168.31.100:8840;
+    server 192.168.31.100:8842;
+    server 192.168.31.100:8844;
+    }
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    server {
+        listen       8849;
+        server_name  localhost;
+
+        location / {
+            proxy_pass http://nacoscluster/;
+        }
+    }
+}
+```
+
+
+
+/opt/nacos/nacos-1/bin/shutdown.sh
 
 
 
@@ -995,6 +1024,8 @@ spring:
         # 随便填,注意服务之间进行调用需要在同一组
         group: MY_GROUP
 ```
+
+
 
 
 
@@ -1560,8 +1591,8 @@ Feign中本身已经集成了Ribbon依赖和自动配置，因此我们不需要
 
 ```java
 @Component
-@FeignClient(name = "Product", path = "/product/product")
 // name 为服务名
+@FeignClient(name = "Product", path = "/product/product")
 public interface ProductFeignService {
     @GetMapping("/{id}")
     ProductVO findById(@PathVariable("id") Long id);
@@ -4284,3 +4315,53 @@ Ramp-up period(seconds):决定多长时间启动所有线程,如果ramp-up perio
 5、对 HTTP Request 右键 Add -> Lisenter 添加（View Result Tree、Aggregate Report、Graph Results)
 
 6、点击Start按钮开始发起请求
+
+
+
+# Nginx
+
+在[官网](http://nginx.org/en/download.html)上下载 Stable version
+
+```shell
+tar -zxvf nginx.tar.gz
+
+# 首先要安装 PCRE
+# PCRE 作用是让 Nginx 支持 Rewrite 功能。
+cd /usr/local/src/
+sudo wget http://downloads.sourceforge.net/project/pcre/pcre/8.45/pcre-8.45.tar.gz
+sudo tar zxvf pcre-8.45.tar.gz
+cd pcre-8.45
+sudo ./configure --prefix=/opt/pcre
+sudo make && make install
+pcre-config --version
+
+# 安装 nginx
+sudo wget http://nginx.org/download/nginx-1.24.0.tar.gz
+sudo tar zxvf nginx-1.24.0.tar.gz
+cd nginx-1.24.0
+# sudo apt install openssl libssl zlib1g-dev
+sudo ./configure --prefix=/opt/nginx --with-http_stub_status_module --with-http_ssl_module --with-pcre=/opt/pcre-8.45
+sudo make && make install
+/opt/nginx/sbin/nginx -v
+#添加用户组(-r 创建系统工作组,系统工作组的组 ID 小于 500)
+sudo groupadd -r www
+#添加用户(-r 建立系统帐号,-s /bin/false 参数指定 www 用户仅拥有所有权,而没有登录权限)
+sudo useradd -r -g www -s /bin/false www
+sudo chown -R www:www /opt/nginx
+# 配置文件 /opt/nginx/conf/nginx.conf
+# 配置 user www www;
+# 检查配置文件 /opt/nginx/sbin/nginx -t
+
+# sudo rm -r pcre-8.45
+```
+
+
+
+常用命令
+
+```shell
+sudo /opt/nginx/sbin/nginx					   # 启动 Nginx
+sudo /opt/nginx/sbin/nginx -s reload            # 重新载入配置文件
+sudo /opt/nginx/sbin/nginx -s reopen            # 重启 Nginx
+sudo /opt/nginx/sbin/nginx -s stop              # 停止 Nginx
+```
