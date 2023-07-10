@@ -973,15 +973,15 @@ public static void main(String[] args) {
 ```conf
 http {
     upstream nacoscluster {
-    server 192.168.31.100:8840;
-    server 192.168.31.100:8842;
-    server 192.168.31.100:8844;
+        server 192.168.31.100:8840;
+        server 192.168.31.100:8842;
+        server 192.168.31.100:8844;
     }
 
     # another virtual host using mix of IP-, name-, and port-based configuration
     #
     server {
-        listen       8849;
+        listen       8848;
         server_name  localhost;
 
         location / {
@@ -989,11 +989,41 @@ http {
         }
     }
 }
+
+stream {
+
+    upstream nacoscluster_grpc {
+        server 192.168.31.100:9840 max_fails=3 fail_timeout=10s;
+        server 192.168.31.100:9842 max_fails=3 fail_timeout=10s;
+		server 192.168.31.100:9844 max_fails=3 fail_timeout=10s;
+    }
+
+    server {
+        listen 9848;
+        proxy_connect_timeout 20s;
+        proxy_timeout 5m;
+        proxy_pass nacoscluster_grpc;
+    }
+
+}
 ```
 
 
 
-/opt/nacos/nacos-1/bin/shutdown.sh
+##### 注意
+
+Nacos2.0 版本相比 1.X 新增了 gRPC 的通信方式，因此需要增加 2 个端口。新增端口是在配置的主端口(server.port)基础上，进行一定偏移量自动生成。
+
+| 端口 | 与主端口的偏移量 | 描述                                                       |
+| ---- | ---------------- | ---------------------------------------------------------- |
+| 9848 | 1000             | 客户端gRPC请求服务端端口，用于客户端向服务端发起连接和请求 |
+| 9849 | 1001             | 服务端gRPC请求服务端端口，用于服务间同步等                 |
+
+也就是在同一台机器上，如果搭建集群，建议使用8848，8850，8852，这种有间隔的端口，否则可能导致端口冲突。
+
+如果使用的是 Docker 或存在端口转发方式启动，需要把这两个端口进行配置。
+
+如果存在防火墙或者 Nginx 端口转发问题，需要进行相应的端口暴露配置。如在 Nginx 中，在已经暴露 8848(x) 的基础上，需要额外暴露9848（x+1000)。
 
 
 
@@ -4340,7 +4370,8 @@ sudo wget http://nginx.org/download/nginx-1.24.0.tar.gz
 sudo tar zxvf nginx-1.24.0.tar.gz
 cd nginx-1.24.0
 # sudo apt install openssl libssl zlib1g-dev
-sudo ./configure --prefix=/opt/nginx --with-http_stub_status_module --with-http_ssl_module --with-pcre=/opt/pcre-8.45
+# --with-stream : 支持 TCP 转发
+sudo ./configure --prefix=/opt/nginx --with-stream --with-http_stub_status_module --with-http_ssl_module --with-pcre=/opt/pcre-8.45
 sudo make && make install
 /opt/nginx/sbin/nginx -v
 #添加用户组(-r 创建系统工作组,系统工作组的组 ID 小于 500)
@@ -4357,11 +4388,65 @@ sudo chown -R www:www /opt/nginx
 
 
 
+## 配置 HTTP 转发
+
+```conf
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    upstream nacoscluster {
+        server 192.168.31.100:8840;
+        server 192.168.31.100:8842;
+        server 192.168.31.100:8844;
+    }
+
+    server {
+        listen       8848;
+        server_name  localhost;
+
+        location / {
+            proxy_pass http://nacoscluster/;
+        }
+    }
+
+}
+
+```
+
+
+
+## 配置 TCP 转发
+
+```java
+stream {
+
+    upstream nacoscluster_grpc {
+        server 192.168.31.100:9840 max_fails=3 fail_timeout=10s;
+        server 192.168.31.100:9842 max_fails=3 fail_timeout=10s;
+		server 192.168.31.100:9844 max_fails=3 fail_timeout=10s;
+    }
+
+    server {
+        listen 9848;
+        proxy_connect_timeout 20s;
+        proxy_timeout 5m;
+        proxy_pass nacoscluster_grpc;
+    }
+
+}
+
+```
+
+
+
 常用命令
 
 ```shell
-sudo /opt/nginx/sbin/nginx					   # 启动 Nginx
+sudo /opt/nginx/sbin/nginx					    # 启动 Nginx
 sudo /opt/nginx/sbin/nginx -s reload            # 重新载入配置文件
 sudo /opt/nginx/sbin/nginx -s reopen            # 重启 Nginx
 sudo /opt/nginx/sbin/nginx -s stop              # 停止 Nginx
+sudo /opt/nginx/sbin/nginx -V					# Nginx 有哪些模块
+
 ```
