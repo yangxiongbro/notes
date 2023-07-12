@@ -1,5 +1,9 @@
 # SpringCloud
 
+[Spring Cloud Alibaba](https://spring-cloud-alibaba-group.github.io/zh-cn/docs/next/overview/what-is-sca)
+
+
+
 ## 概述
 
 Spring Cloud的本质是在 Spring Boot 的基础上，增加了一堆微服务相关的规范，并对应用上下文 （Application Context）进行了功能增强。既然 Spring Cloud 是规范，那么就需要去实现，目前 Spring Cloud 规范已有 Spring官方，Spring Cloud Netﬂix，Spring Cloud Alibaba等实现。通过组件 化的方式，Spring Cloud将这些实现整合到一起构成全家桶式的微服务技术栈。 
@@ -872,11 +876,11 @@ eureka.instance.lease-renewal-interval-in-seconds=5
 ```
 
 ```xml
-		<dependency>
-		    <groupId>org.springframework.boot</groupId>
-		    <artifactId>spring-boot-actuator</artifactId>
-		    <!-- <version>2.3.3.RELEASE</version> -->
-		</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-actuator</artifactId>
+    <!-- <version>2.3.3.RELEASE</version> -->
+</dependency>
 ```
 
 
@@ -893,11 +897,15 @@ eureka.instance.instanceId=${spring.cloud.client.ip-address}:${server.port}
 
 ### Nacos
 
+[Nacos](https://spring-cloud-alibaba-group.github.io/zh-cn/docs/next/user-guide/nacos/quick-start)
+
+
+
 #### 下载安装及配置
 
 ##### 安装
 
-[GitHub 的 Release 下载页](https://github.com/alibaba/nacos/releases)，下载完成后，解压文件，启动 /bin/startup 脚本
+[GitHub 的 Release 下载页](https://github.com/alibaba/nacos/releases)，下载完成后，解压文件，启动 bin/startup 脚本
 
 
 
@@ -1057,9 +1065,17 @@ spring:
 
 
 
+##### 开启服务发现
 
-
-
+```java
+@SpringBootApplication
+@EnableDiscoveryClient
+public class OrderApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(OrderApplication.class, args);
+    }
+}
+```
 
 
 
@@ -1611,6 +1627,20 @@ Feign中本身已经集成了Ribbon依赖和自动配置，因此我们不需要
     <artifactId>spring-cloud-starter-openfeign</artifactId>
     <version>3.1.7</version>
 </dependency>
+```
+
+
+
+#### 开启 OpenFeign
+
+```java
+@SpringBootApplication
+@EnableFeignClients
+public class OrderApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(OrderApplication.class, args);
+    }
+}
 ```
 
 
@@ -2242,6 +2272,14 @@ http://localhost:8004/turbine.stream
 
 ### Sentinel
 
+[Sentinal](https://spring-cloud-alibaba-group.github.io/zh-cn/docs/next/user-guide/sentinel/quick-start)
+
+[Sentinel Wiki (github.com)](https://github.com/alibaba/spring-cloud-alibaba/wiki/Sentinel)
+
+[Sentinel (sentinelguard.io)](https://sentinelguard.io/zh-cn/docs/dashboard.html)
+
+
+
 #### 简介
 
 Sentinel 是阿里巴巴开源的一款断路器实现，目前在Spring Cloud的孵化器项目Spring Cloud Alibaba 中的一员Sentinel本身在阿里内部已经被大规模采用，非常稳定。因此可以作为一个较好的替代品。
@@ -2279,10 +2317,27 @@ Sentinel 可以简单的分为 Sentinel 核心库和 Dashboard。核心库不依
 从[官方网站](https://github.com/alibaba/Sentinel/releases)中下载最新版本的控制台 jar 包
 
 ```shell
-java -Dserver.port=8050 -Dcsp.sentinel.dashboard.server=localhost:8000 -Dproject.name=sentinel-dashboard -jar sentinel-dashboard.jar
+java -Dserver.port=8050 -Dcsp.sentinel.dashboard.server=localhost:8050 -Dsentinel.dashboard.auth.username=sentinel -Dsentinel.dashboard.auth.password=sentinel -Dproject.name=sentinel-dashboard -jar sentinel-dashboard.jar
 ```
 
-使用如下命令启动控制台： 其中 -Dserver.port=8050 用于指定 Sentinel 控制台端口为 8050 。 从 Sentinel 1.6.0 起，Sentinel 控制台引入基本的登录功能，默认用户名和密码都是 sentinel 。
+启动配置项
+
+[更多启动配置项](https://sentinelguard.io/zh-cn/docs/general-configuration.html)
+
+```properties
+# 指定控制台的端口为 8050
+-Dserver.port=8050 
+# 指定要被哪个控制台监控（这里指定的是自己监控自己）
+-Dcsp.sentinel.dashboard.server=localhost:8050
+# 指定实例名称（名称会在控制台左侧以菜单显示）
+-Dproject.name=sentinel-dashboard 
+# 设置登录的帐号为：sentinel，默认为 sentinel
+-Dsentinel.dashboard.auth.username=sentinel 
+# 设置登录的密码为：sentinel，默认为 sentinel
+-Dsentinel.dashboard.auth.password=sentinel 
+```
+
+
 
 启动之后在浏览器访问http://localhost:8050/
 
@@ -2292,22 +2347,32 @@ java -Dserver.port=8050 -Dcsp.sentinel.dashboard.server=localhost:8000 -Dproject
 
 ##### 客户端接入
 
-###### pom.xml
+###### 导包
 
 ```xml
-		<dependency>
-			<groupId>com.alibaba.csp</groupId>
-			<artifactId>sentinel-transport-simple-http</artifactId>
-		</dependency>
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+</dependency>
 ```
 
-###### application.properties
 
-```properties
-# Sentinel
-# 配置控制台的请求路径
-spring.cloud.sentinel.transport.dashboard=localhost:8050
+
+###### 配置
+
+```yaml
+spring:
+  cloud:
+    sentinel:
+      transport:
+        # 配置 Sentinal dashboard 地址
+        dashboard: 192.168.31.100:8050
+        # 默认8719端口，假如被占用会自动从8719开始依次+1扫描,直至找到未被占用的端口
+        # 端口配置会在应用对应的机器上启动一个 Http Server，该 Server 会与 Sentinel 控制台做交互。比如 Sentinel 控制台添加了一个限流规则，会把规则数据 push 给这个 Http Server 接收，Http Server 再将规则注册到 Sentinel 中。
+        port: 8719
 ```
+
+
 
 
 
@@ -2473,30 +2538,30 @@ Sentinel RestTemplate 限流的资源规则提供两种粒度： httpmethod:sche
 父工程增加如下依赖
 
 ```xml
-	<dependencyManagement>
-        <dependencies>
-            <dependency>
-				<groupId>com.alibaba.cloud</groupId>
-				<artifactId>spring-cloud-alibaba-dependencies</artifactId>
-				<version>2.2.0.RELEASE</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-        </dependencies>
-    </dependencyManagement>
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+            <version>2.2.0.RELEASE</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
 ```
 
 服务消费者增加如下依赖
 
 ```xml
-	    <dependency>
-			<groupId>com.alibaba.cloud</groupId>
-			<artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-openfeign</artifactId>
-		</dependency>
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
 ```
 
 ##### application.properties
@@ -2554,6 +2619,24 @@ Feign 对应的接口中的资源名策略定义：httpmethod:protocol://request
 @FeignClient 注解中 的所有属性，Sentinel 都做了兼容。 
 
 IProductFeginClient 接口中方法 findByIdWithGet对应的资源名  GET:http://shop-service-product/product/get/{id}
+
+
+
+#### Endpoint 支持
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+在使用 Endpoint 特性之前需要在 Maven 中添加 `spring-boot-starter-actuator` 依赖，并在配置中允许 Endpoints 的访问。
+
+- Spring Boot 1.x 中添加配置 `management.security.enabled=false`。暴露的 endpoint 路径为 `/sentinel`
+- Spring Boot 2.x 中添加配置 `management.endpoints.web.exposure.include=*`。暴露的 endpoint 路径为 `/actuator/sentinel`
+
+Sentinel Endpoint 里暴露的信息非常有用。包括当前应用的所有规则信息、日志目录、当前实例的 IP，Sentinel Dashboard 地址，Block Page，应用与 Sentinel Dashboard 的心跳频率等等信息。
 
 
 
@@ -4259,6 +4342,10 @@ spring.cloud.config.discovery.serviceId=shop-server-config
 
 
 ### Nacos
+
+[Nacos](https://spring-cloud-alibaba-group.github.io/zh-cn/docs/next/user-guide/nacos/quick-start)
+
+
 
 #### 导包
 
