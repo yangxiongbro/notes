@@ -2652,6 +2652,12 @@ Sentinel Endpoint 里暴露的信息非常有用。包括当前应用的所有�
 
 ##### 流控规则
 
+[流量控制](https://github.com/alibaba/Sentinel/wiki/流量控制)
+
+[流量控制](https://sentinelguard.io/zh-cn/docs/flow-control.html)
+
+
+
 - 资源名：唯一名称，默认请求路径
 - 针对来源：Sentinel 可以针对调用者进行限流，填写微服务名，默认default（不区分来源）
 - 阈值类型/单机阈值：
@@ -2671,6 +2677,12 @@ Sentinel Endpoint 里暴露的信息非常有用。包括当前应用的所有�
 
 
 ##### 熔断规则
+
+[熔断降级](https://github.com/alibaba/Sentinel/wiki/熔断降级)
+
+[熔断降级](https://sentinelguard.io/zh-cn/docs/circuit-breaking.html)
+
+
 
 Sentinel 熔断降级会在调用链路中某个资源出现不稳定状态时（例如调用超时或异常比例升高），对这个资源的调用进行限制，让请求快速失败，避免影响到其它的资源而导致级联错误。
 当资源被降级后，在接下来的降级时间窗口之内，对该资源的调用都自动熔断（默认行为是抛出 DegradeException）
@@ -2694,7 +2706,53 @@ Sentinel 熔断降级会在调用链路中某个资源出现不稳定状态时�
 
 ##### 热点规则
 
+[热点参数限流](https://github.com/alibaba/Sentinel/wiki/热点参数限流)
+
+[热点参数限流](https://sentinelguard.io/zh-cn/docs/parameter-flow-control.html?spm=sentinel-github.wiki.0.0.0)
+
+
+
+何为热点? 热点即经常访问的数据。很多时候我们希望统计某个热点数据中访问频次最高的 Top K 数据，并对其访问进行限制。比如:
+
+- 商品 ID 为参数，统计一段时间内最常购买的商品 ID 并进行限制
+- 用户 ID 为参数，针对一段时间内频繁访问的用户 ID 进行限制
+
+热点参数限流会统计传入参数中的热点参数，并根据配置的限流阈值与模式，对包含热点参数的资源调用进行限流。热点参数限流可以看
+
+做是一种特殊的流量控制，仅对包含热点参数的资源调用生效。
+
+Sentinel 利用 LRU 策略统计最近最常访问的热点参数，结合令牌桶算法来进行参数级别的流控。热点参数限流支持集群模式。
+
+
+
+###### 导包
+
+```xml
+<dependency>
+    <groupId>com.alibaba.csp</groupId>
+    <artifactId>sentinel-parameter-flow-control</artifactId>
+</dependency>
+```
+
+
+
+###### 在需要热点限流的方法添加 @SentinelResource 注解
+
+
+
+###### 新增热点限流规则
+
+
+
+
+
 ##### 系统规则
+
+[系统自适应限流](https://github.com/alibaba/Sentinel/wiki/系统自适应限流)
+
+[系统自适应限流](https://sentinelguard.io/zh-cn/docs/system-adaptive-protection.html?spm=sentinel-github.wiki.0.0.0)
+
+
 
 ##### 授权规则
 
@@ -2703,6 +2761,12 @@ Sentinel 熔断降级会在调用链路中某个资源出现不稳定状态时�
 ##### 机器列表
 
 
+
+##### 规则持久化
+
+[(13条消息) 【Sentinel 规则持久化配置】_sentinel配置持久化_BridgeCloud的博客-CSDN博客](https://blog.csdn.net/qq_37168484/article/details/130550929)
+
+[(13条消息) Sentinel规则持久化（1.8.+版）_sentinel持久化规则官方文档_陌守的博客-CSDN博客](https://blog.csdn.net/qq_36763419/article/details/121560105)
 
 ## 微服务网关
 
