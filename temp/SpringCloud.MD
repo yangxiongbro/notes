@@ -2378,17 +2378,69 @@ spring:
 
 #### @SentinelResource
 
-| 属性                      | 作用                                                         | 是否必须  |
-| ------------------------- | ------------------------------------------------------------ | --------- |
-| value                     | 资源名称                                                     | 是        |
-| entryType                 | entry类型，标记流量的方向，取值IN/OUT，默 认是OUT            | 否        |
-| blockHandler              | 处理BlockException的函数名称。函数要求： 1. 必须是 public 2.返回类型与原方法一致 3. 参数 类型需要和原方法相匹配，并在最后加 BlockException 类型的参数。 4. 默认需和原方 法在同一个类中。若希望使用其他类的函数，可 配置 blockHandlerClass ，并指定 blockHandlerClass里面的方法 | 否        |
-| blockHandlerClass         | 存放blockHandler的类。对应的处理函数必须 static修饰，否则无法解析，其他要求：同 blockHandler。 | 否        |
-| fallback                  | 用于在抛出异常的时候提供fallback处理逻辑。 fallback函数可以针对所有类型的异常（除了 exceptionsToIgnore 里面排除掉的异常类型） 进行处理。函数要求： 1. 返回类型与原方法一致 2. 参数类型需要和原方法相匹配，Sentinel 1.6 开始，也可在方法最后加 Throwable 类型的参 数。 3.默认需和原方法在同一个类中。若希望使 用其他类的函数，可配置 fallbackClass ，并 指定fallbackClass里面的方法。 | 否        |
-| fallbackClass【1.6】      | 存放fallback的类。对应的处理函数必须static修 饰，否则无法解析，其他要求：同fallback。 | 否        |
-| defaultFallback【1.6】    | 用于通用的 fallback 逻辑。默认fallback函数可 以针对所有类型的异常（除了 exceptionsToIgnore 里面排除掉的异常类型） 进行处理。若同时配置了 fallback 和 defaultFallback，以fallback为准。函数要求： 1. 返回类型与原方法一致 2. 方法参数列表为空， 或者有一个 Throwable 类型的参数。 3. 默认需 要和原方法在同一个类中。若希望使用其他类的 函数，可配置 fallbackClass ，并指定 fallbackClass 里面的方法。 | 否        |
-| exceptionsToIgnore【1.6】 | 指定排除掉哪些异常。排除的异常不会计入异常 统计，也不会进入fallback逻辑，而是原样抛 出。 | 否        |
-| exceptionsToTrace         | 需要trace的异常                                              | Throwable |
+[basic-api-resource-rule | Sentinel (sentinelguard.io)](https://sentinelguard.io/zh-cn/docs/basic-api-resource-rule.html)
+
+`@SentinelResource` 用于定义资源，并提供可选的异常处理和 fallback 配置项。`@SentinelResource` 解包含以下属性：
+
+注意：注解方式埋点不支持 private 方法。
+
+| 属性                        | 作用                                                         | 是否必须  |
+| --------------------------- | ------------------------------------------------------------ | --------- |
+| `value`                     | 资源名称                                                     | 是        |
+| `entryType`                 | entry 类型，标记流量的方向，取值 `EntryType.IN`/`EntryType.OUT`，默 认是 `EntryType.OUT` | 否        |
+| `blockHandler`              | 处理 BlockException 的函数名称。函数要求： 1. 必须是 public 2.返回类型与原方法一致 3. 参数类型需要和原方法相匹配，并在最后加 BlockException 类型的参数。 4. 默认需和原方 法在同一个类中。若希望使用其他类的函数，可配置 blockHandlerClass ，并指定 blockHandlerClass 里面的方法。 | 否        |
+| `blockHandlerClass`         | 存放 blockHandler 的类。对应的处理函数必须 static修饰，否则无法解析，其他要求：同 blockHandler。 | 否        |
+| `fallback`                  | 用于在抛出异常的时候提供 fallback 处理逻辑。 fallback 函数可以针对所有类型的异常（除了 exceptionsToIgnore 里面排除掉的异常类型） 进行处理。函数要求： 1. 返回类型与原方法一致 2. 参数类型需要和原方法相匹配，Sentinel 1.6 开始，也可在方法最后加 Throwable 类型的参数。 3.默认需和原方法在同一个类中。若希望使 用其他类的函数，可配置 fallbackClass ，并指定 fallbackClass 里面的方法。 | 否        |
+| `fallbackClass`【1.6】      | 存放 fallback 的类。对应的处理函数必须 static 修饰，否则无法解析，其他要求：同fallback。 | 否        |
+| `defaultFallback`【1.6】    | 用于通用的 fallback 逻辑。默认 fallback 函数可 以针对所有类型的异常（除了 exceptionsToIgnore 里面排除掉的异常类型） 进行处理。若同时配置了 fallback 和 defaultFallback，以fallback为准。函数要求： 1. 返回类型与原方法一致 2. 方法参数列表为空， 或者有一个 Throwable 类型的参数。 3. 默认需 要和原方法在同一个类中。若希望使用其他类的函数，可配置 fallbackClass ，并指定 fallbackClass 里面的方法。 | 否        |
+| `exceptionsToIgnore`【1.6】 | 指定排除掉哪些异常。排除的异常不会计入异常统计，也不会进入fallback逻辑，而是原样抛出。 | 否        |
+| `exceptionsToTrace`         | 需要 trace 的异常                                            | Throwable |
+
+
+
+###### 示例
+
+```java
+@RequestMapping("/sentinel")
+@RestController
+public class SentinelDemoController {
+    /**
+     * 单机阈值：5
+     */
+    @GetMapping("/sentinelResource")
+    @SentinelResource(value = "sentinelResource", blockHandler = "sentinelResourceBlockHandler")
+    public String sentinelResource(Integer id){
+        return "sentinelResource,快速失败，id：" + id;
+    }
+    public String sentinelResourceBlockHandler(Integer id, BlockException blockException){
+        return "sentinelResource,被限流，id：" + id;
+    }
+
+
+    /**
+     * 单机阈值：5
+     */
+    @GetMapping("/sentinelResource2")
+    @SentinelResource(value = "sentinelResource2", blockHandlerClass = SentinelResourceBlockHandlerClass.class,blockHandler = "sentinelResource2BlockHandler")
+    public String sentinelResource2(Integer id){
+        return "sentinelResource2,快速失败，id：" + id;
+    }
+
+}
+```
+
+
+
+```java
+public class SentinelResourceBlockHandlerClass {
+
+    public static String sentinelResource2BlockHandler(Integer id, BlockException blockException){
+        return "sentinelResource2,被限流，id：" + id;
+    }
+}
+```
+
+
 
 
 
@@ -2622,6 +2674,63 @@ IProductFeginClient 接口中方法 findByIdWithGet对应的资源名  GET:http:
 
 
 
+#### OpenFeign 整合 Sentinel(SpringCloudAlibaba)
+
+##### pom.xml
+
+参考 Openfeign 和 Sentinel 的配置
+
+
+
+##### application.properties
+
+配置增加如下，开启 feign 对 sentinel 的支持
+
+```properties
+# 开启 feign 对 sentinel 的支持
+feign.sentinel.enabled=true
+```
+
+##### Feign 接口配置 Sentinel
+
+在服务消费者的 Feign 接口的实现类中配置熔断方法
+
+基于 Feign 实现熔断降级，降级方法需要配置到 FeignClient 接口的实现类中
+
+- IProductFeignClient 的实现类，在里面编写对应调用的降级并确保该类能被扫描进 Spring 容器
+
+
+```java
+// 实现 UserFeignService Feign 微服务调用接口 在接口实现类中编写熔断降级方法
+@Component
+public class UserFeignServiceFallback implements UserFeignService {
+    @Override
+    public UserVO findById(Long id) {
+        System.out.println("UserFeignServiceFallback");
+        return null;
+    }
+}
+```
+
+- Feign接口IProductFeignClient中，去掉注解@Component，并在注解@FeignClient中添加fallback指定降级类
+
+```java
+@Component
+@FeignClient(name = "User", path = "/user/user", fallback = UserFeignServiceFallbackHandler.class)
+public interface UserFeignService {
+    @GetMapping("/{id}")
+    UserVO findById(@PathVariable("id") Long id);
+}
+```
+
+Feign 对应的接口中的资源名策略定义：httpmethod:protocol://requesturl
+
+@FeignClient 注解中的所有属性，Sentinel 都做了兼容。 
+
+UserFeignService 接口中方法 findById 对应的资源名  GET:http://User/user/user/{id}
+
+
+
 #### Endpoint 支持
 
 ```xml
@@ -2647,82 +2756,6 @@ Sentinel Endpoint 里暴露的信息非常有用。包括当前应用的所有�
 
 
 ##### 簇点链路
-
-
-
-##### @SentinelResource
-
-[basic-api-resource-rule | Sentinel (sentinelguard.io)](https://sentinelguard.io/zh-cn/docs/basic-api-resource-rule.html)
-
-
-
-注意：注解方式埋点不支持 private 方法。
-
-`@SentinelResource` 用于定义资源，并提供可选的异常处理和 fallback 配置项。`@SentinelResource` 解包含以下属性：
-
-`value`：资源名称，必需项（不能为空）
-
-`entryType`：entry 类型，可选项（默认为 EntryType.Out）
-
-`blockHandler / blockHandlerClass`：blockHandler 对应处理 BlockException 的函数名称，可选项。blockHandler 函数访问范围需要是 public，返回类型需要与原方法相匹配，参数类型需要和原方法相匹配并且最后加一个额外的参数，类型为 BlockException 。blockHandler 函数默认需要和原方法在同一个类中。若希望使用其他类的函数，则可以指定 blockHandlerClass 为对应的类的 Class 对象，注意对应的函故必需为 static 函数，否则无法解析。
-
-`fallback`：fallback 函数名称，可选项，用于在抛出异常的时候提供 fallback 处理逻辑。fallback 函数可以针对所有类型的异常(除了 `exceptionsToIgnore` 里面排除掉的异常类型)进行处理。 fallback 函数签名和位置要求:
-
-- 返回值类型必须与原函数返回值类型一致。
-- 方法参数列表需要和原函数一致，或者可以额外多一个 `Throwable` 类型的参数用于接收对应的异常。
-- fallback 函数默认需要和原方法在同一个类中。若希望使用其他类的函数，则可以指定 fallbackClass 为对应的类的 `Class` 对象，注意对应的函数必需为 static 函数，否则无法解析。
-
-`defaultFallback` (since 1.6.0)：默认的 fallback 数名称，可选项，通常用于通用的 fallback 逻辑（即可以用于很多服务或方法）。默认 fallback 函教可以针对所有类型的异常(除了 `exceptionsToIgnore` 里面排除掉的异常类型）进行处理。若同时配置了 `fallback` 和`defaultFallback`，则只有 `fallback` 会生效。`defaultFallback` 函数签名要求：
-
-- 返回值类型必须与原函数返回值类型一致。
-- 方法参数列表需要为空，或者可以额外多一个 Throwable 类型的参数用于接收对应的异常。
-- `defaultFalback` 函数默认需要和原方法在同一个类中。若希望使用其他类的图数，则可以指定 `fallbackClass` 为对应的类的 Class 对象，注意对应的函数必需为 static 函数，否则无法解析。
-
-`exceptionsToIgnore` (since 1.6.0)：用于指定哪些异常被排除掉，不会计入异常统计中，也不会进入 `fallBack` 逻辑中，而是会原样抛出。
-
-
-
-###### 示例
-
-```java
-@RequestMapping("/sentinel")
-@RestController
-public class SentinelDemoController {
-    /**
-     * 单机阈值：5
-     */
-    @GetMapping("/sentinelResource")
-    @SentinelResource(value = "sentinelResource", blockHandler = "sentinelResourceBlockHandler")
-    public String sentinelResource(Integer id){
-        return "sentinelResource,快速失败，id：" + id;
-    }
-    public String sentinelResourceBlockHandler(Integer id, BlockException blockException){
-        return "sentinelResource,被限流，id：" + id;
-    }
-
-
-    /**
-     * 单机阈值：5
-     */
-    @GetMapping("/sentinelResource2")
-    @SentinelResource(value = "sentinelResource2", blockHandlerClass = SentinelResourceBlockHandlerClass.class,blockHandler = "sentinelResource2BlockHandler")
-    public String sentinelResource2(Integer id){
-        return "sentinelResource2,快速失败，id：" + id;
-    }
-
-}
-```
-
-
-
-```java
-public class SentinelResourceBlockHandlerClass {
-
-    public static String sentinelResource2BlockHandler(Integer id, BlockException blockException){
-        return "sentinelResource2,被限流，id：" + id;
-    }
-}
-```
 
 
 
