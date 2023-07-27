@@ -4682,7 +4682,241 @@ RM (Resource Manager) - 资源管理器
 
 
 
+#### 安装配置
 
+##### 下载
+
+[Releases · seata/seata (github.com)](https://github.com/seata/seata/releases)
+
+
+
+##### 安装
+
+将下载的文件解压缩
+
+
+
+##### 配置
+
+###### 应用配置 
+
+conf/application.yml
+
+```yaml
+#  Copyright 1999-2019 Seata.io Group.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+server:
+  port: 7091
+
+spring:
+  application:
+    name: seata-server
+
+logging:
+  config: classpath:logback-spring.xml
+  file:
+    path: ${user.home}/logs/seata
+  extend:
+    logstash-appender:
+      destination: 127.0.0.1:4560
+    kafka-appender:
+      bootstrap-servers: 127.0.0.1:9092
+      topic: logback_to_logstash
+
+console:
+  user:
+    username: seata
+    password: seata
+
+# seata 下除 config 配置中心的配置外，其它配置都配置到配置中心
+seata:
+  config:
+    # support: nacos, consul, apollo, zk, etcd3
+    type: nacos
+    nacos:
+      server-addr: 192.168.31.100:8848
+      namespace: ed2069f3-cc54-4a62-b044-95061643ae84
+      group: MY_GROUP
+      # #if use MSE Nacos with auth, mutex with username/password attribute
+      # access-key: ""
+      # secret-key: ""
+      data-id: SeataServer.properties
+  # registry:
+    # support: nacos, eureka, redis, zk, consul, etcd3, sofa
+    # type: nacos
+  # store:
+    # support: file 、 db 、 redis
+    # mode: db
+  # server:
+    # service-port: 8091 #If not configured, the default is '${server.port} + 1000'
+  # security:
+    # secretKey: SeataSecretKey0c382ef121d778043159209298fd40bf3850a017
+    # tokenValidityInMilliseconds: 1800000
+    # ignore:
+      # urls: /,/**/*.css,/**/*.js,/**/*.html,/**/*.map,/**/*.svg,/**/*.png,/**/*.jpeg,/**/*.ico,/api/v1/auth/login
+
+```
+
+
+
+###### 配置中心
+
+SeataServer.properties
+
+```properties
+# support: nacos, eureka, redis, zk, consul, etcd3, sofa
+registry.type=nacos
+# registry.nacos.application=seata-tc-server
+registry.nacos.serverAddr=192.168.31.100:8848
+registry.nacos.namespace=ed2069f3-cc54-4a62-b044-95061643ae84
+registry.nacos.group=MY_GROUP
+# registry.nacos.cluster=SH
+# #if use MSE Nacos with auth, mutex with username/password attribute
+# registry.nacos.access-key=""
+# registry.nacos.secret-key=""
+
+# support: file 、 db 、 redis
+store.mode=db
+store.db.datasource=druid
+store.db.dbType=mysql
+store.db.driverClassName=com.mysql.cj.jdbc.Driver
+store.db.url=jdbc:mysql://192.168.31.100:3306/spring_cloud_alibaba_seata?useSSL=false&serverTimezone=Hongkong&useUnicode=true&characterEncoding=utf-8&autoReconnect=true
+store.db.user=root
+store.db.password=mysql
+store.db.minConn=5
+store.db.maxConn=100
+store.db.globalTable=global_table
+store.db.branchTable=branch_table
+store.db.lockTable=lock_table
+store.db.distributedLockTable=distributed_lock
+store.db.queryLimit=100
+store.db.maxWait=5000
+
+# 事务、日志等配置
+server.recoverycommittingRetryPeriod=3000
+server.recoveryasynCommittingRetryPeriod=3000
+server.recoveryrollbackingRetryPeriod=3000
+server.recoverytimeoutRetryPeriod=3000
+server.maxCommitRetryTimeout=-1
+server.maxRollbackRetryTimeout=-1
+server.rollbackRetryTimeoutUnlockEnable=false
+server.undologSaveDays=7
+server.undologDeletePeriod=86400000
+
+# 客户端与服务端传输方式
+transport.serialization=seata
+transport.compressor=none
+
+# 关闭metrics功能，提高性能
+metrics.enabled=false
+metrics.registryType=compact
+metrics.exporterList=prometheus
+metrics.exporterPrometheusPort=9898
+```
+
+
+
+###### 数据库配置
+
+使用 script/server/db/mysql.sql 初始化数据库 spring_cloud_alibaba_seata
+
+```sql
+-- -------------------------------- The script used when storeMode is 'db' --------------------------------
+-- the table to store GlobalSession data
+CREATE TABLE IF NOT EXISTS `global_table`
+(
+    `xid`                       VARCHAR(128) NOT NULL,
+    `transaction_id`            BIGINT,
+    `status`                    TINYINT      NOT NULL,
+    `application_id`            VARCHAR(32),
+    `transaction_service_group` VARCHAR(32),
+    `transaction_name`          VARCHAR(128),
+    `timeout`                   INT,
+    `begin_time`                BIGINT,
+    `application_data`          VARCHAR(2000),
+    `gmt_create`                DATETIME,
+    `gmt_modified`              DATETIME,
+    PRIMARY KEY (`xid`),
+    KEY `idx_status_gmt_modified` (`status` , `gmt_modified`),
+    KEY `idx_transaction_id` (`transaction_id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
+-- the table to store BranchSession data
+CREATE TABLE IF NOT EXISTS `branch_table`
+(
+    `branch_id`         BIGINT       NOT NULL,
+    `xid`               VARCHAR(128) NOT NULL,
+    `transaction_id`    BIGINT,
+    `resource_group_id` VARCHAR(32),
+    `resource_id`       VARCHAR(256),
+    `branch_type`       VARCHAR(8),
+    `status`            TINYINT,
+    `client_id`         VARCHAR(64),
+    `application_data`  VARCHAR(2000),
+    `gmt_create`        DATETIME(6),
+    `gmt_modified`      DATETIME(6),
+    PRIMARY KEY (`branch_id`),
+    KEY `idx_xid` (`xid`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
+-- the table to store lock data
+CREATE TABLE IF NOT EXISTS `lock_table`
+(
+    `row_key`        VARCHAR(128) NOT NULL,
+    `xid`            VARCHAR(128),
+    `transaction_id` BIGINT,
+    `branch_id`      BIGINT       NOT NULL,
+    `resource_id`    VARCHAR(256),
+    `table_name`     VARCHAR(32),
+    `pk`             VARCHAR(36),
+    `status`         TINYINT      NOT NULL DEFAULT '0' COMMENT '0:locked ,1:rollbacking',
+    `gmt_create`     DATETIME,
+    `gmt_modified`   DATETIME,
+    PRIMARY KEY (`row_key`),
+    KEY `idx_status` (`status`),
+    KEY `idx_branch_id` (`branch_id`),
+    KEY `idx_xid` (`xid`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `distributed_lock`
+(
+    `lock_key`       CHAR(20) NOT NULL,
+    `lock_value`     VARCHAR(20) NOT NULL,
+    `expire`         BIGINT,
+    primary key (`lock_key`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
+INSERT INTO `distributed_lock` (lock_key, lock_value, expire) VALUES ('AsyncCommitting', ' ', 0);
+INSERT INTO `distributed_lock` (lock_key, lock_value, expire) VALUES ('RetryCommitting', ' ', 0);
+INSERT INTO `distributed_lock` (lock_key, lock_value, expire) VALUES ('RetryRollbacking', ' ', 0);
+INSERT INTO `distributed_lock` (lock_key, lock_value, expire) VALUES ('TxTimeoutCheck', ' ', 0);
+```
+
+
+
+##### 启动
+
+sudo ./bin/seata-server.sh
+
+cat /opt/seata/logs/start.out
+
+192.168.31.100:7091
 
 
 
