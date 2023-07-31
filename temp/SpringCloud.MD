@@ -4776,6 +4776,7 @@ seata:
 SeataServer.properties
 
 ```properties
+txServiceGroup=spring_cloud_alibaba_tx_group
 # support: nacos, eureka, redis, zk, consul, etcd3, sofa
 registry.type=nacos
 # registry.nacos.application=seata-tc-server
@@ -4917,6 +4918,10 @@ sudo ./bin/seata-server.sh
 cat /opt/seata/logs/start.out
 
 192.168.31.100:7091
+
+
+
+
 
 
 
