@@ -4684,6 +4684,8 @@ RM (Resource Manager) - 资源管理器
 
 #### 安装配置
 
+[SEATA1.6.1的配置与使用-阿里云开发者社区 (aliyun.com)](https://developer.aliyun.com/article/1223677)
+
 ##### 下载
 
 [Releases · seata/seata (github.com)](https://github.com/seata/seata/releases)
@@ -4776,7 +4778,6 @@ seata:
 SeataServer.properties
 
 ```properties
-txServiceGroup=spring_cloud_alibaba_tx_group
 # support: nacos, eureka, redis, zk, consul, etcd3, sofa
 registry.type=nacos
 # registry.nacos.application=seata-tc-server
