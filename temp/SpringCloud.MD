@@ -4696,6 +4696,8 @@ RM (Resource Manager) - 资源管理器
 
 将下载的文件解压缩
 
+下面的示例 Seata 版本号为：1.7.0
+
 
 
 ##### 配置
@@ -4741,8 +4743,6 @@ console:
   user:
     username: seata
     password: seata
-
-# seata 下除 config 配置中心的配置外，其它配置都配置到配置中心
 seata:
   config:
     # support: nacos, consul, apollo, zk, etcd3
@@ -4755,6 +4755,7 @@ seata:
       # access-key: ""
       # secret-key: ""
       data-id: SeataServer.properties
+      cluster: default
   # registry:
     # support: nacos, eureka, redis, zk, consul, etcd3, sofa
     # type: nacos
@@ -4763,11 +4764,11 @@ seata:
     # mode: db
   # server:
     # service-port: 8091 #If not configured, the default is '${server.port} + 1000'
-  # security:
-    # secretKey: SeataSecretKey0c382ef121d778043159209298fd40bf3850a017
-    # tokenValidityInMilliseconds: 1800000
-    # ignore:
-      # urls: /,/**/*.css,/**/*.js,/**/*.html,/**/*.map,/**/*.svg,/**/*.png,/**/*.jpeg,/**/*.ico,/api/v1/auth/login
+  security:
+    secretKey: SeataSecretKey0c382ef121d778043159209298fd40bf3850a017
+    tokenValidityInMilliseconds: 1800000
+    ignore:
+      urls: /,/**/*.css,/**/*.js,/**/*.html,/**/*.map,/**/*.svg,/**/*.png,/**/*.jpeg,/**/*.ico,/api/v1/auth/login
 
 ```
 
@@ -4778,6 +4779,10 @@ seata:
 SeataServer.properties
 
 ```properties
+# txServiceGroup=spring_cloud_alibaba_tx_group
+# service.vgroupMapping.spring_cloud_alibaba_tx_group=default
+# 对应 seata server 的 seata.seaver.server-port
+# service.default.grouplist=192.168.31.100:8091
 # support: nacos, eureka, redis, zk, consul, etcd3, sofa
 registry.type=nacos
 # registry.nacos.application=seata-tc-server
@@ -4797,13 +4802,13 @@ store.db.driverClassName=com.mysql.cj.jdbc.Driver
 store.db.url=jdbc:mysql://192.168.31.100:3306/spring_cloud_alibaba_seata?useSSL=false&serverTimezone=Hongkong&useUnicode=true&characterEncoding=utf-8&autoReconnect=true
 store.db.user=root
 store.db.password=mysql
-store.db.minConn=5
+store.db.minConn=10
 store.db.maxConn=100
 store.db.globalTable=global_table
 store.db.branchTable=branch_table
 store.db.lockTable=lock_table
 store.db.distributedLockTable=distributed_lock
-store.db.queryLimit=100
+store.db.queryLimit=1000
 store.db.maxWait=5000
 
 # 事务、日志等配置
@@ -4816,6 +4821,10 @@ server.maxRollbackRetryTimeout=-1
 server.rollbackRetryTimeoutUnlockEnable=false
 server.undologSaveDays=7
 server.undologDeletePeriod=86400000
+
+security.secretKey=SeataSecretKey0c382ef121d778043159209298fd40bf3850a017
+security.tokenValidityInMilliseconds=1800000
+security.ignore.urls=/,/**/*.css,/**/*.js,/**/*.html,/**/*.map,/**/*.svg,/**/*.png,/**/*.jpeg,/**/*.ico,/api/v1/auth/login
 
 # 客户端与服务端传输方式
 transport.serialization=seata
@@ -4921,6 +4930,95 @@ cat /opt/seata/logs/start.out
 192.168.31.100:7091
 
 
+
+#### 服务配置 Seata
+
+##### 配置
+
+```yaml
+seata:
+  tx-service-group: spring_cloud_alibaba_tx_group
+  service:
+    vgroup-mapping:
+      spring_cloud_alibaba_tx_group: default
+    default:
+      # 对应 TC 服务的 IP 及 seata.server.server-port 配置的端口
+      grouplist: 192.168.31.100:8091
+```
+
+
+
+##### Seata 代理数据源
+
+导包
+
+```xml
+<dependency>
+    <groupId>io.seata</groupId>
+    <artifactId>seata-spring-boot-starter</artifactId>
+    <version>1.7.0</version>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-configuration-processor</artifactId>
+</dependency>
+```
+
+
+
+###### MybatisPlusConfig
+
+```java
+@Configuration
+@MapperScan({"com.example.order.mapper"})
+public class MybatisPlusConfig {
+}
+```
+
+
+
+###### DataSourceConfig
+
+```java
+import com.alibaba.druid.pool.DruidDataSource;
+import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
+import io.seata.rm.datasource.DataSourceProxy;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.transaction.SpringManagedTransactionFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+
+@Configuration
+public class DataSourceConfig {
+
+    @Value("${mybatis-plus.mapper-location}")
+    private String mapperLocations;
+
+    @Bean
+    @ConfigurationProperties(prefix = "spring.datasource")
+    public DataSource druidDataSource(){
+        return new DruidDataSource();
+    }
+
+    @Bean
+    public DataSourceProxy dataSourceProxy(DataSource dataSource){
+        return new DataSourceProxy(dataSource);
+    }
+
+    @Bean
+    public SqlSessionFactory sqlSessionFactory(@Qualifier("dataSourceProxy") DataSource dataSourceProxy) throws Exception {
+        MybatisSqlSessionFactoryBean sqlSessionFactoryBean = new MybatisSqlSessionFactoryBean();
+        sqlSessionFactoryBean.setDataSource(dataSourceProxy);
+        sqlSessionFactoryBean.setMapperLocations(new PathMatchingResourcePatternResolver().getResources(mapperLocations));
+        sqlSessionFactoryBean.setTransactionFactory(new SpringManagedTransactionFactory());
+        return sqlSessionFactoryBean.getObject();
+    }
+}
+```
 
 
 
