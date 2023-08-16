@@ -909,27 +909,14 @@ eureka.instance.instanceId=${spring.cloud.client.ip-address}:${server.port}
 
 
 
-##### 使用
+##### 配置
 
-startup.cmd -m standalone
+###### conf/application.properties
 
-sh startup.sh -m standalone
-
-启动之后在浏览器打开[链接](http://localhost:8848/nacos)，默认用户名/密码是 nacos/nacos 。
-
-端口号和访问链接的前缀可以在配置文件 **conf/application.properties** 中修改
-
-
-
-##### 配置 Mysql
-
-默认使用嵌入式数据库，0.7版本以后增加支持mysql数据源能力
-
-1.初始化 nacos 相关表：运行 **conf/nacos-mysql.sql** 文件
-
-2.修改 **conf/application.properties** 文件，增加支持 Mysql 数据源配置（目前只支持 Mysql），添加 Mysql 数据源的 url、用户名和密码
-
-```
+```properties
+# 配置为使用 mysql 数据源
+# 默认使用嵌入式数据库，0.7版本以后增加支持mysql数据源能力，目前只支持 Mysql
+# 需要数据库执行初始化表 conf/mysql-schema.sql
 spring.datasource.platform=mysql
 spring.sql.init.platform=mysql
 
@@ -937,9 +924,174 @@ db.num=1
 db.url.0=jdbc:mysql://127.0.0.1:3306/nacos?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true
 db.user.0=user
 db.password.0=password
+
+# tomcat 文件目录
+server.tomcat.basedir=/var/log/nacos
 ```
 
-3.配置后输入命令启动服务
+
+
+###### conf/nacos-logback.xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 1999-2018 Alibaba Group Holding Ltd.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<configuration scan="true" scanPeriod="10 seconds">
+
+	<!-- defaultValue 由 ${nacos.home}/logs 改为 /var/log/nacos -->
+    <springProperty scope="context" name="logPath" source="nacos.logs.path" defaultValue="/var/log/nacos"/>
+ 
+    <property name="LOG_HOME" value="${logPath}"/>
+
+    <appender name="cmdb-main"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- ${nacos.home}/logs 改为 ${LOG_HOME} -->
+        <file>${LOG_HOME}/cmdb-main.log</file>
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- ${nacos.home}/logs 改为 ${LOG_HOME} -->
+            <fileNamePattern>${LOG_HOME}/logs/cmdb-main.log.%d{yyyy-MM-dd}.%i</fileNamePattern>
+            <maxFileSize>2GB</maxFileSize>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>7GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <encoder>
+            <Pattern>%date %level %msg%n%n</Pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <Pattern>%date %level %msg%n%n</Pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    
+<!--
+    省略......
+-->
+</configuration>
+```
+
+
+
+###### bin/startup.sh
+
+```shell
+# 脚本开头加上
+LOG_DIR="/var/log/nacos"
+
+# 省略......
+
+if [[ "$JAVA_MAJOR_VERSION" -ge "9" ]] ; then
+# 这里的 ${BASE_DIR}/logs 改为 ${LOG_DIR}
+  JAVA_OPT="${JAVA_OPT} -Xlog:gc*:file=${LOG_DIR}/nacos_gc.log:time,tags:filecount=10,filesize=100m"
+else
+
+# 省略......
+
+# 结尾这部分
+## check the start.out log output file
+# if [ ! -f "${BASE_DIR}/logs/start.out" ]; then
+#   touch "${BASE_DIR}/logs/start.out"
+# fi
+## start
+# echo "$JAVA $JAVA_OPT_EXT_FIX ${JAVA_OPT}" > ${BASE_DIR}/logs/start.out 2>&1 &
+
+# if [[ "$JAVA_OPT_EXT_FIX" == "" ]]; then
+#   nohup "$JAVA" ${JAVA_OPT} nacos.nacos >> ${BASE_DIR}/logs/start.out 2>&1 &
+# else
+#   nohup "$JAVA" "$JAVA_OPT_EXT_FIX" ${JAVA_OPT} nacos.nacos >> ${BASE_DIR}/logs/start.out 2>&1 &
+# fi
+# 和日志输出有关的更改
+LOG_DIR="/var/log/nacos"
+START_LOG_FILE=${LOG_DIR}/start.out
+if [ ! -f "${START_LOG_FILE}" ]; then
+  touch "${START_LOG_FILE}"
+fi
+# start
+echo "$JAVA $JAVA_OPT_EXT_FIX ${JAVA_OPT}" > ${START_LOG_FILE} 2>&1 &
+
+if [[ "$JAVA_OPT_EXT_FIX" == "" ]]; then
+  nohup "$JAVA" ${JAVA_OPT} nacos.nacos >> ${START_LOG_FILE} 2>&1 &
+else
+  nohup "$JAVA" "$JAVA_OPT_EXT_FIX" ${JAVA_OPT} nacos.nacos >> ${START_LOG_FILE} 2>&1 &
+fi
+
+echo "nacos is starting，you can check the ${LOG_DIR}/start.out"
+```
+
+
+
+##### 创建用户
+
+```shell
+# sudo groupadd -r apps
+sudo useradd -r -g apps -s /bin/false nacos
+```
+
+
+
+##### 启动脚本
+
+新建 `/opt/apps/nacos/startup.sh`
+
+```shell
+#!/bin/bash
+
+cd "/opt/apps/nacos"
+sudo -u nacos /opt/apps/nacos/bin/startup.sh -m cluster
+
+exit 0
+```
+
+
+
+##### 更改文件权限
+
+```shell
+sudo mkdir /var/log/nacos/
+sudo chown -R nacos:root /opt/apps/nacos
+sudo chown -R nacos:root /var/log/nacos
+sudo chmod +x /opt/apps/nacos/startup.sh
+```
+
+
+
+##### 使用
+
+```shell
+sudo /opt/apps/nacos/startup.sh
+
+# cd /opt/apps/nacos
+# 集群模式启动
+sudo -u nacos /opt/apps/nacos/bin/startup.sh -m cluster
+# 单机模式启动
+sudo -u nacos /opt/apps/nacos/bin/startup.sh -m standalone
+
+sudo /opt/apps/nacos/bin/shutdown.sh
+```
+
+启动之后在浏览器打开[链接](http://localhost:8848/nacos)，默认用户名/密码是 nacos/nacos 。
+
+端口号和访问链接的前缀可以在配置文件 **conf/application.properties** 中修改
 
 
 
@@ -967,8 +1119,9 @@ public static void main(String[] args) {
 
 1.在 nacos 的解压目录 **conf** 目录下，有配置文件 **cluster.conf**（若无则手动创建），每行配置成 **ip:port**。（配置3个或3个以上节点）
 
-```conf
-#cluster.conf
+`conf/cluster.conf`
+
+```properties
 192.168.31.100:8840
 192.168.31.100:8844
 192.168.31.100:8842
@@ -5063,23 +5216,14 @@ Ramp-up period(seconds):决定多长时间启动所有线程,如果ramp-up perio
 ```shell
 tar -zxvf nginx.tar.gz
 
-# 首先要安装 PCRE
-# PCRE 作用是让 Nginx 支持 Rewrite 功能。
-cd /usr/local/src/
-sudo wget http://downloads.sourceforge.net/project/pcre/pcre/8.45/pcre-8.45.tar.gz
-sudo tar zxvf pcre-8.45.tar.gz
-cd pcre-8.45
-sudo ./configure --prefix=/opt/pcre
-sudo make && make install
-pcre-config --version
-
 # 安装 nginx
 sudo wget http://nginx.org/download/nginx-1.24.0.tar.gz
 sudo tar zxvf nginx-1.24.0.tar.gz
 cd nginx-1.24.0
-# sudo apt install openssl libssl zlib1g-dev
+# sudo apt install libpcre3 libpcre3-dev libssl-dev zlib1g-dev
+# PCRE 作用是让 Nginx 支持 Rewrite 功能。
 # --with-stream : 支持 TCP 转发
-sudo ./configure --prefix=/opt/nginx --with-stream --with-http_stub_status_module --with-http_ssl_module --with-pcre=/opt/pcre-8.45
+sudo ./configure --prefix=/opt/nginx --with-stream --with-http_stub_status_module --with-http_ssl_module
 sudo make && make install
 /opt/nginx/sbin/nginx -v
 #添加用户组(-r 创建系统工作组,系统工作组的组 ID 小于 500)
@@ -5087,11 +5231,309 @@ sudo groupadd -r www
 #添加用户(-r 建立系统帐号,-s /bin/false 参数指定 www 用户仅拥有所有权,而没有登录权限)
 sudo useradd -r -g www -s /bin/false www
 sudo chown -R www:www /opt/nginx
-# 配置文件 /opt/nginx/conf/nginx.conf
-# 配置 user www www;
-# 检查配置文件 /opt/nginx/sbin/nginx -t
 
-# sudo rm -r pcre-8.45
+sudo groupadd -r apps
+sudo useradd -r -g apps -s /bin/false www
+#修改当前目录拥有者为新建的 mysql 用户
+sudo chown -R www:root /opt/apps/nginx
+sudo chown -R www:root /opt/temp/nginx
+sudo chown -R www:root /var/log/nginx
+```
+
+
+
+## 配置
+
+`nginx/conf/nginx.conf`
+
+检查配置文件 `nginx/sbin/nginx -t`
+
+[参考](https://www.cnblogs.com/54chensongxia/p/12938929.html#:~:text=Nginx的主配置文件,间不存在次序关系。)
+
+```properties
+# 全局块
+# 主要设置一些影响 Nginx 服务器整体运行的配置指令，因此，这些指令的作用域是 Nginx 服务器全局。
+
+# 指定可以运行 nginx 服务的用户和用户组，只能在全局块配置
+# 将 user 指令注释掉，或者配置成 nobody 的话所有用户都可以运行
+# user nobody;
+# user nobody nobody;
+user www apps;
+
+# 指定工作线程数，可以制定具体的进程数，也可使用自动模式，这个指令只能在全局块配置
+# worker_processes number | auto;
+worker_processes 1;
+
+# 指定pid文件存放的路径，这个指令只能在全局块配置
+pid /opt/temp/nginx/nginx.pid;
+
+# 指定错误日志的路径和日志级别，此指令可以在全局块、http 块、server 块以及 location 块中配置。
+# 其中 debug 级别的日志需要编译时使用 --with-debug 开启 debug 开关
+# error_log [path] [debug | info | notice | warn | error | crit | alert | emerg] 
+error_log  /var/log/nginx/error.log  info;
+
+# 指定进程可以打开的最大描述符：数目
+# 工作模式与连接数上限
+# 这个指令是指当一个 nginx 进程打开的最多文件描述符数目，理论值应该是最多打开文件数（ulimit -n）与 nginx 进程数相除，但是 nginx 分配请求并不是那么均匀，所以最好与 ulimit -n 的值保持一致。
+# 现在在 linux 2.6 内核下开启文件打开数为 65535，worker_rlimit_nofile 就相应应该填写 65535。
+# 这是因为 nginx 调度时分配请求到进程并不是那么的均衡，所以假如填写 10240，总并发量达到 3-4 万时就有进程可能超过 10240 了，这时会返回 502 错误。
+worker_rlimit_nofile 1024;
+
+# event块
+# 主要影响 Nginx 服务器与用户的网络连接。
+# 这一部分的指令对 Nginx 服务器的性能影响较大，在实际配置中应该根据实际情况灵活调整。
+
+events {
+    # 当某一时刻只有一个网络连接到来时，多个睡眠进程会被同时叫醒，但只有一个进程可获得连接。如果每次唤醒的进程数目太多，会影响一部分系统性能。在 Nginx 服务器的多进程下，就有可能出现这样的问题。
+    # 开启的时候，将会对多个 Nginx 进程接收连接进行序列化，防止多个进程对连接的争抢
+    # 默认是 on 状态，只能在 events 块中进行配置
+    # accept_mutex on | off;
+    
+    # 如果 multi_accept 被禁止了，Nginx 一个工作进程只能同时接受一个新的连接。否则，一个工作进程可以同时接受所有的新连接。 
+    # 如果nginx使用 kqueue 连接方法，那么这条指令会被忽略，因为这个方法会报告在等待被接受的新连接的数量。
+    # 默认是 off 状态，只能在 event 块配置
+	# multi_accept on | off;
+	
+    # 指定使用哪种网络 IO 模型，method 可选择的内容有：select、poll、kqueue、epoll、rtsig、/dev/poll 以及 eventport，
+    # 一般操作系统不是支持上面所有模型的。
+    # 是Linux 2.6以上版本内核中的高性能网络 I/O 模型，linux 建议 epoll，如果跑在 FreeBSD 上面，就用 kqueue 模型。
+    # 补充说明：
+    # 与 apache 相类，nginx 针对不同的操作系统，有不同的事件模型
+    # A）标准事件模型
+    # Select、poll 属于标准事件模型，如果当前系统不存在更有效的方法，nginx 会选择 select 或 poll
+    # B）高效事件模型
+    # Kqueue：使用于 FreeBSD 4.1+, OpenBSD 2.9+, NetBSD 2.0 和 MacOS X.使用双处理器的 MacOS X 系统使用 kqueue 可能会造成内核崩溃。
+    # Epoll：使用于 Linux 内核2.6版本及以后的系统。
+    # /dev/poll：使用于 Solaris 7 11/99+，HP/UX 11.22+ (eventport)，IRIX 6.5.15+ 和 Tru64 UNIX 5.1A+。
+    # Eventport：使用于 Solaris 10。 为了防止出现内核崩溃的问题， 有必要安装安全补丁。
+    # 只能在 events 块中进行配置
+    # use method
+    use epoll;
+
+    # 设置允许每一个 worker process 同时开启的最大连接数，当每个工作进程接受的连接数超过这个值时将不再接收连接
+    # 当所有的工作进程都接收满时，连接进入 logback，logback 满后连接被拒绝
+    # 只能在 events 块中进行配置
+    # 注意：这个值不能超过超过系统支持打开的最大文件数，也不能超过单个进程支持打开的最大文件数，具体可以参考这篇文章：		https://cloud.tencent.com/developer/article/1114773
+    worker_connections  1024;
+}
+
+# http 块
+# 这里的 http 全局块表示 http 块中不包含在 server 块中的部分。
+
+http {
+	# include 指令，用于包含其他的配置文件，可以放在配置文件的任何地方，但是要注意你包含进来的配置文件一定符合配置规范，比如说你include 进来的配置是 worker_processes 指令的配置，而你将这个指令包含到了 http 块中，着肯定是不行的，worker_processes 指令只能在全局块中。
+    # 下面的指令将 mime.types 包含进来，mime.types 和 ngin.cfg 同级目录，不同级的话需要指定具体路径
+    include  mime.types;
+    
+    # 配置默认类型，如果不加此指令，默认值为 text/plain。
+    # 此指令可以在 http、server 或者 location 块中进行配置。
+    default_type  application/octet-stream;
+    
+    # 默认编码
+    # charset utf-8;
+    
+    # access_log 配置，此指令可以在 http、server 或者 location 块中进行设置
+    # access_log 是指记录Nginx 服务器提供服务过程应答前端请求的日志
+    
+    # log_format 指令，用于定义日志格式，此指令只能在 http 块中进行配置
+	log_format  main '$remote_addr - $remote_user [$time_local] "$request" '
+					 '$status $body_bytes_sent "$http_referer" '
+					 '"$http_user_agent" "$http_x_forwarded_for"';
+    
+    # 记录 access_log 开关
+    # access_log on | off;
+    access_log on;
+    
+    # access_log path [format [buffer=size]]
+    access_log /var/log/nginx/access.log  main;
+    
+    # 开启关闭 sendfile 方式传输文件,调用 sendfile 函数（zero copy 方式）来输出文件，
+    # 对于普通应用，必须设为 on。如果用来进行下载等应用磁盘IO重负载应用，可设置为 off，以平衡磁盘与网络IO处理速度，降低系统 uptime。
+    # 可以在 http、serve 或者 location 块中进行配置
+	# sendfile  on | off;
+	sendfile  on;
+	
+	# 设置 sendfile 最大数据量,此指令可以在 http、server 或 location 块中配置
+    # 其中，size 值如果大于0，Nginx 进程的每个 worker_processes 每次调用 sendfile() 传输的数据量最大不能超过这个值(这里是 128k，所以每次不能超过 128k)；如果设置为 0，则无限制。默认值为 0。
+    # sendfile_max_chunk size;
+    # sendfile_max_chunk 128k;
+    
+    # 开启目录列表访问，合适下载服务器，默认关闭。
+    autoindex on;
+    
+    # 此选项允许或禁止使用 socke 的 TCP_CORK 的选项，此选项仅在使用 sendfile 的时候使用
+    tcp_nopush on;
+     
+    tcp_nodelay on;
+    
+    # 配置连接超时时间,此指令可以在 http、server 或 location 块中配置。
+    # 与用户建立会话连接后，Nginx 服务器可以保持这些连接打开一段时间
+    # timeout，服务器端对连接的保持时间。默认值为 75s;
+    # header_timeout，可选项，在应答报文头部的 Keep-Alive 域设置超时时间：“Keep-Alive:timeout=header_timeout”。
+    # 报文中的这个指令可以被 Mozilla 或者 Konqueror 识别。
+    # keepalive_timeout timeout [header_timeout]
+    # 下面配置的含义是，在服务器端保持连接的时间设置为120s，发给用户端的应答报文头部中 Keep-Alive 域的超时时间设置为 100s。
+    keepalive_timeout 120s 100s;
+
+    # 配置单次连接请求数上限，此指令可以在 http、server 或 location 块中配置。
+    # Nginx 服务器端和用户端建立会话连接后，用户端通过此连接发送请求。指令 keepalive_requests 用于限制用户通过某一连接向 Nginx 服务器发送请求的次数。默认是 100
+    # keepalive_requests number;
+    
+    # 服务器名字的 hash 表大小
+    # 保存服务器名字的 hash 表是由指令 server_names_hash_max_size 和 server_names_hash_bucket_size 所控制的。
+    # 参数hash bucket size 总是等于 hash 表的大小，并且是一路处理器缓存大小的倍数。
+    # 在减少了在内存中的存取次数后，使在处理器中加速查找hash表键值成为可能。
+    # 如果 hash bucket size 等于一路处理器缓存的大小，那么在查找键的时候，最坏的情况下在内存中查找的次数为 2。
+    # 第一次是确定存储单元的地址，第二次是在存储单元中查找键值。
+    # 因此，如果Nginx给出需要增大 hash max size 或 hash bucket size 的提示，那么首要的是增大前一个参数的大小.
+    # server_names_hash_bucket_size 64;
+
+    # 客户端请求头部的缓冲区大小。这个可以根据你的系统分页大小来设置，
+    # 一般一个请求头的大小不会超过 1k，不过由于一般系统分页都要大于 1k，所以这里设置为分页大小。
+    # 分页大小可以用命令 getconf PAGESIZE 取得。
+    # 但也有 client_header_buffer_size 超过 4k 的情况，
+    # 但是 client_header_buffer_size 该值必须设置为“系统分页大小”的整倍数。
+    client_header_buffer_size 4k;
+
+    # 客户请求头缓冲大小。nginx 默认会用 client_header_buffer_size 这个 buffer 来读取 header 值，如果 header 过大，它会使用 large_client_header_buffers 来读取。
+    large_client_header_buffers 4 16k;
+
+    #设定通过 nginx 上传文件的大小
+    client_max_body_size 8m;
+    
+    # 这个将为打开文件指定缓存，默认是没有启用的，max 指定缓存数量，建议和打开文件数一致，
+    # inactive 是指经过多长时间文件没被请求后删除缓存。
+    # 可以在 http、server 或者 location 块中进行配置。
+    open_file_cache max=65535 inactive=60s;
+    
+	# 指定了何时需要检查 open_file_cache 中缓存项目的有效信息。
+    # 可以在 http、server 或者 location 块中进行配置。
+    # 默认值: 60s
+    open_file_cache_valid 80s;
+
+    # open_file_cache 指令中的 inactive 参数时间内文件的最少使用次数，
+    # 如果超过这个数字，文件描述符一直是在缓存中打开的，否则它将被从缓存中移除。
+    # 可以在 http、server 或者 location 块中进行配置。
+    # 默认值: 1
+    open_file_cache_min_uses 1;
+    
+    # 是否在搜索一个文件时记录 cache 错误.
+    # 可以在 http、server 或者 location 块中进行配置。
+    # open_file_cache_errors on | off
+    open_file_cache_errors on;
+    
+    # FastCGI 相关参数是为了改善网站的性能：减少资源占用，提高访问速度。下面参数看字面意思都能理解。
+    # fastcgi_connect_timeout 300;
+    # fastcgi_send_timeout 300;
+    # fastcgi_read_timeout 300;
+    # fastcgi_buffer_size 64k;
+    # fastcgi_buffers 4 64k;
+    # fastcgi_busy_buffers_size 128k;
+    # fastcgi_temp_file_write_size 128k;
+    
+    # gzip 模块设置
+    # 开启 gzip 压缩输出
+    gzip on;
+    # 最小压缩文件大小
+    gzip_min_length 1k;
+    # 压缩缓冲区
+    gzip_buffers 4 16k;
+    # 压缩版本（默认1.1，前端如果是 squid2.5 请使用 1.0）
+    # gzip_http_version 1.0;
+    # 压缩等级
+    # gzip_comp_level 2;  
+    # 压缩类型，默认就已经包含 textml，所以下面就不用再写了，写上去也不会有问题，但是会有一个 warn。
+    gzip_types text/plain application/x-javascript text/css application/xml;    
+    gzip_vary on;
+
+    # 开启限制 IP 连接数的时候需要使用
+    # limit_zone crawler $binary_remote_addr 10m;
+    
+    # server 块
+    # server 块和“虚拟主机”的概念有密切联系。
+	# 虚拟主机，又称虚拟服务器、主机空间或是网页空间，它是一种技术。该技术是为了节省互联网服务器硬件成本而出现的。
+	# 这里的“主机”或“空间”是由实体的服务器延伸而来，硬件系统可以基于服务器群，或者单个服务器等。
+	# 虚拟主机技术主要应用于 HTTP、FTP 及 EMAIL 等多项服务，将一台服务器的某项或者全部服务内容逻辑划分为多个服务单位，对外表现为多个服务器，从而充分利用服务器硬件资源。从用户角度来看，一台虚拟主机和一台独立的硬件主机是完全一样的。
+	# 在使用 Nginx 服务器提供 Web 服务时，利用虚拟主机的技术就可以避免为每一个要运行的网站提供单独的 Nginx 服务器，也无需为每个网站对应运行一组 Nginx 进程。
+	# 虚拟主机技术使得 Nginx 服务器可以在同一台服务器上只运行一组 Nginx 进程，就可以运行多个网站。
+	# 每一个 http 块都可以包含多个 server 块，而每个 server 块就相当于一台虚拟主机，它内部可有多台主机联合提供服务，一起对外提供在逻辑上关系密切的一组服务（或网站）。
+	# 和 http 块相同，server 块也可以包含自己的全局块，同时可以包含多个 location 块。
+	# 在 server 全局块中，最常见的两个配置项是本虚拟主机的监听配置和本虚拟主机的名称或 IP 配置。
+    
+    server {
+    	# server块中最重要的指令就是 listen 指令，这个指令有三种配置语法。
+    	# 这个指令默认的配置值是：listen *:80 | *:8000。
+    	# 只能在 server 块种配置这个指令。
+    	# 第一种
+        # listen address[:port] [default_server] [ssl] [http2 | spdy] [proxy_protocol] [setfib=number] [fastopen=number] [backlog=number] [rcvbuf=size] [sndbuf=size] [accept_filter=filter] [deferred] [bind] [ipv6only=on|off] [reuseport] [so_keepalive=on|off|[keepidle]:[keepintvl]:[keepcnt]];
+        # 第二种
+        # listen port [default_server] [ssl] [http2 | spdy] [proxy_protocol] [setfib=number] [fastopen=number] [backlog=number] [rcvbuf=size] [sndbuf=size] [accept_filter=filter] [deferred] [bind] [ipv6only=on|off] [reuseport] [so_keepalive=on|off|[keepidle]:[keepintvl]:[keepcnt]];
+        # 第三种（可以不用重点关注）
+        # listen unix:path [default_server] [ssl] [http2 | spdy] [proxy_protocol] [backlog=number] [rcvbuf=size] [sndbuf=size] [accept_filter=filter] [deferred] [bind] [so_keepalive=on|off|[keepidle]:[keepintvl]:[keepcnt]];
+        # 关于上面的一些重要参数做如下说明：
+		# address：监听的 IP 地址（请求来源的 IP 地址），如果是 IPv6 的地址，需要使用中括号“[]”括起来，比如 [fe80::1] 等。
+		# port：端口号，如果只定义了 IP 地址没有定义端口号，就使用 80 端口。如果没配置 listen 指令，以超级用户权限运行，则使用 *:80，否则使用 *:8000。多个虚拟主机可以同时监听同一个端口,但是 server_name 需要设置成不一样；
+		# default_server：假如通过Host没匹配到对应的虚拟主机，则通过这台虚拟主机处理。具体的可以 https://segmentfault.com/a/1190000015681272。
+		# backlog=number：设置监听函数 listen() 最多允许多少网络连接同时处于挂起状态，在 FreeBSD 中默认为 -1，其他平台默认为 511。
+		# accept_filter=filter：设置监听端口对请求的过滤，被过滤的内容不能被接收和处理。本指令只在 FreeBSD 和 NetBSD 5.0+ 平台下有效。filter 可以设置为 dataready 或 httpready，感兴趣的读者可以参阅 Nginx 的官方文档。
+		# bind：标识符，使用独立的 bind() 处理此 address:port；一般情况下，对于端口相同而IP地址不同的多个连接，Nginx 服务器将只使用一个监听命令，并使用 bind() 处理端口相同的所有连接。
+		# ssl：标识符，设置会话连接使用 SSL 模式进行，此标识符和 Nginx 服务器提供的 HTTPS 服务有关。
+		# listen 指令的使用看起来比较复杂，但其实在一般的使用过程中，相对来说比较简单，并不会进行太复杂的配置。
+		# listen 指令的配置非常灵活，可以单独制定 IP，单独指定端口或者同时指定 IP 和端口。
+		# listen 127.0.0.1:8000;	只监听来自 127.0.0.1 这个 IP，请求 8000 端口的请求
+        # listen 127.0.0.1;			只监听来自 127.0.0.1 这个 IP，请求 80 端口的请求（不指定端口，默认 80）
+        # listen 8000;				监听来自所有 IP，请求 8000 端口的请求
+        # listen *:8000;			和上面效果一样
+        # listen localhost:8000;	和第一种效果一致
+        listen       80;
+        
+        # 用于配置虚拟主机的名称。
+        # 可以只有一个名称，也可以由多个名称并列，之间用空格隔开。
+        # 可以使用通配符“*”，但通配符只能用在由三段字符串组成的名称（每段由点号“.”隔开比如：myserver.com www.myserver.com）的首段或尾段，或者由两段字符串组成的名称的尾段
+        # server_name myserver.* *.myserver.com
+        # 另外还支持正则表达式的形式。
+        # 当出现一个名称被多个虚拟主机的 server_name 匹配成功时。对于匹配方式不同的，按照以下的优先级选择虚拟主机，排在前面的优先处理请求。
+        # 1、准确匹配 server_name
+        # 2、通配符在开始时匹配 server_name 成功
+        # 3、通配符在结尾时匹配 server_name 成功
+        # 4、正则表达式匹配 server_name 成功
+        # 在以上四种匹配方式中，如果 server_name 被处于同一优先级的匹配方式多次匹配成功，则首次匹配成功的虚拟主机处理请求。
+        server_name  localhost;
+
+		# access_log  logs/host.access.log  main;
+		access_log /var/log/nginx/localhost.access.log  main;
+		
+		# localtion 块
+		# 主要作用是，基于 Nginx 服务器接收到的请求字符串（例如， server_name/uri-string），对除虚拟主机名称 server_name 之外的字符串（前例中“/uri-string”部分）进行匹配，对特定的请求进行处理。
+		# 配置格式为：location [ = | ~ | ~* | ^~ ] uri { ... }
+		# “=”：用于标准 uri 前，要求请求字符串与 uri 严格匹配。如果已经匹配成功，就停止继续向下搜索并立即处理此请求。
+		# “^～”：用于标准 uri 前，要求 Nginx 服务器找到标识 uri 和请求字符串匹配度最高的 location 后，立即使用此 location 处理请求，而不再使用 location 块中的正则 uri 和请求字符串做匹配。
+		# “～”：用于表示 uri 包含正则表达式，并且区分大小写。
+		# “～*”：用于表示 uri 包含正则表达式，并且不区分大小写。
+		# 注意如果 uri 包含正则表达式，就必须要使用“～”或者“～*”标识。
+		# 在不添加此选项时，
+		# Nginx 服务器首先在 server 块的多个 location 块中搜索是否有标准 uri 和请求字符串匹配，
+		# 如果有多个可以匹配，就记录匹配度最高的一个。
+		# 然后，服务器再用 location 块中的正则 uri 和请求字符串匹配，当第一个正则 uri 匹配成功，结束搜索，
+		# 并使用这个 location 块处理此请求；如果正则匹配全部失败，就使用刚才记录的匹配度最高的 location 块处理此请求。
+		localtion / {
+			# 这个指令用于设置请求寻找资源的跟目录，此指令可以在 http、server 或者 location 块中配置。
+			# 由于使用Nginx服务器多数情况下要配置多个 location 块对不同的请求分别做出处理，
+			# 因此该指令通常在 location 块中进行设置。
+			# path 变量中可以包含Nginx服务器预设的大多数变量，只有 documentroot 和 realpath_root 不可以使用。
+			# root path
+			root   html;
+			
+			# alisa
+			
+            index  index.html index.htm;
+
+			# alisa
+		}
+    }
+    
+}
+
 ```
 
 
