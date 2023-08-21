@@ -901,7 +901,9 @@ eureka.instance.instanceId=${spring.cloud.client.ip-address}:${server.port}
 
 
 
-#### 下载安装及配置
+#### 安装配置部署管理
+
+
 
 ##### 安装
 
@@ -998,96 +1000,105 @@ server.tomcat.basedir=/var/log/nacos
 # 脚本开头加上
 LOG_DIR="/var/log/nacos"
 
+#===========================================================================================
+# JVM Configuration
+#===========================================================================================
+if [[ "${MODE}" == "standalone" ]]; then
+    JAVA_OPT="${JAVA_OPT} -Xms512m -Xmx512m -Xmn256m"
+    JAVA_OPT="${JAVA_OPT} -Dnacos.standalone=true"
+else
+    if [[ "${EMBEDDED_STORAGE}" == "embedded" ]]; then
+        JAVA_OPT="${JAVA_OPT} -DembeddedStorage=true"
+    fi
+    # 这里修改一下堆大小
+    # JAVA_OPT="${JAVA_OPT} -server -Xms2g -Xmx2g -Xmn1g -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=320m"
+    JAVA_OPT="${JAVA_OPT} -server -Xms1g -Xmx1g -Xmn512m -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m"
+    # 这里的 ${BASE_DIR}/logs -> ${LOG_DIR}    
+    JAVA_OPT="${JAVA_OPT} -XX:-OmitStackTraceInFastThrow -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${LOG_DIR}/java_heapdump.hprof"
+    JAVA_OPT="${JAVA_OPT} -XX:-UseLargePages"
+
+fi
+
 # 省略......
 
+JAVA_MAJOR_VERSION=$($JAVA -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p')
 if [[ "$JAVA_MAJOR_VERSION" -ge "9" ]] ; then
-# 这里的 ${BASE_DIR}/logs 改为 ${LOG_DIR}
+  # 这里的 ${BASE_DIR}/logs -> ${LOG_DIR}
   JAVA_OPT="${JAVA_OPT} -Xlog:gc*:file=${LOG_DIR}/nacos_gc.log:time,tags:filecount=10,filesize=100m"
 else
+  JAVA_OPT_EXT_FIX="-Djava.ext.dirs=${JAVA_HOME}/jre/lib/ext:${JAVA_HOME}/lib/ext"
+  # 这里的 ${BASE_DIR}/logs -> ${LOG_DIR}
+  JAVA_OPT="${JAVA_OPT} -Xloggc:${LOG_DIR}/nacos_gc.log -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=100M"
+fi
+
 
 # 省略......
 
 # 结尾这部分
-## check the start.out log output file
-# if [ ! -f "${BASE_DIR}/logs/start.out" ]; then
-#   touch "${BASE_DIR}/logs/start.out"
-# fi
-## start
-# echo "$JAVA $JAVA_OPT_EXT_FIX ${JAVA_OPT}" > ${BASE_DIR}/logs/start.out 2>&1 &
-
-# if [[ "$JAVA_OPT_EXT_FIX" == "" ]]; then
-#   nohup "$JAVA" ${JAVA_OPT} nacos.nacos >> ${BASE_DIR}/logs/start.out 2>&1 &
-# else
-#   nohup "$JAVA" "$JAVA_OPT_EXT_FIX" ${JAVA_OPT} nacos.nacos >> ${BASE_DIR}/logs/start.out 2>&1 &
-# fi
-# 和日志输出有关的更改
-LOG_DIR="/var/log/nacos"
-START_LOG_FILE=${LOG_DIR}/start.out
+# 增加变量
+START_LOG_FILE="${LOG_DIR}/start.out"
+# 这里的 ${BASE_DIR}/logs/start.out -> ${START_LOG_FILE}
 if [ ! -f "${START_LOG_FILE}" ]; then
+# 这里的 ${BASE_DIR}/logs/start.out -> ${START_LOG_FILE}
   touch "${START_LOG_FILE}"
 fi
 # start
+# 这里的 ${BASE_DIR}/logs/start.out -> ${START_LOG_FILE}
 echo "$JAVA $JAVA_OPT_EXT_FIX ${JAVA_OPT}" > ${START_LOG_FILE} 2>&1 &
 
 if [[ "$JAVA_OPT_EXT_FIX" == "" ]]; then
+# 这里的 ${BASE_DIR}/logs/start.out -> ${START_LOG_FILE}
   nohup "$JAVA" ${JAVA_OPT} nacos.nacos >> ${START_LOG_FILE} 2>&1 &
 else
+# 这里的 ${BASE_DIR}/logs/start.out -> ${START_LOG_FILE}
   nohup "$JAVA" "$JAVA_OPT_EXT_FIX" ${JAVA_OPT} nacos.nacos >> ${START_LOG_FILE} 2>&1 &
 fi
 
-echo "nacos is starting，you can check the ${LOG_DIR}/start.out"
+# 这里的 ${BASE_DIR}/logs/start.out -> ${START_LOG_FILE}
+echo "nacos is starting，you can check the ${START_LOG_FILE}"
 ```
 
 
 
-##### 创建用户
+##### 创建用户（组）
 
 ```shell
-# sudo groupadd -r apps
+sudo groupadd -r apps
 sudo useradd -r -g apps -s /bin/false nacos
-```
 
-
-
-##### 启动脚本
-
-新建 `/opt/apps/nacos/startup.sh`
-
-```shell
-#!/bin/bash
-
-cd "/opt/apps/nacos"
-sudo -u nacos /opt/apps/nacos/bin/startup.sh -m cluster
-
-exit 0
-```
-
-
-
-##### 更改文件权限
-
-```shell
 sudo mkdir /var/log/nacos/
 sudo chown -R nacos:root /opt/apps/nacos
 sudo chown -R nacos:root /var/log/nacos
-sudo chmod +x /opt/apps/nacos/startup.sh
 ```
 
 
 
-##### 使用
+##### 服务管理
+
+手动
 
 ```shell
-sudo /opt/apps/nacos/startup.sh
-
 # cd /opt/apps/nacos
 # 集群模式启动
 sudo -u nacos /opt/apps/nacos/bin/startup.sh -m cluster
 # 单机模式启动
 sudo -u nacos /opt/apps/nacos/bin/startup.sh -m standalone
-
+# 停止
 sudo /opt/apps/nacos/bin/shutdown.sh
+
+ps aux | grep 'nacos'
+sudo kill -9 PID
 ```
+
+
+
+自动
+
+编写[脚本](../files/scripts/server/nacos.server)文件放在 base_dir 目录下 `/opt/apps/nacos/nacos.server`
+
+配置参考 Linux -> 服务管理  -> 系统启动时自动运行服务
+
+
 
 启动之后在浏览器打开[链接](http://localhost:8848/nacos)，默认用户名/密码是 nacos/nacos 。
 
@@ -5211,6 +5222,12 @@ Ramp-up period(seconds):决定多长时间启动所有线程,如果ramp-up perio
 
 # Nginx
 
+## 安装配置部署管理
+
+
+
+### 安装
+
 在[官网](http://nginx.org/en/download.html)上下载 Stable version
 
 ```shell
@@ -5226,23 +5243,11 @@ cd nginx-1.24.0
 sudo ./configure --prefix=/opt/nginx --with-stream --with-http_stub_status_module --with-http_ssl_module
 sudo make && make install
 /opt/nginx/sbin/nginx -v
-#添加用户组(-r 创建系统工作组,系统工作组的组 ID 小于 500)
-sudo groupadd -r www
-#添加用户(-r 建立系统帐号,-s /bin/false 参数指定 www 用户仅拥有所有权,而没有登录权限)
-sudo useradd -r -g www -s /bin/false www
-sudo chown -R www:www /opt/nginx
-
-sudo groupadd -r apps
-sudo useradd -r -g apps -s /bin/false www
-#修改当前目录拥有者为新建的 mysql 用户
-sudo chown -R www:root /opt/apps/nginx
-sudo chown -R www:root /opt/temp/nginx
-sudo chown -R www:root /var/log/nginx
 ```
 
 
 
-## 配置
+### 配置
 
 `nginx/conf/nginx.conf`
 
@@ -5538,7 +5543,7 @@ http {
 
 
 
-## 配置 HTTP 转发
+### 配置 HTTP 转发
 
 ```conf
 http {
@@ -5566,7 +5571,7 @@ http {
 
 
 
-## 配置 TCP 转发
+### 配置 TCP 转发
 
 ```java
 stream {
@@ -5590,13 +5595,46 @@ stream {
 
 
 
-常用命令
+### 创建用户（组）
 
 ```shell
-sudo /opt/nginx/sbin/nginx					    # 启动 Nginx
-sudo /opt/nginx/sbin/nginx -s reload            # 重新载入配置文件
-sudo /opt/nginx/sbin/nginx -s reopen            # 重启 Nginx
-sudo /opt/nginx/sbin/nginx -s stop              # 停止 Nginx
-sudo /opt/nginx/sbin/nginx -V					# Nginx 有哪些模块
-
+sudo groupadd -r apps
+sudo useradd -r -g apps -s /bin/false www
+#修改当前目录拥有者为新建的 mysql 用户
+sudo chown -R www:root /opt/apps/nginx
+sudo chown -R www:root /opt/temp/nginx
+sudo chown -R www:root /var/log/nginx
 ```
+
+
+
+### 服务管理
+
+手动
+
+```shell
+# 启动 Nginx
+sudo /opt/apps/nginx/sbin/nginx
+# 重新载入配置文件
+sudo /opt/apps/nginx/sbin/nginx -s reload
+# 重启 Nginx
+sudo /opt/apps/nginx/sbin/nginx -s reopen
+# 停止 Nginx
+sudo /opt/apps/nginx/sbin/nginx -s stop
+# Nginx 有哪些模块
+sudo /opt/apps/nginx/sbin/nginx -V
+
+ps aux | grep 'nginx'
+sudo kill -9 PID
+```
+
+
+
+自动
+
+编写[脚本](../files/scripts/server/nginx.server)文件放在 base_dir 目录下 `/opt/apps/nginx/nginx.server`
+
+配置参考 Linux -> 服务管理  -> 系统启动时自动运行服务
+
+
+

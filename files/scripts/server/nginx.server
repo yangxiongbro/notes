@@ -1,0 +1,88 @@
+#!/bin/sh
+
+lsb_functions="/lib/lsb/init-functions"
+if test -f $lsb_functions ; then
+  . $lsb_functions
+else
+  log_success_msg()
+  {
+    echo " SUCCESS! $@"
+  }
+  log_failure_msg()
+  {
+    echo " ERROR! $@"
+  }
+fi
+
+server_name="Nginx"
+base_dir="/opt/apps/nginx"
+log_dir="/var/log/nginx"
+log_file="nginx.nohup.log"
+start_command="${base_dir}/sbin/nginx"
+mode=$1
+process_id=$(ps -eo pid,cmd | egrep '^.*([0-9]+)\s*nginx: master process' | sed 's@^[^0-9]*\([0-9]\+\)[^0-9]*@\1@')
+echo "mode=${mode}, PID=${process_id}"
+case "$mode" in
+  'start')
+    # Start daemon
+    cd $base_dir
+    echo "Starting ${server_name}"
+    sleep 20s
+    # 文件存在且可执行
+    if test -x "$base_dir/sbin/nginx" ; then
+      # 文件存在并且是目录
+      if ! test -d "$log_dir" ; then 
+        mkdir $log_dir
+      fi
+      echo "You can check the ${log_dir}/${log_file}"
+      bash -c "sudo nohup ${start_command} > ${log_dir}/${log_file} 2>&1 &"
+      exit 0
+    else
+      log_failure_msg "Couldn't find ${server_name} server (${base_dir}/sbin/nginx)"
+      exit 1
+    fi
+    ;;
+
+  'stop')
+  	bash -c "sudo /opt/apps/nginx/sbin/nginx -s stop"
+    echo "Shutting down ${server_name}"
+    ;;
+
+  'restart')
+    if $0 stop ; then
+      $0 start
+    else
+      log_failure_msg "Failed to stop running ${server_name} server, so refusing to try to start."
+      exit 1
+    fi
+    ;;
+    
+  'reload'|'force-reload')
+  	bash -c "sudo /opt/apps/nginx/sbin/nginx -s reload"
+    log_success_msg "Reloading service ${server_name}"
+    ;;
+    
+  'status')
+    if test -n "$process_id" ; then
+      if (kill -0 $process_id 2>/dev/null) ; then
+        log_success_msg "${server_name} running"
+        exit 0
+      else
+        log_failure_msg "${server_name} is not running, but PID exists"
+        exit 1
+      fi
+    else
+      log_failure_msg "${server_name} is not running"
+      exit 0
+    fi
+    ;;
+    *)
+      # usage
+      basename=`basename "$0"`
+      echo "Usage: $basename  {start|stop|restart|reload|force-reload|status}  [ ${server_name} server options ]"
+      exit 1
+    ;;
+esac
+
+
+exit 0

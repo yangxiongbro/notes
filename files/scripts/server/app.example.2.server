@@ -1,0 +1,48 @@
+#!/bin/sh
+do_start()
+{
+#	nohup /opt/mysql/mysql/support-files/mysql.server start
+	/opt/mysql/mysql/support-files/mysql.server start
+}
+
+do_stop()
+{
+	/opt/mysql/mysql/support-files/mysql.server stop
+}
+
+do_restart()
+{
+#	nohup /opt/mysql/mysql/support-files/mysql.server restart
+	/opt/mysql/mysql/support-files/mysql.server restart
+#	do_stop
+#	sleep 1
+#	do_start
+}
+
+do_status()
+{
+	/opt/mysql/mysql/support-files/mysql.server status
+}
+case "$1" in
+	start)
+		do_start
+		;;
+	stop)
+		do_stop
+		;;
+	status)
+		do_status
+		;;
+	reload)
+		echo "reload"
+		;;
+	restart)
+		do_restart
+		;;
+	*)
+		echo "Usage: {start|stop|restart|reload}" >&2
+		exit 3
+		;;
+esac
+
+exit 0

@@ -1,0 +1,118 @@
+#!/bin/sh
+# 参考 mysql/support-files/mysql.server
+# 该脚本样例是通关获取 PID 来对程序的启动、关闭、重启、查看状态等进行管理
+# 修改两处地方
+
+lsb_functions="/lib/lsb/init-functions"
+if test -f $lsb_functions ; then
+  . $lsb_functions
+else
+  log_success_msg()
+  {
+    echo " SUCCESS! $@"
+  }
+  log_failure_msg()
+  {
+    echo " ERROR! $@"
+  }
+fi
+
+######## 第一处：
+# 应用名称，在后面的日志打印中将使用该名称
+server_name="Nginx"
+# 运行应用的用户
+user="frp"
+# 应用所在目录
+base_dir="/opt/apps/frp"
+# nohup 日志目录
+log_dir="/var/log/frp"
+# nohup 日志文件名
+log_file="frpc.nohup.log"
+# 启动命令
+start_command="${base_dir}/frpc -c ${base_dir}/frpc.ini"
+# 通过执行查找该应用的进程命令获取 PID
+process_id=$(ps -eo pid,cmd | egrep '^.*([0-9]+)\s*'"$start_command"'$' | sed 's@^[^0-9]*\([0-9]\+\)[^0-9]*@\1@')
+mode=$1
+echo "mode=${mode}, PID=${process_id}"
+case "$mode" in
+  'start')
+    # Start daemon
+    cd $base_dir
+    echo "Starting ${server_name}"
+    sleep 5s
+######## 第二处：
+    # 修改可执行文件目录/文件名
+    # 文件存在且可执行
+    if test -x "$base_dir/frpc" ; then
+      # 文件存在并且是目录
+      if ! test -d "$log_dir" ; then 
+        mkdir $log_dir
+      fi
+      echo "You can check the ${log_dir}/${log_file}"
+      bash -c "sudo -u ${user} nohup ${start_command} > ${log_dir}/${log_file} 2>&1 &"
+      exit 0
+    else
+      log_failure_msg "Couldn't find ${server_name} server (${base_dir}/frpc)"
+      exit 1
+    fi
+    ;;
+
+  'stop')
+    # 检测字符串长度大于0
+    if test -n "$process_id" ; then
+	  # kill -0 $pid中的-0表示不发送任何信号给PID对应的进程，但是仍会对变量值PID对应的进程是否存在进行检查，如果$pid对应的进程存在，则返回0，不存在返回1
+	  # 2>/dev/null不输出错误信息
+      if (kill -0 $process_id 2>/dev/null) ; then
+        echo "Shutting down ${server_name}"
+        kill $process_id
+      else
+        log_failure_msg "${server_name} server process #${process_id} is not running!"
+      fi
+    else
+      log_failure_msg "${server_name} server PID could not be found!"
+    fi
+    ;;
+
+  'restart')
+    # Stop the service and regardless of whether it was
+    # running or not, start it again.
+	# 这里
+    if $0 stop ; then
+      $0 start
+    else
+      log_failure_msg "Failed to stop running ${server_name} server, so refusing to try to start."
+      exit 1
+    fi
+    ;;
+
+  'reload'|'force-reload')
+    if test -n "$process_id" ; then 
+      kill -HUP $process_id && log_success_msg "Reloading service ${server_name}"
+    else
+      log_failure_msg "${server_name} PID could not be found!"
+      exit 1
+    fi
+    ;;
+  'status')
+    if test -n "$process_id" ; then
+      if (kill -0 $process_id 2>/dev/null) ; then
+        log_success_msg "${server_name} running ${process_id}"
+        exit 0
+      else
+        log_failure_msg "${server_name} is not running, but PID exists"
+        exit 1
+      fi
+    else
+      log_failure_msg "${server_name} is not running"
+      exit 0
+    fi
+    ;;
+    *)
+      # usage
+      basename=`basename "$0"`
+      echo "Usage: $basename  {start|stop|restart|reload|force-reload|status}  [ ${server_name} server options ]"
+      exit 1
+    ;;
+esac
+
+exit 0
