@@ -1119,6 +1119,8 @@ nacos 的密码是使用 org.springframework.security.crypto.bcrypt.BCryptPasswo
 public static void main(String[] args) {
     String pwd = new BCryptPasswordEncoder().encode("123456");
     System.out.println(pwd);
+    // nacos
+    // $2a$10$OUohm24WhHoYRC4fADWKXOdXptJTKNN04RMyvhW86hGwxbUDuE/Mq
 }
 ```
 
@@ -2474,42 +2476,118 @@ Sentinel 可以简单的分为 Sentinel 核心库和 Dashboard。核心库不依
 
 
 
-#### Sentinel管理控制台
+#### 安装配置部署管理
 
-##### 安装启动
+##### 安装
 
 从[官方网站](https://github.com/alibaba/Sentinel/releases)中下载最新版本的控制台 jar 包
 
-```shell
-java -Dserver.port=8050 -Dcsp.sentinel.dashboard.server=localhost:8050 -Dsentinel.dashboard.auth.username=sentinel -Dsentinel.dashboard.auth.password=sentinel -Dproject.name=sentinel-dashboard -jar sentinel-dashboard.jar
-```
+**启动 Sentinel 控制台需要 JDK 版本为 1.8 及以上版本。**
 
-启动配置项
+
+
+##### 配置
 
 [更多启动配置项](https://sentinelguard.io/zh-cn/docs/general-configuration.html)
 
+[配置](../files/config/sentinel.all.properties)
+
+- Sentinel 提供 JVM -D 参数方式\properties 文件方式（1.7.0 版本开始支持）配置方式
+- 优先级 JVM -D 参数 > properties 文件参数
+- 其中，project.name 参数只能通过 JVM -D 参数方式配置（since 1.8.0 取消该限制），其它参数支持所有的配置方式。
+
+
+
+JVM -D 参数方式
+
 ```properties
+# 配置文件路径
+-Dcsp.sentinel.config.file=/opt/apps/sentinal/conf/application.properties
 # 指定控制台的端口为 8050
 -Dserver.port=8050 
 # 指定要被哪个控制台监控（这里指定的是自己监控自己）
 -Dcsp.sentinel.dashboard.server=localhost:8050
 # 指定实例名称（名称会在控制台左侧以菜单显示）
--Dproject.name=sentinel-dashboard 
+-Dproject.name=sentinel-dashboard
 # 设置登录的帐号为：sentinel，默认为 sentinel
--Dsentinel.dashboard.auth.username=sentinel 
+-Dsentinel.dashboard.auth.username=sentinel
 # 设置登录的密码为：sentinel，默认为 sentinel
--Dsentinel.dashboard.auth.password=sentinel 
+-Dsentinel.dashboard.auth.password=sentinel
+# Sentinel 日志文件目录。默认值：${user.home}/logs/csp/
+-Dcsp.sentinel.log.dir=/var/log/sentinal
+# 日志文件名中是否加入进程号，用于单机部署多个应用的情况。默认值：false
+-Dcsp.sentinel.log.use.pid=false
+# 客户端启动 HTTP API Server 的端口号。默认值：8719，若端口冲突会自动从8719开始依次+1扫描,直至找到未被占用的端口
+# 端口配置会在应用对应的机器上启动一个 Http Server，该 Server 会与 Sentinel 控制台做交互。比如 Sentinel 控制台添加了一个限流规则，会把规则数据 push 给这个 Http Server 接收，Http Server 再将规则注册到 Sentinel 中。
+-Dcsp.sentinel.api.port=8719
 ```
 
 
 
-启动之后在浏览器访问http://localhost:8050/
+properties 文件方式
+
+```properties
+server.port=8050 
+csp.sentinel.dashboard.server=localhost:8050
+project.name=sentinel-dashboard
+sentinel.dashboard.auth.username=sentinel
+sentinel.dashboard.auth.password=sentinel
+csp.sentinel.log.dir=/var/log/sentinal
+csp.sentinel.log.use.pid=false
+csp.sentinel.api.port=8719
+```
+
+
+
+##### 创建用户（组）
+
+```shell
+sudo groupadd -r apps
+sudo useradd -r -g apps -s /bin/false sentinel
+
+sudo mkdir /var/log/sentinel/
+sudo chown -R sentinel:root /opt/apps/sentinel
+sudo chown -R sentinel:root /var/log/sentinel
+```
+
+
+
+##### 服务管理
+
+手动
+
+```shell
+# 启动
+sudo -u sentinel nohup java -Dcsp.sentinel.config.file=/opt/apps/sentinel/conf/application.properties -jar /opt/apps/sentinel/sentinel-dashboard.jar > /var/log/sentinel/sentinel.nohup.log 2>&1 &
+
+sudo -u sentinel nohup java -Dserver.port=8050 -Dcsp.sentinel.dashboard.server=localhost:8050 -Dproject.name=sentinel-dashboard -Dsentinel.dashboard.auth.username=sentinel -Dsentinel.dashboard.auth.password=sentinel -Dcsp.sentinel.log.dir=/var/log/sentinel -Dcsp.sentinel.log.use.pid=false -Dcsp.sentinel.api.port=8719 -jar /opt/apps/sentinel/sentinel-dashboard.jar > /var/log/sentinel/sentinel.nohup.log 2>&1 &
+
+# 停止
+ps aux | grep 'sentinel'
+sudo kill -9 PID
+```
+
+
+
+自动
+
+编写[脚本](../files/scripts/server/sentinel.server)文件放在 base_dir 目录下 `/opt/apps/sentinel/sentinel.server`
+
+配置参考 Linux -> 服务管理  -> 系统启动时自动运行服务
+
+
+
+启动之后在浏览器访问 http://localhost:8050/ 进入 Sentinel 管理控制台
+
+
+
+#### Spring Cloud 客户端接入 Sentinel
+
+
 
 参考[鉴权模块文档](https://github.com/alibaba/Sentinel/wiki/%E6%8E%A7%E5%88%B6%E5%8F%B0#%E9%89%B4%E6%9D%83) 
 
-**启动 Sentinel 控制台需要 JDK 版本为 1.8 及以上版本。**
 
-##### 客户端接入
 
 ###### 导包
 
