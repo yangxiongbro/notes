@@ -1144,7 +1144,7 @@ public static void main(String[] args) {
 
 3.配置 nginx 负载均衡
 
-```conf
+```properties
 http {
     upstream nacoscluster {
         server 192.168.31.100:8840;
@@ -4994,9 +4994,16 @@ seata:
       # secret-key: ""
       data-id: SeataServer.properties
       cluster: default
-  # registry:
+  registry:
     # support: nacos, eureka, redis, zk, consul, etcd3, sofa
-    # type: nacos
+    type: nacos
+    nacos:
+      # application=seata-tc-server
+      server-addr: 192.168.31.101:8848
+      namespace: ed2069f3-cc54-4a62-b044-95061643ae84
+      group: MY_GROUP
+      # username: nacos
+      # password: xx
   # store:
     # support: file 、 db 、 redis
     # mode: db
@@ -5017,29 +5024,14 @@ seata:
 SeataServer.properties
 
 ```properties
-# txServiceGroup=spring_cloud_alibaba_tx_group
-# service.vgroupMapping.spring_cloud_alibaba_tx_group=default
-# 对应 seata server 的 seata.seaver.server-port
-# service.default.grouplist=192.168.31.100:8091
-# support: nacos, eureka, redis, zk, consul, etcd3, sofa
-registry.type=nacos
-# registry.nacos.application=seata-tc-server
-registry.nacos.serverAddr=192.168.31.101:8848
-registry.nacos.namespace=ed2069f3-cc54-4a62-b044-95061643ae84
-registry.nacos.group=MY_GROUP
-# registry.nacos.cluster=SH
-# #if use MSE Nacos with auth, mutex with username/password attribute
-# registry.nacos.access-key=""
-# registry.nacos.secret-key=""
-
 # support: file 、 db 、 redis
 store.mode=db
 store.db.datasource=druid
 store.db.dbType=mysql
 store.db.driverClassName=com.mysql.cj.jdbc.Driver
 store.db.url=jdbc:mysql://192.168.31.101:3306/spring_cloud_alibaba_seata?useSSL=false&serverTimezone=Hongkong&useUnicode=true&characterEncoding=utf-8&autoReconnect=true
-store.db.user=root
-store.db.password=mysql
+store.db.user=young
+store.db.password=123456
 store.db.minConn=10
 store.db.maxConn=100
 store.db.globalTable=global_table
@@ -5083,6 +5075,48 @@ metrics.exporterPrometheusPort=9898
 
 
 
+###### 启动脚本配置修改
+
+bin/seata-server.sh
+
+```shell
+# 前面加上
+LOG_DIR="/var/log/seata"
+
+# 此处参数：-Dskywalking.logging.dir 由 ${BASEDIR}/logs 改为 ${LOG_DIR}
+SKYWALKING_OPTS="-javaagent:${BASEDIR}/ext/apm-skywalking/skywalking-agent.jar -Dskywalking_config=${BASEDIR}/ext/apm-skywalking/config/agent.config -Dskywalking.logging.dir=${LOG_DIR}"
+
+# 这里修改一下堆大小
+JAVA_OPT="${JAVA_OPT} -server -Dloader.path=${LOADER_PATH:="$BASEDIR/lib"} -Xmx${JVM_XMX:="1024m"} -Xms${JVM_XMS:="1024m"} -Xss${JVM_XSS:="512k"} -XX:SurvivorRatio=10 -XX:MetaspaceSize=${JVM_MetaspaceSize:="256m"} -XX:MaxMetaspaceSize=${JVM_MaxMetaspaceSize:="256m"} -XX:MaxDirectMemorySize=${JVM_MaxDirectMemorySize:=1024m} -XX:-OmitStackTraceInFastThrow -XX:-UseAdaptiveSizePolicy"
+
+# 此处参数：-XX:HeapDumpPath 由 ${BASEDIR}/logs 改为 ${LOG_DIR}
+JAVA_OPT="${JAVA_OPT} -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${BASEDIR}/logs/java_heapdump.hprof -XX:+DisableExplicitGC"
+
+# 此处参数：-Xlog:gc*:file、-Xlog:gc=trace:file、-Xloggc 由 ${BASEDIR}/logs 改为 ${LOG_DIR}
+if [[ "$JAVA_MAJOR_VERSION" -ge "9" ]] ; then
+  JAVA_OPT="${JAVA_OPT} -Xlog:gc*:file=${LOG_DIR}/seata_gc.log:time,tags:filecount=10,filesize=102400"
+elif [[ "$JAVA_MAJOR_VERSION" -ge "17" ]] ; then
+  JAVA_OPT="${JAVA_OPT} -Xlog:gc=trace:file=${LOG_DIR}/seata_gc.log:time,tags:filecount=10,filesize=10M"
+else
+  JAVA_OPT="${JAVA_OPT} -Xloggc:${LOG_DIR}/seata_gc.log -verbose:gc -XX:+PrintGCDetails  -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=100M -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC"
+fi
+
+# 注释掉这几句
+# if [ ! -x "$BASEDIR"/logs ]; then
+#   mkdir "$BASEDIR"/logs
+# fi
+
+CMD_LINE_ARGS=$@
+
+# 此处后台输出日志文件目录 由 ${BASEDIR}/logs 改为 ${LOG_DIR}
+# start
+echo "$JAVACMD ${JAVA_OPT} ${CMD_LINE_ARGS}" > ${LOG_DIR}/start.out 2>&1 &
+nohup $JAVACMD ${JAVA_OPT} ${CMD_LINE_ARGS} >> ${LOG_DIR}/start.out 2>&1 &
+echo "seata-server is starting, you can check the ${LOG_DIR}/start.out"
+```
+
+
+
 ##### 创建用户（组）
 
 ```shell
@@ -5096,15 +5130,88 @@ sudo chown -R seata:root /var/log/seata
 
 
 
+##### 服务管理
+
+手动
+
+```shell
+# cd /opt/apps/seata
+sudo -u seata /opt/apps/seata/bin/seata-server.sh
+# 停止
+ps aux | grep 'seata'
+sudo kill -9 PID
+```
 
 
-##### 启动
 
-sudo ./bin/seata-server.sh
+自动
 
-cat /opt/seata/logs/start.out
+编写[脚本](../files/scripts/server/seata.server)文件放在 base_dir 目录下 `/opt/apps/seata/seata.server`
 
-192.168.31.100:7091
+配置参考 Linux -> 服务管理  -> 系统启动时自动运行服务
+
+
+
+启动之后在浏览器打开[链接](http://localhost:7091)。
+
+端口号和访问链接的前缀可以在配置文件 **conf/application.properties** 中修改
+
+
+
+##### Seata 高可用集群
+
+1.修改应用端口为 7090
+
+2.配置后在各个节点服务器输入命令启动所有服务
+
+3.配置 nginx 负载均衡
+
+```properties
+http {
+    upstream seatacluster {
+        server 192.168.31.101:7090;
+        server 192.168.31.102:7090;
+        server 192.168.31.103:7090;
+    }
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    server {
+        listen       7091;
+        server_name  localhost;
+
+        location / {
+            proxy_pass http://seatacluster/;
+        }
+    }
+    
+    server {
+        listen       8091;
+        server_name  localhost;
+
+        location / {
+            proxy_pass http://seatacluster_server/;
+        }
+    }
+}
+
+stream {
+
+    upstream seatacluster_server {
+        server 192.168.31.101:8090 max_fails=3 fail_timeout=10s;
+        server 192.168.31.102:8090 max_fails=3 fail_timeout=10s;
+		server 192.168.31.103:8090 max_fails=3 fail_timeout=10s;
+    } 
+
+    server {
+        listen 8091;
+        proxy_connect_timeout 20s;
+        proxy_timeout 5m;
+        proxy_pass seatacluster_server;
+    }
+
+}
+```
 
 
 
@@ -5284,7 +5391,7 @@ sudo make && make install
 
 #### 配置 HTTP 转发
 
-```conf
+```properties
 http {
     include       mime.types;
     default_type  application/octet-stream;
@@ -5312,7 +5419,7 @@ http {
 
 #### 配置 TCP 转发
 
-```java
+```properties
 stream {
 
     upstream nacoscluster_grpc {

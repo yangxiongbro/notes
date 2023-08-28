@@ -14,14 +14,14 @@ else
   }
 fi
 
-server_name="Nacos"
-user="nacos"
-base_dir="/opt/apps/nacos"
-log_dir="/var/log/nacos"
-log_file="nacos.nohup.log"
-start_command="${base_dir}/bin/startup.sh -m cluster"
+server_name="Seata"
+user="seata"
+base_dir="/opt/apps/seata"
+log_dir="/var/log/seata"
+log_file="seata.nohup.log"
+start_command="${base_dir}/bin/seata-server.sh"
 mode=$1
-process_id=$(ps -eo pid,cmd | fgrep -i 'nacos.nacos' | fgrep ${base_dir} | grep java | grep -v grep | awk '{print $1}')
+process_id=$(ps -eo pid,cmd | fgrep -i 'seata-server.jar' | fgrep ${base_dir} | grep java | grep -v grep | awk '{print $1}')
 
 echo "mode=${mode}, PID=${process_id}"
 case "$mode" in
@@ -31,7 +31,7 @@ case "$mode" in
     echo "Starting ${server_name}"
     sleep 20s
     # 文件存在且可执行
-    if test -x "$base_dir/bin/startup.sh" ; then
+    if test -x "$base_dir/bin/seata-server.sh" ; then
       # 文件存在并且是目录
       if ! test -d "$log_dir" ; then 
         mkdir $log_dir
@@ -39,7 +39,7 @@ case "$mode" in
       bash -c "sudo -u ${user} ${start_command}"
       exit 0
     else
-      log_failure_msg "Couldn't find ${server_name} server (${base_dir}/bin/startup.sh)"
+      log_failure_msg "Couldn't find ${server_name} server (${base_dir}/bin/seata-server.sh)"
       exit 1
     fi
     ;;
