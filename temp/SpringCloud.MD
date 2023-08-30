@@ -903,7 +903,7 @@ eureka.instance.instanceId=${spring.cloud.client.ip-address}:${server.port}
 
 #### 安装配置部署管理
 
-
+示例版本 `2.2.3`
 
 ##### 安装
 
@@ -929,6 +929,28 @@ db.password.0=password
 
 # tomcat 文件目录
 server.tomcat.basedir=/var/log/nacos
+
+# 开启鉴权
+nacos.core.auth.system.type=nacos
+nacos.core.auth.enabled=true
+
+## 开启服务身份识别功能
+### 关闭使用user-agent判断服务端请求并放行鉴权的功能
+### Since 1.4.1, Turn on/off white auth for user-agent: nacos-server, only for upgrade from old version.
+nacos.core.auth.enable.userAgentAuthWhite=false
+
+### 配置自定义身份识别的key（不可为空）和value（不可为空）
+### 所有集群均需要配置相同的server.identity信息，否则可能导致服务端之间数据不一致或无法删除实例等问题。
+### Since 1.4.1, worked when nacos.core.auth.enabled=true and nacos.core.auth.enable.userAgentAuthWhite=false.
+### The two properties is the white list for auth and used by identity the request from other server.
+nacos.core.auth.server.identity.key=example
+nacos.core.auth.server.identity.value=example
+
+# 自定义用于生成JWT令牌的密钥
+# 密钥需要保持节点间一致，长时间不一致可能导致403 invalid token错误
+### The default token (Base64 String):
+# Base64 SecretKey987654321098765432109876543210987654321098765432109876543210
+nacos.core.auth.plugin.nacos.token.secret.key=U2VjcmV0S2V5OTg3NjU0MzIxMDk4NzY1NDMyMTA5ODc2NTQzMjEwOTg3NjU0MzIxMDk4NzY1NDMyMTA5ODc2NTQzMjEw
 ```
 
 
@@ -1106,26 +1128,6 @@ sudo kill -9 PID
 
 
 
-##### 自定义账号密码
-
-配置好 Mysql 之后，在数据库中，找到users表，即用户表，就可以修改其中的账号和密码。
-
-nacos 的密码是使用 org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder 加密的，所以需要我们手动创建一个加密工具类，来生成我们自己的密码，将密码写进users表中，重启nacos
-
-```java
-// 需要依赖
-// org.springframework.boot
-// spring-boot-starter-security
-public static void main(String[] args) {
-    String pwd = new BCryptPasswordEncoder().encode("123456");
-    System.out.println(pwd);
-    // nacos
-    // $2a$10$OUohm24WhHoYRC4fADWKXOdXptJTKNN04RMyvhW86hGwxbUDuE/Mq
-}
-```
-
-
-
 ##### Nacos 高可用集群
 
 注意：3个或3个以上Nacos节点才能构成集群，仅支持linux/unix/mac
@@ -1227,6 +1229,8 @@ spring:
         namespace: ed2069f3-cc54-4a62-b044-95061643ae84
         # 随便填,注意服务之间进行调用需要在同一组
         group: MY_GROUP
+        username: nacos
+        password: xx
 ```
 
 
@@ -2478,6 +2482,8 @@ Sentinel 可以简单的分为 Sentinel 核心库和 Dashboard。核心库不依
 
 #### 安装配置部署管理
 
+示例版本 `1.8.6`
+
 ##### 安装
 
 从[官方网站](https://github.com/alibaba/Sentinel/releases)中下载最新版本的控制台 jar 包
@@ -3115,9 +3121,251 @@ Sentinel 利用 LRU 策略统计最近最常访问的热点参数，结合令牌
 
 ##### 规则持久化
 
-[(13条消息) 【Sentinel 规则持久化配置】_sentinel配置持久化_BridgeCloud的博客-CSDN博客](https://blog.csdn.net/qq_37168484/article/details/130550929)
+**注意：规则配置文件添加注释可能会导致规则不生效**
 
-[(13条消息) Sentinel规则持久化（1.8.+版）_sentinel持久化规则官方文档_陌守的博客-CSDN博客](https://blog.csdn.net/qq_36763419/article/details/121560105)
+###### 导包
+
+```xml
+<!-- sentinel 规则持久化 -->
+<dependency>
+    <groupId>com.alibaba.csp</groupId>
+    <artifactId>sentinel-datasource-nacos</artifactId>
+</dependency>
+```
+
+
+
+###### 应用配置
+
+```yaml
+spring:
+  cloud:
+    sentinel:
+      # 添加Nacos数据源配置
+      datasource:
+        # 流控规则
+        flow:
+          nacos:
+            server-addr: 192.168.31.101:8848
+            namespace: ed2069f3-cc54-4a62-b044-95061643ae84
+            data-id: ${spring.application.name}-flow-rules
+            group-id: MY_SENTINEL_GROUP
+            # 还可以是：degrade、authority、param-flow
+            rule-type: flow
+            data-type: json
+            username: app
+            password: Senna&nacos-app@P1
+        # 降级规则
+        degrade:
+          nacos:
+            server-addr: 192.168.31.101:8848
+            namespace: ed2069f3-cc54-4a62-b044-95061643ae84
+            data-id: ${spring.application.name}-degrade-rules
+            group-id: MY_SENTINEL_GROUP
+            rule-type: degrade
+            data-type: json
+            username: app
+            password: Senna&nacos-app@P1
+        # 系统规则
+        system:
+          nacos:
+            server-addr: 192.168.31.101:8848
+            namespace: ed2069f3-cc54-4a62-b044-95061643ae84
+            data-id: ${spring.application.name}-system-rules
+            group-id: MY_SENTINEL_GROUP
+            rule-type: system
+            data-type: json
+            username: app
+            password: Senna&nacos-app@P1
+        # 授权规则
+        authority:
+          nacos:
+            server-addr: 192.168.31.101:8848
+            namespace: ed2069f3-cc54-4a62-b044-95061643ae84
+            data-id: ${spring.application.name}-authority-rules
+            group-id: MY_SENTINEL_GROUP
+            rule-type: authority
+            data-type: json
+            username: app
+            password: Senna&nacos-app@P1
+        # 热点规则
+        param-flow:
+          nacos:
+            server-addr: 192.168.31.101:8848
+            namespace: ed2069f3-cc54-4a62-b044-95061643ae84
+            data-id: ${spring.application.name}-param-flow-rules
+            group-id: MY_SENTINEL_GROUP
+            rule-type: param-flow
+            data-type: json
+            username: app
+            password: Senna&nacos-app@P1
+```
+
+
+
+###### 流控规则配置
+
+[Order-flow-rules](../files/config/Sentinel/SpringCloudAlibaba/Order-flow-rules.json)
+
+```json
+[
+  {
+    // 资源名
+    "resource":"/sentinel/flow/fast",
+    // 针对来源，若为 default 则不区分调用来源
+    "limitApp":"default",
+    // 限流阈值类型(1:QPS;0:并发线程数）
+    "grade":1,
+    // 阈值
+    "count":5,
+    // 是否是集群模式
+    "clusterMode":false,
+    // 流控模式(0:直接；1:关联;2:链路)
+    "strategy":0,
+    // 流控效果(0:快速失败;1:Warm Up(预热模式);2:排队等待)
+    "controlBehavior":0
+    // 预热时长（秒，预热模式需要此参数）
+    // "warmUpPeriodSec":10,
+    // 超时时间（排队等待模式需要此参数）
+    // "maxQueueingTimeMs":500,
+    // 关联资源、入口资源(关联、链路模式)
+    // "refResource":"rrr"
+  }
+]
+```
+
+
+
+###### 降级规则配置
+
+[Order-degrade-rules](../files/config/Sentinel/SpringCloudAlibaba/Order-degrade-rules.json)
+
+```json
+[
+    {
+      // 资源名
+      "resource": "/sentinel/meltdown/rt",
+      "limitApp": "default",
+      // 熔断策略（0:慢调用比例，1:异常比率，2:异常计数）
+      "grade": 0,
+      // 最大RT、比例阈值、异常数
+      "count": 500,
+      // 慢调用比例阈值，仅慢调用比例模式有效（1.8.0 引入）
+      "slowRatioThreshold": 0.5,
+      // 最小请求数
+      "minRequestAmount": 5,
+      // 当单位统计时长(类中默认1000)
+      "statIntervalMs": 1000,
+      // 熔断时长
+      "timeWindow": 1000
+    }
+]
+```
+
+
+
+###### 系统规则配置
+
+[Order-system-rules](../files/config/Sentinel/SpringCloudAlibaba/Order-system-rules.json)
+
+```json
+[
+    {
+      // RT
+      "avgRt": 1,
+      // CPU 使用率
+      "highestCpuUsage": -1,
+      // LOAD
+      "highestSystemLoad": -1,
+      // 线程数
+      "maxThread": -1,
+      // 入口 QPS
+      "qps": -1
+    }
+  ]
+  
+```
+
+
+
+###### 授权规则配置
+
+[Order-authority-rules](../files/config/Sentinel/SpringCloudAlibaba/Order-authority-rules.json)
+
+```json
+[
+    {
+      // 资源名
+      "resource": "sentinel_spring_web_context",
+      // 流控应用
+      "limitApp": "/test",
+      // 授权类型(0代表白名单；1代表黑名单。)
+      "strategy": 0
+    }
+  ]
+  
+```
+
+
+
+###### 热点规则配置
+
+[Order-param-flow-rules](../files/config/Sentinel/SpringCloudAlibaba/Order-param-flow-rules.json)
+
+```json
+[
+    {
+      // 资源名
+      "resource": "sentinelHotKey",
+      // 限流模式（QPS 模式，不可更改）
+      "grade": 1,
+      // 参数索引
+      "paramIdx": 0,
+      // 单机阈值
+      "count": 1,
+      // 统计窗口时长（秒）
+      "durationInSec": 1,
+      // 是否集群 默认false
+      "clusterMode": false,
+      // 均摊阈值/集群阈值
+      "burstCount": 0,
+      // 集群模式配置
+      "clusterConfig": {
+        // 
+        "fallbackToLocalWhenFail": true,
+        // 
+        "flowId": 2,
+        // 
+        "sampleCount": 10,
+        // 
+        "thresholdType": 0,
+        // 
+        "windowIntervalMs": 1000
+      },
+      // 流控效果（支持快速失败和匀速排队模式）
+      "controlBehavior": 0,
+      // 
+      "limitApp": "default",
+      // 
+      "maxQueueingTimeMs": 0,
+      // 高级选项
+      "paramFlowItemList": [
+        {
+           // 参数类型
+          "classType": "int",
+           // 参数值
+          "object": "1",
+           // 限流阈值
+          "count": 2
+        }
+      ]
+    }
+  ]
+```
+
+
+
+
 
 ## 微服务网关
 
@@ -4856,6 +5104,8 @@ spring:
         file-extension: yaml
         namespace: ed2069f3-cc54-4a62-b044-95061643ae84
         group: MY_GROUP
+        username: nacos
+        password: xx
 ```
 
 
@@ -4926,15 +5176,15 @@ RM (Resource Manager) - 资源管理器
 
 #### 安装配置部署管理
 
+示例版本 `1.7.0`
+
 [SEATA1.6.1的配置与使用-阿里云开发者社区 (aliyun.com)](https://developer.aliyun.com/article/1223677)
+
+
 
 ##### 安装
 
 下载的 [Seata](https://github.com/seata/seata/releases) 并解压缩
-
-示例 Seata 版本号为：1.7.0
-
-
 
 
 
@@ -4987,11 +5237,14 @@ seata:
     type: nacos
     nacos:
       server-addr: 192.168.31.101:8848
-      namespace: ed2069f3-cc54-4a62-b044-95061643ae84
-      group: MY_GROUP
+      namespace: e7f09330-5809-43ba-bcc9-31f46580b9e9
+      group: SEATA_GROUP
       # #if use MSE Nacos with auth, mutex with username/password attribute
       # access-key: ""
       # secret-key: ""
+      # nacos dashboard 的账号密码
+      username: nacos
+      password: xx
       data-id: SeataServer.properties
       cluster: default
   registry:
@@ -5000,10 +5253,11 @@ seata:
     nacos:
       # application=seata-tc-server
       server-addr: 192.168.31.101:8848
-      namespace: ed2069f3-cc54-4a62-b044-95061643ae84
-      group: MY_GROUP
-      # username: nacos
-      # password: xx
+      namespace: e7f09330-5809-43ba-bcc9-31f46580b9e9
+      group: SEATA_GROUP
+      # nacos dashboard 的账号密码
+      username: nacos
+      password: xx
   # store:
     # support: file 、 db 、 redis
     # mode: db
@@ -5182,15 +5436,6 @@ http {
 
         location / {
             proxy_pass http://seatacluster/;
-        }
-    }
-    
-    server {
-        listen       8091;
-        server_name  localhost;
-
-        location / {
-            proxy_pass http://seatacluster_server/;
         }
     }
 }

@@ -1,0 +1,28 @@
+[
+    {
+      "resource": "sentinelHotKey",
+      "grade": 1,
+      "paramIdx": 0,
+      "count": 1,
+      "durationInSec": 1,
+      "clusterMode": false,
+      "burstCount": 0,
+      "clusterConfig": {
+        "fallbackToLocalWhenFail": true,
+        "flowId": 2,
+        "sampleCount": 10,
+        "thresholdType": 0,
+        "windowIntervalMs": 1000
+      },
+      "controlBehavior": 0,
+      "limitApp": "default",
+      "maxQueueingTimeMs": 0,
+      "paramFlowItemList": [
+        {
+          "classType": "int",
+          "object": "1",
+          "count": 2
+        }
+      ]
+    }
+  ]

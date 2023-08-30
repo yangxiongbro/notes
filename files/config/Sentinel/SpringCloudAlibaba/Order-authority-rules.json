@@ -1,0 +1,8 @@
+[
+    {
+      "resource": "sentinel_spring_web_context",
+      "limitApp": "/test",
+      "strategy": 0
+    }
+  ]
+  

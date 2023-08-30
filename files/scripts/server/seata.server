@@ -29,6 +29,7 @@ case "$mode" in
     # Start daemon
     cd $base_dir
     echo "Starting ${server_name}"
+    # 当开机启动时，比注册配置中心晚一些启动
     sleep 20s
     # 文件存在且可执行
     if test -x "$base_dir/bin/seata-server.sh" ; then

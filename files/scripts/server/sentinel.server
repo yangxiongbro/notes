@@ -29,7 +29,7 @@ case "$mode" in
     # Start daemon
     cd $base_dir
     echo "Starting ${server_name}"
-    sleep 15s
+    sleep 10s
     # 文件存在
     if test -e "$base_dir/sentinel-dashboard.jar" ; then
       # 文件存在并且是目录

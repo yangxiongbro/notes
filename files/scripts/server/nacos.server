@@ -29,7 +29,7 @@ case "$mode" in
     # Start daemon
     cd $base_dir
     echo "Starting ${server_name}"
-    sleep 20s
+    sleep 10s
     # 文件存在且可执行
     if test -x "$base_dir/bin/startup.sh" ; then
       # 文件存在并且是目录
