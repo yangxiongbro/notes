@@ -5283,7 +5283,7 @@ store.mode=db
 store.db.datasource=druid
 store.db.dbType=mysql
 store.db.driverClassName=com.mysql.cj.jdbc.Driver
-store.db.url=jdbc:mysql://192.168.31.101:3306/spring_cloud_alibaba_seata?useSSL=false&serverTimezone=Hongkong&useUnicode=true&characterEncoding=utf-8&autoReconnect=true
+store.db.url=jdbc:mysql://192.168.31.101:3306/seata?useSSL=false&serverTimezone=Hongkong&useUnicode=true&characterEncoding=utf-8&autoReconnect=true
 store.db.user=young
 store.db.password=123456
 store.db.minConn=10
@@ -5466,10 +5466,10 @@ stream {
 
 ```yaml
 seata:
-  tx-service-group: spring_cloud_alibaba_tx_group
+  tx-service-group: demo_spring_cloud_alibaba_tx_group
   service:
     vgroup-mapping:
-      spring_cloud_alibaba_tx_group: default
+      demo_spring_cloud_alibaba_tx_group: default
     default:
       # 对应 TC 服务的 IP 及 seata.server.server-port 配置的端口
       grouplist: 192.168.31.101:8091
