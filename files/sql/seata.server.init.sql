@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS `global_table`
     `transaction_id`            BIGINT,
     `status`                    TINYINT      NOT NULL,
     `application_id`            VARCHAR(32),
-    `transaction_service_group` VARCHAR(32),
+    `transaction_service_group` VARCHAR(128),
     `transaction_name`          VARCHAR(128),
     `timeout`                   INT,
     `begin_time`                BIGINT,
