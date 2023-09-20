@@ -2587,7 +2587,7 @@ sudo kill -9 PID
 
 
 
-#### Spring Cloud 客户端接入 Sentinel
+#### SpringCloud 整合 Sentinel
 
 
 
@@ -2595,7 +2595,25 @@ sudo kill -9 PID
 
 
 
-###### 导包
+##### 导包
+
+父工程增加依赖
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+            <version>2021.0.5.0</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+服务模块增加依赖
 
 ```xml
 <dependency>
@@ -2606,7 +2624,7 @@ sudo kill -9 PID
 
 
 
-###### 配置
+##### 配置
 
 ```yaml
 spring:
@@ -2618,13 +2636,15 @@ spring:
         # 默认8719端口，假如被占用会自动从8719开始依次+1扫描,直至找到未被占用的端口
         # 端口配置会在应用对应的机器上启动一个 Http Server，该 Server 会与 Sentinel 控制台做交互。比如 Sentinel 控制台添加了一个限流规则，会把规则数据 push 给这个 Http Server 接收，Http Server 再将规则注册到 Sentinel 中。
         port: 8719
+      # 默认为true，表示将调用链路收敛，会导致链路流控效果无效，需要改成false
+      web-context-unify: false
 ```
 
 
 
 
 
-#### @SentinelResource
+##### @SentinelResource
 
 [basic-api-resource-rule | Sentinel (sentinelguard.io)](https://sentinelguard.io/zh-cn/docs/basic-api-resource-rule.html)
 
@@ -2692,43 +2712,11 @@ public class SentinelResourceBlockHandlerClass {
 
 
 
-#### RestTemplate整合Sentinel
+##### RestTemplate 整合 Sentinel
 
-##### pom.xml
 
-父工程增加如下依赖
 
-```xml
-	<dependencyManagement>
-        <dependencies>
-
-            <dependency>
-				<groupId>com.alibaba.cloud</groupId>
-				<artifactId>spring-cloud-alibaba-dependencies</artifactId>
-				<version>2.2.0.RELEASE</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-        </dependencies>
-    </dependencyManagement>
-```
-
-服务消费者增加如下依赖
-
-```xml
-	    <dependency>
-			<groupId>com.alibaba.cloud</groupId>
-			<artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
-		</dependency>
-```
-
-##### application.properties
-
-```properties
-
-```
-
-##### 服务消费者配置降级方法
+###### 服务消费者配置降级方法
 
 在需要被保护的方法上使用@SentinelResource注解进行熔断配置。与Hystrix不同的是，Sentinel对抛 出异常和熔断降级做了更加细致的区分，通过 blockHandler 指定熔断降级方法，通过 fallback 指定 触发异常执行的降级方法。
 
@@ -2784,7 +2772,7 @@ public class OrderController {
 
 特别地，若 blockHandler 和 fallback 都进行了配置，则被限流降级而抛出 BlockException 时只会 进入 blockHandler 处理逻辑。若未配置 blockHandler 、 fallback 和 defaultFallback ，则被 限流降级时会将 BlockException 直接抛出。
 
-##### 启动类配置Sentinel
+###### 启动类配置 Sentinel
 
 ```java
 @SpringBootApplication
@@ -2831,106 +2819,13 @@ public class FallBackUtil {
 
 Sentinel RestTemplate 限流的资源规则提供两种粒度： httpmethod:schema://host:port/path ：协议、主机、端口和路径 httpmethod:schema://host:port ：协议、主机和端口
 
-#### Feign整合Sentinel
-
-##### pom.xml
-
-父工程增加如下依赖
-
-```xml
-<dependencyManagement>
-    <dependencies>
-        <dependency>
-            <groupId>com.alibaba.cloud</groupId>
-            <artifactId>spring-cloud-alibaba-dependencies</artifactId>
-            <version>2.2.0.RELEASE</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
-    </dependencies>
-</dependencyManagement>
-```
-
-服务消费者增加如下依赖
-
-```xml
-<dependency>
-    <groupId>com.alibaba.cloud</groupId>
-    <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-openfeign</artifactId>
-</dependency>
-```
-
-##### application.properties
-
-配置增加如下，开启sentinel
-
-```properties
-# Sentinel
-feign.sentinel.enabled=true
-```
-
-##### Feign接口配置Sentinel
-
-在服务消费者的Feign接口的实现类中配置熔断方法
-
-基于Feign实现熔断降级，降级方法需要配置到FeignClient接口的实现类中
-
-- IProductFeignClient的实现类，在里面编写对应调用的降级并确保该类能被扫描进Spring容器
 
 
-```java
-// 实现IProductFeginClient接口 在接口实现类中编写熔断降级方法
-@Component
-public class ProductFeginClientFallBack implements IProductFeginClient {
-	public Product findByIdWithGet(Long id) {
-		Product product=new Product();
-		product.setProductName("熔断降级方法");
-		return product;
-	}
-	public Product findByIdWithFind(Long id) {
-		Product product=new Product();
-		product.setProductName("熔断降级方法");
-		return product;
-	}
-}
-```
-
-- Feign接口IProductFeignClient中，去掉注解@Component，并在注解@FeignClient中添加fallback指定降级类
-
-```java
-//指定需要调用的微服务名称
-@FeignClient(name="shop-service-product",fallback =ProductFeginClientFallBack.class)
-public interface IProductFeginClient {
-	//调用的请求路径
-	@GetMapping("/product/get/{id}")
-	public Product findByIdWithGet(@PathVariable("id") Long id);
-	@GetMapping("/product/find")
-	public Product findByIdWithFind(@RequestParam("id") Long id);
-}
-
-```
-
-Feign 对应的接口中的资源名策略定义：httpmethod:protocol://requesturl
-
-@FeignClient 注解中 的所有属性，Sentinel 都做了兼容。 
-
-IProductFeginClient 接口中方法 findByIdWithGet对应的资源名  GET:http://shop-service-product/product/get/{id}
+##### OpenFeign 整合 Sentinel
 
 
 
-#### OpenFeign 整合 Sentinel(SpringCloudAlibaba)
-
-##### pom.xml
-
-参考 Openfeign 和 Sentinel 的配置
-
-
-
-##### application.properties
+###### application.properties
 
 配置增加如下，开启 feign 对 sentinel 的支持
 
@@ -2939,7 +2834,7 @@ IProductFeginClient 接口中方法 findByIdWithGet对应的资源名  GET:http:
 feign.sentinel.enabled=true
 ```
 
-##### Feign 接口配置 Sentinel
+###### Feign 接口配置 Sentinel
 
 在服务消费者的 Feign 接口的实现类中配置熔断方法
 
@@ -2979,7 +2874,7 @@ UserFeignService 接口中方法 findById 对应的资源名  GET:http://User/us
 
 
 
-#### Endpoint 支持
+##### Endpoint 支持
 
 ```xml
 <dependency>
@@ -4648,7 +4543,7 @@ java -jar zipkin-server-2.21.7-exec.jar --STORAGE_TYPE=mysql --MYSQL_HOST=127.0.
 
 ### 概述 
 
-Spring Cloud Stream由一个中间件中立的核组成。应用通过Spring Cloud Stream插入的input(相当于 消费者consumer，它是从队列中接收消息的)和output(相当于生产者producer，它是从队列中发送消 息的。)通道与外界交流。通道通过指定中间件的Binder实现与外部代理连接。业务开发者不再关注具 体消息中间件，只需关注Binder对应用程序提供的抽象概念来使用消息中间件实现业务即可。
+Spring Cloud Stream 由一个中间件中立的核组成。应用通过 Spring Cloud Stream 插入的 input(相当于 消费者consumer，它是从队列中接收消息的)和output(相当于生产者producer，它是从队列中发送消 息的。)通道与外界交流。通道通过指定中间件的Binder实现与外部代理连接。业务开发者不再关注具 体消息中间件，只需关注Binder对应用程序提供的抽象概念来使用消息中间件实现业务即可。
 
 ### 核心概念
 
@@ -5132,7 +5027,231 @@ Group
 
 ## 分布式事务
 
+[Spring Cloud Alibaba-----整合Seata_springcloud整合seata_皆是梦的博客-CSDN博客](https://blog.csdn.net/weixin_43994761/article/details/131533629)
+
 一次业务操作需要跨多个数据源或需要跨多个系统进行远程调用，就会产生分布式事务问题。
+
+
+
+### 分布式事务的理论基础
+
+​		解决分布式事务，也有相应的规范和协议。分布式事务相关的协议有 2PC、3PC。由于三阶段提交协议3PC非常难实现，目前市面主流的分布式事务解决方案都是 2PC 协议。
+
+
+
+#### 2PC 两阶段提交协议
+
+2PC(两阶段提交，Two-Phase Commit)，顾名思义，分为两个阶段：Prepare 和 Commit。
+
+
+
+##### Prepare
+
+提交事务请求
+
+1. 询问：协调者向所有参与者发送事务请求，询问是否可执行事务操作，然后等待各个参与者的响应。
+2. 执行：各个参与者接收到协调者事务请求后，执行事务操作（例如更新一个关系型数据库表中的记录），并将 Undo 和 Redo 信息记录事务日志中。
+3. 响应：如果参与者成功执行了事务并写入 Undo 和 Redo 信息，则向协调者返回 YES 响应，否则返回 NO 响应。
+  当然，参与者也可能宕机，从而不会返回响应。
+
+
+
+##### Commit
+
+执行事务提交，执行事务提交分为正常提交和回滚两种情况。
+
+
+
+###### 正常提交事务
+
+1. Commit 请求：协调者向所有参与者发送 Commit 请求。
+2. 事务提交：参与者收到 Commit 请求后，执行事务提交，提交完成后释放事务执行期占用的所有资源。
+3. 反馈结果：参与者执行事务提交后向协调者发送 Ack 响应。
+4. 完成事务：接收到所有参与者的 Ack 响应后，完成事务提交。
+
+
+
+###### 回滚事务
+
+​		在执行 Prepare 步骤过程中，如果某些参与者执行事务失败、宕机或与协调者之间的网络中断，那么协调者就无法收到所有参与者的 YES 响应，或者某个参与者返回了 No 响应，此时，协调者就会进入回滚流程，对事务进行回滚。
+
+1. Rollback 请求：协调者向所有参与者发送 Rollback 请求。
+2. 事务回滚：参与者收到 Rollback 后，使用 Prepare 阶段的 Undo 日志执行事务回滚，完成后释放事务执行期占用的所有资源。
+3. 反馈结果：参与者执行事务回滚后向协调者发送 Ack 响应。
+4. 中断事务：接收到所有参与者的 Ack 响应后，完成事务中断。
+
+
+
+##### 2PC 的问题
+
+1. 同步阻塞：参与者在等待协调者的指令时，其实是在等待其他参与者的响应，在此过程中，参与者是无法进行其他操作的，也就是阻塞了其运行。 倘若参与者与协调者之间网络异常导致参与者一直收不到协调者信息，那么会导致参与者一直阻塞下去。
+2. 单点：在 2PC 中，一切请求都来自协调者，所以协调者的地位是至关重要的，如果协调者宕机，那么就会使参与者一直阻塞并一直占用事务资源。如果协调者也是分布式，使用选主方式提供服务，那么在一个协调者挂掉后，可以选取另一个协调者继续后续的服务，可以解决单点问题。但是，新协调者无法知道上一个事务的全部状态信息（例如已等待 Prepare 响应的时长等），所以也无法顺利处理上一个事务。
+3. 数据不一致：Commit 事务过程中 Commit /Rollback 请求可能因为协调者宕机或协调者与参与者网络问题丢失，那么就导致了部分参与者没有收到 Commit/Rollback 请求，而其他参与者则正常收到执行了 Commit/Rollback 操作，没有收到请求的参与者则继续阻塞。这时，参与者之间的数据就不再一致了。当参与者执行 Commit/Rollback 后会向协调者发送 Ack，然而协调者不论是否收到所有的参与者的 Ack，该事务也不会再有其他补救措施了，协调者能做的也就是等待超时后像事务发起者返回一个“我不确定该事务是否成功”。
+4. 环境可靠性依赖：协调者 Prepare 请求发出后，等待响应，然而如果有参与者宕机或与协调者之间的网络中断，都会导致协调者无法收到所有参与者的响应，那么在 2PC 中，协调者会等待一定时间，然后超时后，会触发事务中断，在这个过程中，协调者和所有其他参与者都是出于阻塞的。这种机制对网络问题常见的现实环境来说太苛刻了。
+
+
+
+### 常见分布式事务解决方案
+
+1. AT（Seata）
+2. TCC（消息队列）
+3. Saga
+4. XA
+
+​		他们都是两阶段(2PC)。两阶段是指完成整个分布式事务，划分成两个步骤完成。实际上，这四种常见的分布式事务解决方案，分别对应着分布式事务的四种模式：AT、TCC、Saga、XA；四种分布式事务模式，都有各自的理论基础，分别在不同的时间被提出；每种模式都有它的适用场景，同样每个模式也都诞生有各自的代表产品；而这些代表产品，可能就是我们常见的（全局事务、基于可靠消息、最大努力通知、TCC）。
+
+#### AT 模式(auto transcation)
+
+AT 模式是一种无侵入的分布式事务解决方案，Seata 实现了该模式。
+在 AT 模式下，用户只需关注自己的业务 SQL，用户的业务 SQL 作为一阶段，Seata 框架会自动生成事务的二阶段提交和回滚操作。
+
+##### 一阶段
+
+1. Seata 会拦截业务 SQL，解析 SQL 语义，找到业务 SQL 要更新的业务数据，在业务数据被更新前，将其保存成 before image
+2. 执行业务 SQL 更新业务数据，在业务数据更新之后
+3. 其保存成 after image，最后生成行锁
+
+以上操作全部在一个数据库事务内完成，这样保证了一阶段操作的原子性
+
+
+
+##### 二阶段
+
+提交
+
+如果顺利提交的话，因为业务 SQL 在一阶段已经提交至数据库，所以 Seata 框架只需将一阶段保存的快照数据和行锁删掉，完成数据清理即可
+
+回滚
+
+Seata 就需要回滚一阶段已经执行的业务 SQL，还原业务数据。回滚方式便是用 before image 还原业务数据；但在还原前要首先要校验脏写，对比 数据库当前业务数据 和 after image，如果两份数据完全一致就说明没有脏写，可以还原业务数据，如果不一致就说明有脏写，出现脏写就需要转人工处理。
+
+
+
+#### TCC 模式
+
+1. 侵入性比较强， 并且得自己实现相关事务控制逻辑
+2. 在整个过程基本没有锁，性能更强
+   TCC 模式需要用户根据自己的业务场景实现 Try、Confirm 和 Cancel 三个操作；事务发起方在一阶段执行 Try 方式，在二阶段提交执行 Confirm 方法，二阶段回滚执行 Cancel 方法。
+
+
+
+TCC 三个方法描述：
+
+- Try：资源的检测和预留；
+- Confirm：执行的业务操作提交；要求 Try 成功 Confirm 一定要能成功；
+- Cancel：预留资源释放；
+
+
+
+##### 两阶段设计
+
+​		用户接入 TCC ，最重要的是考虑如何将自己的业务模型拆成两阶段来实现。以扣钱场景为例，在接入 TCC 前，对 A 账户的扣钱，只需一条更新账户余额的 SQL 便能完成；但是在接入 TCC 之后，用户就需要考虑如何将原来一步就能完成的扣钱操作，拆成两阶段，实
+现成三个方法，并且保证一阶段 Try 成功的话 二阶段 Confirm 一定能成功。
+
+​		Try 方法作为一阶段准备方法，需要做资源的检查和预留。在扣钱场景下，Try 要做的事情是就是检查账户余额是否充足，预留转账资金，预留的方式就是冻结 A 账户的 转账资金。Try 方法执行之后，账号 A 余额虽然还是 100，但是其中 30 元已经被冻结了，不能被其他事务使用。
+
+​		二阶段 Confirm 方法执行真正的扣钱操作。Confirm 会使用 Try 阶段冻结的资金，执行账号扣款。Confirm 方法执行之后，账号 A 在一阶段中冻结的 30 元已经被扣除，账号 A 余额变成 70 元 。
+
+​		如果二阶段是回滚的话，就需要在 Cancel 方法内释放一阶段 Try 冻结的 30 元，使账号 A 的回到初始状态，100 元全部可用。用户接入 TCC 模式，最重要的事情就是考虑如何将业务模型拆成 2 阶段，实现成 TCC 的 3 个方
+法，并且保证 Try 成功 Confirm 一定能成功。
+
+相对于 AT 模式，TCC 模式对业务代码有一定的侵入性，但是 TCC 模式无 AT 模式的全局行锁，TCC 性能会比 AT 模式高很多。
+
+
+
+##### 并发控制
+
+
+
+##### 允许空回滚
+
+​		Cancel 接口设计时需要允许空回滚。在 Try 接口因为丢包时没有收到，事务管理器会触发回滚，这时会触发 Cancel 接口，这时 Cancel 执行时发现没有对应的事务 xid 或主键时，需要返回回滚成功。让事务服务管理器认为已回滚，否则会不断重试，而 Cancel 又没有对应的业务数据可以进行回滚。
+
+
+
+##### 防悬挂控制
+
+​		悬挂的意思是：Cancel 比 Try 接口先执行，出现的原因是 Try 由于网络拥堵而超时，事务管理器生成回滚，触发 Cancel 接口，而最终又收到了 Try 接口调用，但是 Cancel 比 Try 先到。按照前面允许空回滚的逻辑，回滚会返回成功，事务管理器认为事务已回滚成功，则此时的 Try 接口不应该执行，否则会产生数据不一致，所以我们在 Cancel 空回滚返回成功之前先记录该条事务 xid 或业务主键，标识这条记录已经回滚过，Try 接口先检查这条事务xid或业务主键如果已经标记为回滚成功过，则不执行 Try 的业务操作。
+
+
+
+##### 幂等控制
+
+​		幂等性的意思是：对同一个系统，使用同样的条件，一次请求和重复的多次请求对系统资源的影响是一致的。因为网络抖动或拥堵可能会超时，事务管理器会对资源进行重试操作，所以很可能一个业务操作会被重复调用，为了不因为重复调用而多次占用资源，需要对服务设计时进行幂等控制，通常我们可以用事务 xid 或业务主键判重来控制。
+
+
+
+#### Saga 模式
+
+Saga 理论出自 Hector & Kenneth 1987发表的论文 Sagas。
+Saga 模式的实现，是长事务解决方案。
+Saga 是一种补偿协议，在 Saga 模式下，分布式事务内有多个参与者，每一个参与者都是一个冲正补偿服务，需要用户根据业务场景实现其正向操作和逆向回滚操作。
+
+分布式事务执行过程中，依次执行各参与者的正向操作，如果所有正向操作均执行成功，那么分布式
+事务提交。如果任何一个正向操作执行失败，那么分布式事务会退回去执行前面各参与者的逆向回滚操作，回滚已提交的参与者，使分布式事务回到初始状态。
+Saga 正向服务与补偿服务也需要业务开发者实现。因此是业务入侵的。
+Saga 模式下分布式事务通常是由事件驱动的，各个参与者之间是异步执行的，Saga 模式是一种长事务解决方案。
+
+
+
+##### 使用场景
+
+Saga 模式适用于业务流程长且需要保证事务最终一致性的业务系统，Saga 模式一阶段就会提交本地事务，无锁、长流程情况下可以保证性能。
+
+事务参与者可能是其它公司的服务或者是遗留系统的服务，无法进行改造和提供 TCC 要求的接口，可以使用 Saga 模式。
+
+
+
+##### 优点
+
+- 一阶段提交本地数据库事务，无锁，高性能；
+- 参与者可以采用事务驱动异步执行，高吞吐；
+- 补偿服务即正向服务的“反向”，易于理解，易于实现；
+
+
+
+##### 缺点
+
+Saga 模式由于一阶段已经提交本地数据库事务，且没有进行预留动作，所以不能保证隔离性。
+与 TCC 实践经验相同的是，Saga 模式中，每个事务参与者的冲正、逆向操作，需要支持：
+
+- 空补偿：逆向操作早于正向操作时；
+- 防悬挂控制：空补偿后要拒绝正向操作
+- 幂等
+
+
+
+#### XA 模式
+
+​		XA 是 X/Open DTP 组织（X/Open DTP group）定义的两阶段提交协议，XA 被许多数据库（如 Oracle、DB2、SQL Server、MySQL）和中间件等工具（如 CICS 和 Tuxedo）本地支持 。
+
+X/Open DTP 模型（1994）包括应用程序（AP）、事务管理器（TM）、资源管理器（RM）。
+XA 接口函数由数据库厂商提供。XA 规范的基础是两阶段提交协议 2PC。
+JTA（Java Transaction API）是 Java 实现的 XA 规范的增强版接口。
+
+​		在 XA 模式下，需要有一个[全局]协调器，每一个数据库事务完成后，进行第一阶段预提交，并通知协调器，把结果给协调器。协调器等所有分支事务操作完成、都预提交后，进行第二步；
+
+​		第二步：协调器通知每个数据库进行逐个 commit/rollback。
+其中，这个全局协调器就是 XA 模型中的 TM 角色，每个分支事务各自的数据库就是 RM。
+
+MySQL 提供的XA实现（https://dev.mysql.com/doc/refman/5.7/en/xa.html）
+XA 模式下的 开源框架有 atomikos，其开发公司也有商业版本。
+XA 模式缺点：事务粒度大。高并发下，系统可用性低。因此很少使用。
+
+
+
+
+
+#### 总结
+
+四种分布式事务模式，分别在不同的时间被提出，每种模式都有它的适用场景
+
+- AT 模式是无侵入的分布式事务解决方案，适用于不希望对业务进行改造的场景，几乎 0 学习成本。
+- TCC 模式是高性能分布式事务解决方案，适用于核心系统等对性能有很高要求的场景。
+- Saga 模式是长事务解决方案，适用于业务流程长且需要保证事务最终一致性的业务系统，Saga 模式一阶段就会提交本地事务，无锁，长流程情况下可以保证性能，多用于渠道层、集成层业务系统。事务参与者可能是其它公司的服务或者是遗留系统的服务，无法进行改造和提供 TCC 要求的接口，也可以使用 Saga 模式。
+- XA 模式是分布式强一致性的解决方案，但性能低而使用较少
+
+
 
 ### Seata
 
@@ -5162,13 +5281,15 @@ RM (Resource Manager) - 资源管理器
 
 3.RM 向 TC 注册分支事务，将其纳入 XID 对应全局事务的管辖
 
-4.TM 向 TC 发起针对 XID 的全局提交或回滚决议;
+4.TM 向 TC 发起针对 XID 的全局提交或回滚决议（事务第一阶段结束）
 
-5.TC 调度 XID 下管辖的全部分支事务完成提交或回滚请求
+5.TC 调度 XID 下管辖的全部分支事务完成提交或回滚请求（事务第二阶段结束）
 
 
 
 ![img](..\pictures\20230726\001.png)
+
+
 
 
 
@@ -5460,7 +5581,7 @@ stream {
 
 
 
-#### 服务配置 Seata
+#### SpringCloud 整合 Seata
 
 ##### 配置
 
@@ -5562,7 +5683,7 @@ public class DataSourceConfig {
 
 
 
-#### undo_log
+##### undo_log
 
 在服务所在数据库创建 undo_log 表
 
@@ -5582,6 +5703,10 @@ CREATE TABLE IF NOT EXISTS `undo_log`
 AUTO_INCREMENT = 1
 DEFAULT CHARSET = utf8 COMMENT ='AT transaction mode undo table';
 ```
+
+
+
+https://blog.csdn.net/weixin_43994761/article/details/131533629
 
 
 
