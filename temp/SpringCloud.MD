@@ -2513,6 +2513,9 @@ JVM -D 参数方式
 -Dserver.port=8050 
 # 指定要被哪个控制台监控（这里指定的是自己监控自己）
 -Dcsp.sentinel.dashboard.server=localhost:8050
+# 客户端启动 HTTP API Server 的端口号。默认值：8719，若端口冲突会自动从8719开始依次+1扫描,直至找到未被占用的端口
+# 端口配置会在应用对应的机器上启动一个 Http Server，该 Server 会与 Sentinel 控制台做交互。比如 Sentinel 控制台添加了一个限流规则，会把规则数据 push 给这个 Http Server 接收，Http Server 再将规则注册到 Sentinel 中。
+-Dcsp.sentinel.api.port=8719
 # 指定实例名称（名称会在控制台左侧以菜单显示）
 -Dproject.name=sentinel-dashboard
 # 设置登录的帐号为：sentinel，默认为 sentinel
@@ -2523,9 +2526,11 @@ JVM -D 参数方式
 -Dcsp.sentinel.log.dir=/var/log/sentinal
 # 日志文件名中是否加入进程号，用于单机部署多个应用的情况。默认值：false
 -Dcsp.sentinel.log.use.pid=false
-# 客户端启动 HTTP API Server 的端口号。默认值：8719，若端口冲突会自动从8719开始依次+1扫描,直至找到未被占用的端口
-# 端口配置会在应用对应的机器上启动一个 Http Server，该 Server 会与 Sentinel 控制台做交互。比如 Sentinel 控制台添加了一个限流规则，会把规则数据 push 给这个 Http Server 接收，Http Server 再将规则注册到 Sentinel 中。
--Dcsp.sentinel.api.port=8719
+
+# JVM 最小堆大小
+-Xms1g
+# JVM 最大堆大小
+-Xmx1g
 ```
 
 
@@ -2566,7 +2571,7 @@ sudo chown -R sentinel:root /var/log/sentinel
 # 启动
 sudo -u sentinel nohup java -Dcsp.sentinel.config.file=/opt/apps/sentinel/conf/application.properties -jar /opt/apps/sentinel/sentinel-dashboard.jar > /var/log/sentinel/sentinel.nohup.log 2>&1 &
 
-sudo -u sentinel nohup java -Dserver.port=8050 -Dcsp.sentinel.dashboard.server=localhost:8050 -Dproject.name=sentinel-dashboard -Dsentinel.dashboard.auth.username=sentinel -Dsentinel.dashboard.auth.password=sentinel -Dcsp.sentinel.log.dir=/var/log/sentinel -Dcsp.sentinel.log.use.pid=false -Dcsp.sentinel.api.port=8719 -jar /opt/apps/sentinel/sentinel-dashboard.jar > /var/log/sentinel/sentinel.nohup.log 2>&1 &
+sudo -u sentinel nohup java -Dserver.port=8050 -Dcsp.sentinel.dashboard.server=localhost:8050 -Dproject.name=sentinel-dashboard -Dsentinel.dashboard.auth.username=sentinel -Dsentinel.dashboard.auth.password=sentinel -Dcsp.sentinel.log.dir=/var/log/sentinel -Dcsp.sentinel.log.use.pid=false -Dcsp.sentinel.api.port=8719 -Xms1g -Xmx1g -jar /opt/apps/sentinel/sentinel-dashboard.jar > /var/log/sentinel/sentinel.nohup.log 2>&1 &
 
 # 停止
 ps aux | grep 'sentinel'
@@ -4228,27 +4233,27 @@ location / {
 
 ###### 简介
 
-Spring Cloud Sleuth 主要功能就是在分布式系统中提供追踪解决方案，并且兼容支持了 zipkin，你只 需要在pom文件中引入相应的依赖即可。
+Spring Cloud Sleuth 主要功能就是在分布式系统中提供追踪解决方案，并且兼容支持了 zipkin，你只 需要在 pom 文件中引入相应的依赖即可。
 
 ###### 相关概念
 
-Spring Cloud Sleuth 为Spring Cloud提供了分布式根据的解决方案。它大量借用了Google Dapper的 设计。先来了解一下Sleuth中的术语和相关概念。 
+Spring Cloud Sleuth 为 Spring Cloud 提供了分布式根据的解决方案。它大量借用了 Google Dapper 的 设计。先来了解一下 Sleuth 中的术语和相关概念。 
 
-Spring Cloud Sleuth采用的是Google的开源项目Dapper的专业术语。
+Spring Cloud Sleuth 采用的是 Google 的开源项目 Dapper 的专业术语。
 
-- Span：基本工作单元，例如，在一个新建的span中发送一个RPC等同于发送一个回应请求给 RPC，span通过一个64位ID唯一标识，trace以另一个64位ID表示，span还有其他数据信息，比 如摘要、时间戳事件、关键值注释(tags)、span的ID、以及进度ID(通常是IP地址) span在不断的启动和停止，同时记录了时间信息，当你创建了一个span，你必须在未来的某个时 刻停止它。
+- Span：基本工作单元，例如，在一个新建的 span 中发送一个 RPC 等同于发送一个回应请求给 RPC，span 通过一个 64 位 ID 唯一标识，trace 以另一个 64 位 ID 表示，span 还有其他数据信息，比 如摘要、时间戳事件、关键值注释(tags)、span 的 ID、以及进度ID（通常是 IP 地址） span 在不断的启动和停止，同时记录了时间信息，当你创建了一个 span，你必须在未来的某个时 刻停止它。
 
-- Trace：一系列spans组成的一个树状结构，例如，如果你正在跑一个分布式大数据工程，你可能 需要创建一个trace。
+- Trace：一系列 spans 组成的一个树状结构，例如，如果你正在跑一个分布式大数据工程，你可能 需要创建一个 trace。
 
-- Annotation：用来及时记录一个事件的存在，一些核心annotations用来定义一个请求的开始和结 束
+- Annotation：用来及时记录一个事件的存在，一些核心 annotations 用来定义一个请求的开始和结 束
 
-  - cs - Client Sent -客户端发起一个请求，这个annotion描述了这个span的开始
+  - cs - Client Sent -客户端发起一个请求，这个 annotion 描述了这个 span 的开始
 
-  - sr - Server Received -服务端获得请求并准备开始处理它，如果将其sr减去cs时间戳便可得到 网络延迟
+  - sr - Server Received -服务端获得请求并准备开始处理它，如果将其 sr 减去 cs 时间戳便可得到网络延迟
 
   - ss - Server Sent -注解表明请求处理的完成(当请求返回客户端)，如果ss减去sr时间戳便可得 到服务端需要的处理请求时间
 
-  - cr - Client Received -表明span的结束，客户端成功接收到服务端的回复，如果cr减去cs时间 戳便可得到客户端从服务端获取回复的所有所需时间
+  - cr - Client Received -表明 span 的结束，客户端成功接收到服务端的回复，如果 cr 减去 cs 时间戳便可得到客户端从服务端获取回复的所有所需时间
 
 ##### Zipkin
 
@@ -4274,10 +4279,10 @@ Zipkin 分为两端，一个是 Zipkin 服务端，一个是 Zipkin 客户端，
 被追踪的微服务添加如下依赖
 
 ```xml
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-sleuth</artifactId>
-		</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-sleuth</artifactId>
+</dependency>
 ```
 
 ##### application.properties
@@ -4305,31 +4310,114 @@ logging.level.org.springframework.cloud.sleuth=DEBUG
 2020-09-11 00:10:08.202  INFO [shop-server-eureka,c58c5d7b28a70f8a,c58c5d7b28a70f8a,false]
 ```
 
-服务名称后面是TraceId，后面跟着的是SpanId，依次调用有一个全局的TraceId，将调用链 路串起来。
+服务名称后面是 TraceId，后面跟着的是 SpanId，依次调用有一个全局的 TraceId，将调用链路串起来。
 
-仔细分析每个微服务的日志，不难看出请求的具体过程。 查看日志文件并不是一个很好的方法，当微服务越来越多日志文件也会越来越多，通过Zipkin可以将日 志聚合，并进行可视化展示和全文检索。
+仔细分析每个微服务的日志，不难看出请求的具体过程。 查看日志文件并不是一个很好的方法，当微服务越来越多日志文件也会越来越多，通过 Zipkin 可以将日志聚合，并进行可视化展示和全文检索。
 
-####  Zipkin Server的部署和配置
+####  Zipkin
 
-##### 下载启动
+[OpenZipkin](https://zipkin.io/)
 
-从spring boot 2.0开始，官方就不再支持使用自建Zipkin Server的方式进行服务链路追踪，而是直接提供了编译好的 jar 包来给我们使用https://bintray.com/openzipkin/maven/zipkin/
+[Zipkin服务端搭建使用教程_zipkin-server_思月行云的博客-CSDN博客](https://blog.csdn.net/kenkao/article/details/127844321)
+
+[Kubnernetes 集群部署 Zipkin+Kafka+ElasticSearch 实现链路追踪_wx6086232c36932的技术博客_51CTO博客](https://blog.51cto.com/u_15181572/6172583)
+
+##### Zipkin Server
+
+###### 安装配置部署管理
+
+**安装**
+
+从 SpringBoot 2.0 开始，官方就不再支持使用自建 Zipkin Server 的方式进行服务链路追踪，而是直接提供了编译好的 jar 包来给我们使用 
 
 ```shell
-java -jar zipkin-server-2.21.7-exec.jar
+# https://github.com/openzipkin/zipkin/releases
+# https://search.maven.org/remote_content?g=io.zipkin.java&a=zipkin-server&v=LATEST&c=exec
+# https://repo1.maven.org/maven2/io/zipkin/zipkin-server/2.24.3/zipkin-server-2.24.3-exec.jar
+curl -sSL https://zipkin.io/quickstart.sh | bash -s
 ```
 
-- 默认Zipkin Server的请求端口为 9411
 
-- Zipkin Server的启动参数可以通过官方提供的yml配置文件查找 
 
-- 在浏览器输入 http://127.0.0.1:9411即可进入到Zipkin Server的管理后台
+使用源码
+
+```shell
+# get the latest source
+git clone https://github.com/openzipkin/zipkin
+cd zipkin
+# Build the server and also make its dependencies
+./mvnw -DskipTests --also-make -pl zipkin-server clean install
+# Run the server
+java -jar ./zipkin-server/target/zipkin-server-*exec.jar
+```
+
+
+
+**配置**
+
+Zipkin Server 的启动参数可以通过官方提供的 yml 配置文件查找 
+
+https://github.com/openzipkin/zipkin/blob/master/zipkin-server/src/main/resources/zipkin-server-shared.yml
+
+[zipkin-server-shared.yml](../files/config/zipkin-server-shared.yml)
+
+
+
+```shell
+# 例如配置端口号，rabbitmq，根据 yml 内的配置项进行配置
+java -Xms1g -Xmx1g -jar zipkin-server-2.19.3-exec.jar 
+    --server.port=9411
+    --zipkin.collector.rabbitmq.addresses=ip:port 
+    --zipkin.collector.rabbitmq.username=username 
+    --zipkin.collector.rabbitmq.password=password
+```
+
+
+
+**创建用户**
+
+```shell
+sudo groupadd -r apps
+sudo useradd -r -g apps -s /bin/false zipkin
+
+sudo mkdir /var/log/zipkin/
+sudo chown -R zipkin:root /opt/apps/zipkin
+sudo chown -R zipkin:root /var/log/zipkin
+```
+
+
+
+**服务管理**
+
+手动
+
+```shell
+# 启动
+sudo -u zipkin nohup java -Xms1g -Xmx1g -jar zipkin.jar > /var/log/zipkin/zipkin.nohup.log 2>&1 &
+
+# 停止
+ps aux | grep 'zipkin'
+sudo kill -9 PID
+```
+
+
+
+自动
+
+编写[脚本](../files/scripts/server/zipkin.server)文件放在 base_dir 目录下 `/opt/apps/zipkin/zipkin.server`
+
+配置参考 Linux -> 服务管理  -> 系统启动时自动运行服务
+
+
+
+- 默认 Zipkin Server 的请求端口为 9411
+- 在浏览器输入 http://127.0.0.1:9411 即可进入到 Zipkin Server 的管理后台
 
 
 
 #### Zipkin Client+Sleuth整合
 
-通过Sleuth查看日志分析微服务的调用链路并不是一个很直观的方案，结合zipkin可以很直观地显示微服务之 间的调用关系。
+通过 Sleuth 查看日志分析微服务的调用链路并不是一个很直观的方案，结合 zipkin 可以很直观地显示微服务之间的调用关系。
 
 ##### pom.xml
 
@@ -4372,7 +4460,7 @@ spring.zipkin.sender.type=web
 
 #### 基于RabbitMQ收集数据
 
-加了MQ之后，通信过程为
+加了 MQ 之后，通信过程为
 
 Zipkin client -------> RabbitMQ ---------> Zipkin Server
 
@@ -4390,7 +4478,7 @@ java -jar zipkin-server-2.21.7-exec.jar --RABBIT_ADDRESSES=192.168.31.158:5672 -
 - RABBIT_USER： 用户名（默认guest） 
 - RABBIT_PASSWORD ： 密码（默认guest）
 
-启动Zipkin Server之后，我们打开RabbitMQ的控制台可以看到多了一个名为Zipkin的Queue
+启动 Zipkin Server 之后，我们打开 RabbitMQ 的控制台可以看到多了一个名为 Zipkin 的 Queue
 
 
 
@@ -4401,25 +4489,25 @@ java -jar zipkin-server-2.21.7-exec.jar --RABBIT_ADDRESSES=192.168.31.158:5672 -
 被追踪的微服务添加如下依赖
 
 ```xml
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-sleuth</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-zipkin</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-sleuth-zipkin</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.amqp</groupId>
-			<artifactId>spring-rabbit</artifactId>
-		</dependenc
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-sleuth</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-zipkin</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-sleuth-zipkin</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.amqp</groupId>
+    <artifactId>spring-rabbit</artifactId>
+    </dependenc
 ```
 
-导入 spring-rabbit 依赖，是Spring提供的对rabbit的封装，客户端会根据配置自动的生产消息并发送 到目标队列中
+导入 spring-rabbit 依赖，是 Spring 提供的对 rabbit 的封装，客户端会根据配置自动的生产消息并发送到目标队列中
 
 ###### application.properties
 
@@ -4600,11 +4688,15 @@ spring.cloud.stream.bindings.output.contentType=text/plain
 
 发送消息时需要定义一个接口，不同的是接口方法的返回对象是 MessageChannel，下面是 Spring Cloud Stream 内置的接口
 
+```java
 public interface Source {
     String OUTPUT = "output";
     @Output("output")
     MessageChannel output();
 }
+```
+
+
 
 
 ##### controller
@@ -4655,11 +4747,15 @@ spring.cloud.stream.bindings.input.destination=test-exchange
 
 需要定义一个接口，如下是内置的一个接口
 
+```java
 public interface Sink {
     String INPUT = "input";
     @Input("input")
     SubscribableChannel input();
 }
+```
+
+
 
 ##### controller
 
@@ -4708,7 +4804,7 @@ spring.cloud.stream.bindings.outputOrder.destination=test-exchange-2
 
 #### 消息分组
 
-当同一个服务启动多个实例 的时候，这些实例都会绑定到同一个消息通道的目标主题（Topic）上。默认情况下，当生产者发出一 条消息到绑定通道上，这条消息会产生多个副本被每个消费者实例接收和处理，但是有些业务场景之 下，我们希望生产者产生的消息只被其中一个实例消费，这个时候我们需要为这些消费者设置消费组来 实现这样的功能。
+当同一个服务启动多个实例的时候，这些实例都会绑定到同一个消息通道的目标主题（Topic）上。默认情况下，当生产者发出一 条消息到绑定通道上，这条消息会产生多个副本被每个消费者实例接收和处理，但是有些业务场景之 下，我们希望生产者产生的消息只被其中一个实例消费，这个时候我们需要为这些消费者设置消费组来实现这样的功能。
 
 我们只需要在服务消费者端设置 spring.cloud.stream.bindings.input.group 属性即可
 
@@ -4720,7 +4816,7 @@ spring.cloud.stream.bindings.inputOrder.group=group-2
 #spring.cloud.stream.binders.defaultRabbit.type=rabbit
 ```
 
-在同一个group中的多个消费者只有一个可以获取到消息并消费
+在同一个 group 中的多个消费者只有一个可以获取到消息并消费
 
 #### 消息分区
 
@@ -4754,7 +4850,7 @@ spring.cloud.stream.bindings.outputOrder.producer.partitionKeyExpression=payload
 spring.cloud.stream.bindings.outputOrder.producer.partitionCount=2
 ```
 
-这样当同一个消息被发给消费组时，我们可以发现只有一个消费实 例在接收和处理这些相同的消息。
+这样当同一个消息被发给消费组时，我们可以发现只有一个消费实例在接收和处理这些相同的消息。
 
 
 
@@ -5052,7 +5148,7 @@ Group
 1. 询问：协调者向所有参与者发送事务请求，询问是否可执行事务操作，然后等待各个参与者的响应。
 2. 执行：各个参与者接收到协调者事务请求后，执行事务操作（例如更新一个关系型数据库表中的记录），并将 Undo 和 Redo 信息记录事务日志中。
 3. 响应：如果参与者成功执行了事务并写入 Undo 和 Redo 信息，则向协调者返回 YES 响应，否则返回 NO 响应。
-  当然，参与者也可能宕机，从而不会返回响应。
+    当然，参与者也可能宕机，从而不会返回响应。
 
 
 
