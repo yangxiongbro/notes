@@ -21,7 +21,8 @@ log_dir="/var/log/rabbitmq"
 log_file="rabbitmq.nohup.log"
 start_command="${base_dir}/sbin/rabbitmq-server"
 mode=$1
-process_id=$(ps -eo pid,cmd | fgrep -i 'nacos.nacos' | fgrep ${base_dir} | grep java | grep -v grep | awk '{print $1}')
+# process_id=$(cat ${base_dir}/.pid)
+process_id=$(ps -eo pid,cmd | fgrep 'nohup' | fgrep ${start_command} | grep -v grep | awk '{print $1}')
 
 echo "mode=${mode}, PID=${process_id}"
 case "$mode" in
@@ -36,7 +37,8 @@ case "$mode" in
       if ! test -d "$log_dir" ; then 
         mkdir $log_dir
       fi
-      bash -c "sudo -u ${user} ${start_command}"
+      bash -c "sudo -u ${user} nohup ${start_command} > ${log_dir}/${log_file} 2>&1 &"
+      # $(echo $! > ${base_dir}/.pid)
       exit 0
     else
       log_failure_msg "Couldn't find ${server_name} server (${base_dir}/sbin/rabbitmq-server)"

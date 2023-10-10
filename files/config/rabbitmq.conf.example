@@ -94,7 +94,7 @@
 
 ## Uncomment the following line if you want to allow access to the
 ## guest user from anywhere on the network.
-# loopback_users.guest = false
+loopback_users.guest = false
 
 ## TLS configuration.
 ##
@@ -671,7 +671,7 @@
 
 ## Log all requests to the management HTTP API to a file.
 ##
-# management.http_log_dir = /path/to/access.log
+management.http_log_dir = /var/log/rabbitmq
 
 ## HTTP listener and embedded Web server settings.
 # ## See https://rabbitmq.com/management.html for details.
@@ -965,7 +965,7 @@
 
 ## Log directory, taken from the RABBITMQ_LOG_BASE env variable by default.
 ##
-# log.dir = /var/log/rabbitmq
+log.dir = /var/log/rabbitmq
 
 ## Logging to file. Can be false or a filename.
 ## Default:

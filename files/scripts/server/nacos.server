@@ -18,7 +18,6 @@ server_name="Nacos"
 user="nacos"
 base_dir="/opt/apps/nacos"
 log_dir="/var/log/nacos"
-log_file="nacos.nohup.log"
 start_command="${base_dir}/bin/startup.sh -m cluster"
 mode=$1
 process_id=$(ps -eo pid,cmd | fgrep -i 'nacos.nacos' | fgrep ${base_dir} | grep java | grep -v grep | awk '{print $1}')
