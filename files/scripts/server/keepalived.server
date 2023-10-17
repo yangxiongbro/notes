@@ -16,10 +16,14 @@ fi
 
 server_name="Keepalived"
 base_dir="/opt/apps/keepalived"
-pid_file="/opt/temp/keepalived/keepalived.pid"
-start_command="${base_dir}/sbin/keepalived -f ${base_dir}/etc/keepalived/keepalived.conf -p ${pid_file} -D"
+pid_dir="/opt/temp/keepalived"
+pid_file="${pid_dir}/keepalived.pid"
+start_command="${base_dir}/sbin/keepalived -f ${base_dir}/etc/keepalived/keepalived.conf -p ${pid_file} -r ${pid_dir}/keepalived.vrrp.pid -D -S 0"
 mode=$1
-process_id=$(cat ${pid_file})
+process_id=
+if test -e "$pid_file" ; then
+  process_id=$(cat ${pid_file})
+fi
 # process_id=$(ps -eo pid,cmd | fgrep ${base_dir}/sbin/keepalived | grep -v grep | awk '{print $1}')
 
 echo "mode=${mode}, PID=${process_id}"
