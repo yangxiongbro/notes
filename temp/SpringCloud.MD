@@ -5853,14 +5853,15 @@ tar -zxvf nginx.tar.gz
 
 # 安装 nginx
 sudo wget http://nginx.org/download/nginx-1.24.0.tar.gz
-sudo tar zxvf nginx-1.24.0.tar.gz
-cd nginx-1.24.0
+sudo tar zxvf nginx-1.24.0.tar.gz -C /opt/apps/
+cd /opt/apps/nginx-1.24.0
 # sudo apt install libpcre3 libpcre3-dev libssl-dev zlib1g-dev
 # PCRE 作用是让 Nginx 支持 Rewrite 功能。
 # --with-stream : 支持 TCP 转发
-sudo ./configure --prefix=/opt/nginx --with-stream --with-http_stub_status_module --with-http_ssl_module
-sudo make && make install
-/opt/nginx/sbin/nginx -v
+sudo ./configure --prefix=/opt/apps/nginx --with-stream --with-http_stub_status_module --with-http_ssl_module
+sudo make && sudo make install
+cd .. && sudo rm -r /opt/apps/nginx-1.24.0
+/opt/apps/nginx/sbin/nginx -v
 ```
 
 
@@ -5944,6 +5945,9 @@ stream {
 ```shell
 sudo groupadd -r apps
 sudo useradd -r -g apps -s /bin/false www
+
+sudo mkdir /opt/temp/nginx
+sudo mkdir /var/log/nginx
 #修改当前目录拥有者为新建的 mysql 用户
 sudo chown -R www:root /opt/apps/nginx
 sudo chown -R www:root /opt/temp/nginx
