@@ -27,7 +27,7 @@ case "$mode" in
     # Start daemon
     cd $base_dir
     echo "Starting ${server_name}"
-    sleep 12s
+    sleep 8s
     # 文件存在且可执行
     if test -x "$base_dir/sbin/haproxy" ; then
       bash -c "sudo ${start_command}"

@@ -5453,7 +5453,7 @@ seata:
     # support: nacos, consul, apollo, zk, etcd3
     type: nacos
     nacos:
-      server-addr: 192.168.31.101:8848
+      server-addr: 192.168.31.90:10668
       namespace: e7f09330-5809-43ba-bcc9-31f46580b9e9
       group: SEATA_GROUP
       # #if use MSE Nacos with auth, mutex with username/password attribute
@@ -5469,7 +5469,7 @@ seata:
     type: nacos
     nacos:
       # application=seata-tc-server
-      server-addr: 192.168.31.101:8848
+      server-addr: 192.168.31.90:10668
       namespace: e7f09330-5809-43ba-bcc9-31f46580b9e9
       group: SEATA_GROUP
       # nacos dashboard 的账号密码
