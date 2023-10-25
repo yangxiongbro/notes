@@ -1,3 +1,282 @@
+# Spring
+
+
+
+# SpringMVC
+
+
+
+# SpringBoot
+
+## 创建 Spring Boot 项目
+
+### 使用 Maven 项目创建
+
+#### pom
+
+如果是 linux 环境，用以下命令即可获取 spring boot 的骨架 pom.xml
+
+```shell
+curl -G https://start.spring.io/pom.xml -d dependencies=web,mysql,mybatis -o pom.xml
+```
+
+也可以使用 Postman 等工具实现
+
+若想获取更多用法，请参考
+
+```shell
+curl https://start.spring.io
+```
+
+
+
+[pom.xml.example](../files/config/Java/SpringBoot/pom.xml.example)
+
+
+
+#### 启动类
+
+[ExampleApplication.java](../files/config/Java/SpringBoot/ExampleApplication.java)
+
+
+
+#### 配置
+
+[application.yaml](../files/config/Java/SpringBoot/application.yaml.example)
+
+[application-dev.yaml](../files/config/Java/SpringBoot/application-dev.yaml.example)
+
+
+
+### 使用 IDEA 创建
+
+
+
+## 配置日志
+
+### 简介
+
+[java日志组件介绍(common-logging,log4j,slf4j,logback)](../files/HTML/Java/SpringBoot/java日志组件介绍(common-logging,log4j,slf4j,logback).pdf)
+
+​        SpringBoot 内部日志系统使用的是 Commons Logging 并且 SpringBoot 给 JDKLogging，Log4j2(Log4j 也是支持的)，Logback 都提供了默认配置，并且如果使用了 Starters，那么默认使用 Logback。Slf4j(Simple Logging Facade for Java)则是一个日志门面框架，提供了日志系统中常用的接口，logback 和 log4j 则对slf4j 进行了实现。
+
+官方文档中有提到，SpringBoot 的 Logging 配置的级别有7个：
+     TRACE , DEBUG , INFO , WARN , ERROR , FATAL , OFF
+
+
+
+### 依赖
+
+```xml
+<!-- 实际开发中我们不需要直接添加该依赖，spring-boot-starter 中包含了 spring-boot-starter-logging，该依赖内容就是 Spring Boot 默认的日志框架 Logback+SLF4J。而 spring-boot-starter-web 包含了spring-boot-starter，所以我们只需要引入web组件即可 -->
+<!--    <dependency>-->
+<!--        <groupId>org.springframework.boot</groupId>-->
+<!--        <artifactId>spring-boot-starter-logging</artifactId>-->
+<!--    </dependency>-->
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+
+<!--引入日志 @Slf4j 注解-->
+<dependency>
+	<groupId>org.projectlombok</groupId>
+	<artifactId>lombok</artifactId>
+</dependency>
+```
+
+
+
+### 配置日志输出
+
+#### 在 yaml 中简单配置 Logback
+
+application.yaml
+
+```yaml
+logging:
+  # 记录异常时使用的转换字
+  # exception-conversion-word:
+  file:
+    # 可以是绝对路径或者相对路径
+    # path: /var/logs/
+    # 指定输出日志的文件
+    # path 和 name 不能同时使用，如若同时使用，则只有 name 生效
+    name: logs/Product.log
+    # 日志文件的最长保存时间（仅默认的 Logback 设置受支持。）
+    max-history: 30
+    # 日志文件的最大容量（仅默认的 Logback 设置受支持。）
+    max-size: 20MB
+    # 日志归档的总大小，当日志存档的总大小超过该阈值时，将删除备份（仅默认的 Logback 设置受支持。）
+    total-size-cap: 1GB
+    # 是否在启动时清除存档日志文件（如果启用了 LOG_FILE ）（仅默认的 Logback 设置受支持。）
+    # clean-history-on-start: true
+  
+  level:
+    # root：即项目所有包的日志
+    root: DEBUG
+    # 包名: 指定包下的日志级别
+    com.richstonedt.cmgde2eas.cs.mapper: DEBUG
+
+  # 使用控制台输出的日志模式
+  pattern:
+    # 呈现日志级别时使用的格式（默认%5p）。（仅默认的Logback设置受支持。）
+    level: DEBUG
+    console: ${CONSOLE_LOG_PATTERN:-%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+    # 日志时间格式（仅默认的Logback设置受支持。）
+    # dateformat=
+    # 日志文件中日志的模式
+    # 过渡日志文件名的模式（默认${LOG_FILE}.%d{yyyy-MM-dd}.%i.gz）。（仅默认的Logback设置受支持。）
+    # rolling-file-name:
+    # register-shutdown-hook:
+```
+
+
+
+#### 使用 Logback 自定义配置实现高级日志
+
+application.yaml
+
+```yaml
+logging:
+  # 指定 lohback 配置文件默认 logback-spring.xml
+  config: classpath:logback-spring.xml
+```
+
+
+
+[logback-spring.xml](../files/config/logback-spring.xml.example)
+
+
+
+### 使用 Slf4j API 输出日志
+
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class LoggingTest {
+	private static final Logger logger = LoggerFactory.getLogger(LoggingTest.class);
+
+	@Test
+	public void loggerTest() {
+		logger.info("Current Time:" + System.currentTimeMillis());
+		logger.info("Current Time: {}", System.currentTimeMillis());
+		logger.trace("trace log");
+		logger.warn("warn log");
+		logger.debug("debug log");
+		logger.info("info log");
+		logger.error("error log");
+	}
+}
+```
+
+### 使用 @Slf4j 注解
+
+在类上写上@Slf4j注解，在方法中直接使用 log对象  
+
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+@Slf4j
+public class LoggingTest {
+
+	@Test
+	public void loggerTest() {
+		log.info("Current Time:" + System.currentTimeMillis());
+		log.info("Current Time: {}", System.currentTimeMillis());
+		log.trace("trace log");
+		log.warn("warn log");
+		log.debug("debug log");
+		log.info("info log");
+		log.error("error log");
+	}
+}
+```
+
+如果使用eclipse，使用@slf4j注解找不到log变量
+
+原因是缺少插件Lomboz
+
+Lomboz是一个基于LGPL的开源J2EE综合开发环境的Eclipse插件，对编码，发布，测试，以及debug等各个软件开发的生命周期提供支持，支持JSP,EJB等。Lomboz是Eclipse的一个J2EE的插件，它将很多Java应用服务器、J2EE组件和Web应用开发集成到Eclipse中，可以帮助Java开发者使用Eclipse建立、测试、部署J2EE应用。
+
+安装Lombo方法：
+
+到 https://projectlombok.org/download.html 下载jar包，然后将lombok.jar复制到myeclipse.ini / eclipse.ini /sts.ini所在的文件夹目录下，打开eclipse.ini / myeclipse.ini/sts.ini 添加下面两行并保存
+
+​        -Xbootclasspath/a:lombok.jar  
+
+​        -javaagent:lombok.jar  
+
+ 重启
+
+常用的 lombok 注解：
+@Data  ：注解在类上；提供类所有属性的 getting 和 setting 方法，此外还提供了equals、canEqual、hashCode、toString 方法
+@Setter：注解在属性上；为属性提供 setting 方法
+@Getter：注解在属性上；为属性提供 getting 方法
+@Log4j ：注解在类上；为类提供一个 属性名为log 的 log4j 日志对象
+@NoArgsConstructor：注解在类上；为类提供一个无参的构造方法
+@AllArgsConstructor：注解在类上；为类提供一个全参的构造方法  
+
+
+
+### 日志级别
+
+日志级别从低到高分为 TRACE < DEBUG < INFO < WARN < ERROR < FATAL，如果设置为 WARN，则低于 WARN 的信息都不会输出。
+
+trace： 追踪，就是程序推进以下，你就可以写个trace输出，所以trace应该会特别多，不过没关系，我们可以设置最低日志级别不让他输出。
+
+debug： 调试，一般就只用这个作为最低级别，trace压根不用。是在没办法就用eclipse或者idea的debug功能就好了。
+
+info： 输出一下你感兴趣的或者重要的信息，这个用的最多了。
+
+warn： 有些信息不是错误信息，但是也要给程序员的一些提示，类似于eclipse中代码的验证不是有error 和warn（不算错误但是也请注意，比如以下depressed的方法）。
+
+error： 错误信息。用的也比较多。
+
+fatal： 级别比较高了。重大错误，这种级别你可以直接停止程序了，是不应该出现的错误么！不用那么紧张，其实就是一个程度的问题。
+
+
+
+### slf4j 规范输出
+
+**使用slf4j的格式化功能**
+
+```java
+Object entry = new SomeObject();
+logger.debug("The entry is {}.", entry);
+
+//SLF4J使用自己的格式化语法{}，同时提供了适合不同参数个数的方法重载：
+logger.debug(String format, Object param); //支持一个参数
+logger.debug(String format, Object param1, Object param2); //支持两个参数
+logger.debug(String format, Object... param); //任意数量参数，构造参数数组具有一定的性能损耗
+
+//连续的{}才被认为是格式化占位符，所以：
+logger.debug("Set {1,2} differs from {}", "3"); //output:Set {1,2} differs from 3
+logger.debug("Set {1,2} differs from {{}}", "3"); //output:Set {1,2} differs from {3}
+
+//用”\”转义{}占位符
+logger.debug("Set \\{} differs from {}", "3"); //output:Set {} differs from 3
+
+//用“\”本身转义“{}”中的”\”
+logger.debug("File name is C:\\\\{}.", "file.zip"); //output:File name is C:\file.zip
+```
+
+
+
+### 扩展阅读
+
+[springBoot完美配置log4j2](../files/HTML/Java/SpringBoot/springBoot完美配置log4j2.pdf)
+
+[Spring AOP实现后台管理系统日志管理](../files/HTML/Java/SpringBoot/Spring AOP实现后台管理系统日志管理.pdf)
+
+[Spring Boot 日志配置(超详细)](../files/HTML/Java/SpringBoot/Spring Boot 日志配置(超详细).pdf)
+
+
+
+
+
 # SpringCloud
 
 [Spring Cloud Alibaba](https://spring-cloud-alibaba-group.github.io/zh-cn/docs/next/overview/what-is-sca)

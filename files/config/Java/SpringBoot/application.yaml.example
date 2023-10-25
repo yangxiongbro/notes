@@ -1,0 +1,11 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /example
+spring:
+  application:
+    name: Example
+  profiles:
+    active: dev
+mybatis-plus:
+  mapper-location: classpath*:mapper/**/*.xml
