@@ -17,22 +17,23 @@ fi
 server_name="Zipkin"
 user="zipkin"
 base_dir="/opt/apps/zipkin"
+conf_dir="/opt/apps/zipkin/conf"
 log_dir="/var/log/zipkin"
 log_file="zipkin.nohup.log"
-start_command="java -Xms1g -Xmx1g -jar ${base_dir}/zipkin.jar"
+start_command="java -Xms1g -Xmx1g -jar -Dspring.config.additional-location=${conf_dir}/zipkin-server-my.yml ${base_dir}/zipkin.jar"
 mode=$1
-process_id=$(ps -eo pid,cmd | fgrep ${start_command} | grep -v grep | awk '{print $1}')
+process_id=$(ps -eo pid,cmd | fgrep "$start_command" | grep -v grep | grep -v nohup | awk '{print $1}')
 echo "mode=${mode}, PID=${process_id}"
 case "$mode" in
   'start')
     # Start daemon
     cd $base_dir
     echo "Starting ${server_name}"
-    sleep 10s
+    sleep 15s
     # 文件存在
     if test -e "$base_dir/zipkin.jar" ; then
       # 文件存在并且是目录
-      if ! test -d "$log_dir" ; then 
+      if ! test -d "$log_dir" ; then
         mkdir $log_dir
       fi
       echo "You can check the ${log_dir}/${log_file}"

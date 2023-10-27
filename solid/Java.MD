@@ -1,3 +1,16 @@
+# Java
+
+[java启动jar包引入外部配置文件_jar包加载外部配置文件_飘零未归人的博客-CSDN博客](https://blog.csdn.net/qq_34484062/article/details/128021066)
+
+```shell
+java -jar ./test.jar -Dspring.config.location=../config/application-my.yaml
+java -jar ./test.jar -Dspring.config.additional-location=../config/application-my.yaml
+# spring.config.location：会覆盖内部配置参数
+# spring.config.additional-location：会和内部配置参数互补
+```
+
+
+
 # Spring
 
 
@@ -4506,15 +4519,13 @@ location / {
 
 ### Sleuth+Zipkin
 
-#### 概述
+#### Sleuth
 
-##### Sleuth
-
-###### 简介
+##### 简介
 
 Spring Cloud Sleuth 主要功能就是在分布式系统中提供追踪解决方案，并且兼容支持了 zipkin，你只 需要在 pom 文件中引入相应的依赖即可。
 
-###### 相关概念
+##### 相关概念
 
 Spring Cloud Sleuth 为 Spring Cloud 提供了分布式根据的解决方案。它大量借用了 Google Dapper 的 设计。先来了解一下 Sleuth 中的术语和相关概念。 
 
@@ -4534,24 +4545,7 @@ Spring Cloud Sleuth 采用的是 Google 的开源项目 Dapper 的专业术语�
 
   - cr - Client Received -表明 span 的结束，客户端成功接收到服务端的回复，如果 cr 减去 cs 时间戳便可得到客户端从服务端获取回复的所有所需时间
 
-##### Zipkin
 
-###### 简介
-
-Zipkin 是 Twitter 的一个开源项目，它基于 Google Dapper 实现，它致力于收集服务的定时数据，以 解决微服务架构中的延迟问题，包括数据的收集、存储、查找和展现。 我们可以使用它来收集各个服务 器上请求链路的跟踪数据，并通过它提供的 REST API 接口来辅助我们查询跟踪数据以实现对分布式系统的监控程序，从而及时地发现系统中出现的延迟升高问题并找出系统性能瓶颈的根源。除了面向开发的 API 接口之外，它也提供了方便的 UI 组件来帮助我们直观的搜索跟踪信息和分析请求链路明细，比 如：可以查询某段时间内各用户请求的处理时间等。 Zipkin 提供了可插拔数据存储方式：InMemory、MySql、Cassandra 以及 Elasticsearch。
-
-Zipkin 主要由 4 个核心组件构成： 
-
-- Collector：收集器组件，它主要用于处理从外部系统发送过来的跟踪信息，将这些信息转换为 Zipkin 内部处理的 Span 格式，以支持后续的存储、分析、展示等功能。
-- Storage：存储组件，它主要对处理收集器接收到的跟踪信息，默认会将这些信息存储在内存中， 我们也可以修改此存储策略，通过使用其他存储组件将跟踪信息存储到数据库中。 
-- RESTful API：API 组件，它主要用来提供外部访问接口。比如给客户端展示跟踪信息，或是外接系统访问以实现监控等。 
-- Web UI：UI 组件，基于 API 组件实现的上层应用。通过 UI 组件用户可以方便而有直观地查询和分析跟踪信息。 
-
-Zipkin 分为两端，一个是 Zipkin 服务端，一个是 Zipkin 客户端，客户端也就是微服务的应用。 客户端会配置服务端的 URL 地址，一旦发生服务间的调用的时候，会被配置在微服务里面的 Sleuth 的 监听器监听，并生成相应的 Trace 和 Span 信息发送给服务端。 发送的方式主要有两种，一种是 HTTP 报文的方式，还有一种是消息总线的方式如 RabbitMQ。 不论哪种方式，我们都需要： 一个 Eureka 服务注册中心，这里我们就用之前的 eureka 项目来当注册中心。 一个 Zipkin 服务端。 多个微服务，这些微服务中配置Zipkin 客户端。
-
-
-
-#### Sleuth入门
 
 ##### pom.xml
 
@@ -4561,6 +4555,7 @@ Zipkin 分为两端，一个是 Zipkin 服务端，一个是 Zipkin 客户端，
 <dependency>
     <groupId>org.springframework.cloud</groupId>
     <artifactId>spring-cloud-starter-sleuth</artifactId>
+    <version>3.1.5</version>
 </dependency>
 ```
 
@@ -4570,10 +4565,18 @@ Zipkin 分为两端，一个是 Zipkin 服务端，一个是 Zipkin 客户端，
 
 ```properties
 # Sleuth
-spring.sleuth.enabled=true
-logging.level.root=INFO
-logging.level.org.springframework.web.servlet.RequestDispatcher=DEBUG
-logging.level.org.springframework.cloud.sleuth=DEBUG
+spring:
+  sleuth:
+    enabled: true
+    sampler:
+      # 采样的百分比,默认为0.1，即10%，这里配置1，是记录全部的sleuth信息，是为了收集到更多的数据（仅供测试用）。
+      # 在分布式系统中，过于频繁的采样会影响系统性能，所以这里配置需要采用一个合适的值
+      probability: 1.0
+logging:
+  level:
+    root: INFO
+    org.springframework.web.servlet.RequestDispatcher: DEBUG
+    org.springframework.cloud.sleuth: DEBUG
 ```
 
 每个微服务都需要添加如上的配置。启动微服务，调用之后，我们可以在控制台观察到sleuth的日志输出。
@@ -4595,17 +4598,32 @@ logging.level.org.springframework.cloud.sleuth=DEBUG
 
 ####  Zipkin
 
+##### 简介
+
+Zipkin 是 Twitter 的一个开源项目，它基于 Google Dapper 实现，它致力于收集服务的定时数据，以 解决微服务架构中的延迟问题，包括数据的收集、存储、查找和展现。 我们可以使用它来收集各个服务 器上请求链路的跟踪数据，并通过它提供的 REST API 接口来辅助我们查询跟踪数据以实现对分布式系统的监控程序，从而及时地发现系统中出现的延迟升高问题并找出系统性能瓶颈的根源。除了面向开发的 API 接口之外，它也提供了方便的 UI 组件来帮助我们直观的搜索跟踪信息和分析请求链路明细，比 如：可以查询某段时间内各用户请求的处理时间等。 Zipkin 提供了可插拔数据存储方式：InMemory、MySql、Cassandra 以及 Elasticsearch。
+
+Zipkin 主要由 4 个核心组件构成： 
+
+- Collector：收集器组件，它主要用于处理从外部系统发送过来的跟踪信息，将这些信息转换为 Zipkin 内部处理的 Span 格式，以支持后续的存储、分析、展示等功能。
+- Storage：存储组件，它主要对处理收集器接收到的跟踪信息，默认会将这些信息存储在内存中， 我们也可以修改此存储策略，通过使用其他存储组件将跟踪信息存储到数据库中。 
+- RESTful API：API 组件，它主要用来提供外部访问接口。比如给客户端展示跟踪信息，或是外接系统访问以实现监控等。 
+- Web UI：UI 组件，基于 API 组件实现的上层应用。通过 UI 组件用户可以方便而有直观地查询和分析跟踪信息。 
+
+Zipkin 分为两端，一个是 Zipkin 服务端，一个是 Zipkin 客户端，客户端也就是微服务的应用。 客户端会配置服务端的 URL 地址，一旦发生服务间的调用的时候，会被配置在微服务里面的 Sleuth 的 监听器监听，并生成相应的 Trace 和 Span 信息发送给服务端。 发送的方式主要有两种，一种是 HTTP 报文的方式，还有一种是消息总线的方式如 RabbitMQ。 不论哪种方式，我们都需要： 一个 Eureka 服务注册中心，这里我们就用之前的 eureka 项目来当注册中心。 一个 Zipkin 服务端。 多个微服务，这些微服务中配置Zipkin 客户端。
+
+
+
 [OpenZipkin](https://zipkin.io/)
 
 [Zipkin服务端搭建使用教程_zipkin-server_思月行云的博客-CSDN博客](https://blog.csdn.net/kenkao/article/details/127844321)
 
 [Kubnernetes 集群部署 Zipkin+Kafka+ElasticSearch 实现链路追踪_wx6086232c36932的技术博客_51CTO博客](https://blog.51cto.com/u_15181572/6172583)
 
-##### Zipkin Server
+#### Zipkin Server
 
-###### 安装配置部署管理
+##### 安装配置部署管理
 
-**安装**
+###### **安装**
 
 从 SpringBoot 2.0 开始，官方就不再支持使用自建 Zipkin Server 的方式进行服务链路追踪，而是直接提供了编译好的 jar 包来给我们使用 
 
@@ -4632,47 +4650,80 @@ java -jar ./zipkin-server/target/zipkin-server-*exec.jar
 
 
 
-**配置**
+```shell
+sudo mkdir /opt/apps/zipkin/
+sudo mkdir /opt/apps/zipkin/conf
+sudo mkdir /var/log/zipkin/
+sudo cp zipkin-server-2.24.3-exec.jar /opt/apps/zipkin/zipkin.jar
+sudo chmod +x /opt/apps/zipkin/zipkin.jar
+```
+
+
+
+###### **配置**
 
 Zipkin Server 的启动参数可以通过官方提供的 yml 配置文件查找 
 
-https://github.com/openzipkin/zipkin/blob/master/zipkin-server/src/main/resources/zipkin-server-shared.yml
+[zipkin-server-shared-github.yml](https://github.com/openzipkin/zipkin/blob/master/zipkin-server/src/main/resources/zipkin-server-shared.yml)
 
-[zipkin-server-shared.yml](../files/config/zipkin-server-shared.yml)
+[zipkin-server-shared.yml](../files/config/Java/SpringCloud/zipkin-server-shared.yml)
+
+[zipkin-server-my.yml](../files/config/Java/SpringCloud/zipkin-server-my.yml)
 
 
+
+**使用启动参数配置**
 
 ```shell
 # 例如配置端口号，rabbitmq，根据 yml 内的配置项进行配置
-java -Xms1g -Xmx1g -jar zipkin-server-2.19.3-exec.jar 
+java -Xms1g -Xmx1g -jar zipkin.jar
     --server.port=9411
-    --zipkin.collector.rabbitmq.addresses=ip:port 
-    --zipkin.collector.rabbitmq.username=username 
+    --zipkin.collector.rabbitmq.addresses=ip:port
+    --zipkin.collector.rabbitmq.username=username
     --zipkin.collector.rabbitmq.password=password
 ```
 
 
 
-**创建用户**
+**使用配置文件配置**
+
+```yaml
+server:
+  port: 9411
+zipkin:
+  collector:
+    rabbitmq:
+      addresses: 192.168.31.90:10574
+      username: app
+      password: Hello&App@918
+```
+
+```shell
+# 启动时附加配置文件中的配置
+java -Xms1g -Xmx1g -jar -Dspring.config.additional-location=zipkin-server-my.yml zipkin.jar 
+```
+
+
+
+###### **创建用户**
 
 ```shell
 sudo groupadd -r apps
 sudo useradd -r -g apps -s /bin/false zipkin
 
-sudo mkdir /var/log/zipkin/
 sudo chown -R zipkin:root /opt/apps/zipkin
 sudo chown -R zipkin:root /var/log/zipkin
 ```
 
 
 
-**服务管理**
+###### **服务管理**
 
 手动
 
 ```shell
 # 启动
-sudo -u zipkin nohup java -Xms1g -Xmx1g -jar zipkin.jar > /var/log/zipkin/zipkin.nohup.log 2>&1 &
+sudo bash -c 'sudo -u zipkin nohup java -Xms1g -Xmx1g -jar -Dspring.config.additional-location=/opt/apps/zipkin/conf/zipkin-server-my.yml /opt/apps/zipkin/zipkin.jar > /var/log/zipkin/zipkin.nohup.log 2>&1 &'
 
 # 停止
 ps aux | grep 'zipkin'
@@ -4683,7 +4734,7 @@ sudo kill -9 PID
 
 自动
 
-编写[脚本](../files/scripts/server/zipkin.server)文件放在 base_dir 目录下 `/opt/apps/zipkin/zipkin.server`
+编写[/opt/apps/zipkin/zipkin.server](../files/scripts/server/zipkin.server)
 
 配置参考 Linux -> 服务管理  -> 系统启动时自动运行服务
 
@@ -4694,7 +4745,13 @@ sudo kill -9 PID
 
 
 
-#### Zipkin Client+Sleuth整合
+###### **集群**
+
+直接使用 `HAProxy` 或 `Niginx` 代理，`Keepalived` 配置虚拟 IP 进行路由转发
+
+ 
+
+#### Zipkin Client
 
 通过 Sleuth 查看日志分析微服务的调用链路并不是一个很直观的方案，结合 zipkin 可以很直观地显示微服务之间的调用关系。
 
@@ -4706,6 +4763,7 @@ sudo kill -9 PID
 <dependency>
 	<groupId>org.springframework.cloud</groupId>
 	<artifactId>spring-cloud-starter-zipkin</artifactId>
+    <version>3.1.5</version>
 </dependency>
 ```
 
@@ -4714,30 +4772,24 @@ sudo kill -9 PID
 被追踪的微服务添加如下配置
 
 ```properties
-# Sleuth
-spring.sleuth.enabled=true
-# 采样的百分比,默认为0.1，即10%，这里配置1，是记录全部的sleuth信息，是为了收集到更多的数据（仅供测试用）。
-# 在分布式系统中，过于频繁的采样会影响系统性能，所以这里配置需要采用一个合适的值
-spring.sleuth.sampler.probability=1.0
-logging.level.root=INFO
-logging.level.org.springframework.web.servlet.RequestDispatcher=DEBUG
-logging.level.org.springframework.cloud.sleuth=DEBUG
-
 # Zipkin
-spring.zipkin.enabled=true
-# zipkin server的请求地址
-spring.zipkin.base-url=http://127.0.0.1:9411/
-# 请求方式,默认以http的方式向zipkin server发送追踪数据
-spring.zipkin.sender.type=web
+spring:
+  zipkin:
+    enabled: true
+    # zipkin server的请求地址
+    base-url: http://127.0.0.1:9411/
+    # 请求方式,默认以http的方式向zipkin server发送追踪数据
+    sender:
+      type: web
 ```
 
 ##### 测试
 
-通过浏览器发送一次微服务请求。打开 Zipkin Service 控制台，我们可以根据条件查询追踪每次请求调用过程
+通过浏览器发送一次微服务请求。打开 Zipkin Server 控制台，我们可以根据条件查询追踪每次请求调用过程
 
 
 
-#### 基于RabbitMQ收集数据
+#### 基于 RabbitMQ 收集数据
 
 加了 MQ 之后，通信过程为
 
@@ -4747,15 +4799,18 @@ Zipkin client -------> RabbitMQ ---------> Zipkin Server
 
 #####  Zipkin Server
 
-###### 启动
+###### 配置
 
-```shell
-java -jar zipkin-server-2.21.7-exec.jar --RABBIT_ADDRESSES=192.168.31.158:5672 --RABBIT_USER=admin --RABBIT_PASSWORD=123456
+```yml
+server:
+  port: 9411
+zipkin:
+  collector:
+    rabbitmq:
+      addresses: 127.0.0.1:9411
+      username: guest
+      password: guest
 ```
-
-- RABBIT_ADDRESSES ： 指定RabbitMQ地址 
-- RABBIT_USER： 用户名（默认guest） 
-- RABBIT_PASSWORD ： 密码（默认guest）
 
 启动 Zipkin Server 之后，我们打开 RabbitMQ 的控制台可以看到多了一个名为 Zipkin 的 Queue
 
@@ -4769,21 +4824,9 @@ java -jar zipkin-server-2.21.7-exec.jar --RABBIT_ADDRESSES=192.168.31.158:5672 -
 
 ```xml
 <dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-sleuth</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-zipkin</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-sleuth-zipkin</artifactId>
-</dependency>
-<dependency>
     <groupId>org.springframework.amqp</groupId>
     <artifactId>spring-rabbit</artifactId>
-    </dependenc
+</dependency>
 ```
 
 导入 spring-rabbit 依赖，是 Spring 提供的对 rabbit 的封装，客户端会根据配置自动的生产消息并发送到目标队列中
@@ -4793,116 +4836,93 @@ java -jar zipkin-server-2.21.7-exec.jar --RABBIT_ADDRESSES=192.168.31.158:5672 -
 被追踪的微服务添加如下配置
 
 ```properties
-# Sleuth
-spring.sleuth.enabled=true
-# 采样的百分比,默认为0.1，即10%，这里配置1，是记录全部的sleuth信息，是为了收集到更多的数据（仅供测试用）。
-# 在分布式系统中，过于频繁的采样会影响系统性能，所以这里配置需要采用一个合适的值
-spring.sleuth.sampler.probability=1.0
-logging.level.root=INFO
-logging.level.org.springframework.web.servlet.RequestDispatcher=DEBUG
-logging.level.org.springframework.cloud.sleuth=DEBUG
+# Zipkin 更改为如下
+spring:
+  zipkin:
+    enabled=true
+    sender:
+      type: rabbit
 
-# Zipkin
-spring.zipkin.enabled=true
-# zipkin server的请求地址
-#spring.zipkin.base-url=http://127.0.0.1:9411/
-# 请求方式,默认以http的方式向zipkin server发送追踪数据
-#spring.zipkin.sender.type=web
-spring.zipkin.sender.type=rabbit
-
-# RabbitMQ
-spring.rabbitmq.host=192.168.31.158
-spring.rabbitmq.port=5672
-spring.rabbitmq.username=admin
-spring.rabbitmq.password=123456
-# 这里配置了重试策略
-spring.rabbitmq.listener.direct.retry.enabled=true
-spring.rabbitmq.listener.simple.retry.enabled=true
+  # 加入 RabbitMQ 配置
+  rabbitmq:
+    host: 192.168.31.158
+    port: 5672
+    username: admin
+    password: 123456
+    # 这里配置了重试策略
+    listener:
+      direct:
+        retry:
+          enabled: true
+      simple:
+        retry:
+          enabled: true
 ```
 
 
 
 ###### 测试
 
-关闭Zipkin Server，并随意请求连接。打开rabbitmq管理后台可以看到，消息已经推送到rabbitmq。 当Zipkin Server启动时，会自动的从rabbitmq获取消息并消费，展示追踪数据 
+关闭 Zipkin Server，并随意请求连接。打开 rabbitmq 管理后台可以看到，消息已经推送到 rabbitmq。 当 Zipkin Server 启动时，会自动的从 rabbitmq 获取消息并消费，展示追踪数据 
 
 可以看到如下效果： 
 
 - 请求的耗时时间不会出现突然耗时特长的情况 
 
-- 当ZipkinServer不可用时（比如关闭、网络不通等），追踪信息不会丢失，因为这些信息会保存在Rabbitmq服务器上，直到Zipkin服务器可用时，再从Rabbitmq中取出这段时间的信息
+- 当 ZipkinServer 不可用时（比如关闭、网络不通等），追踪信息不会丢失，因为这些信息会保存在 Rabbitmq 服务器上，直到 Zipkin 服务器可用时，再从 Rabbitmq 中取出这段时间的信息
 
 
 
-#### 存储跟踪数据
+#### MySql 存储跟踪数据
 
-Zipkin Server默认时间追踪数据信息保存到内存，这种方式不适合生产环境。因为一旦Service关闭重 启或者服务崩溃，就会导致历史数据消失。Zipkin支持将追踪数据持久化到mysql数据库或者存储到 elasticsearch中。这里已mysql为例。
+Zipkin Server 默认时间追踪数据信息保存到内存，这种方式不适合生产环境。因为一旦 Service 关闭重 启或者服务崩溃，就会导致历史数据消失。Zipkin 支持将追踪数据持久化到 MySql 数据库或者存储到 elasticsearch 中。这里已 MySql 为例。
 
 ##### 准备数据库 
 
-可以从官网找到Zipkin Server持久mysql的数据库脚本。
+可以从官网找到 Zipkin Server 持久 MySql 的[数据库脚本](https://github.com/openzipkin/zipkin/blob/master/zipkin-storage/mysql-v1/src/main/resources/mysql.sql)。
 
-```sql
-CREATE TABLE IF NOT EXISTS zipkin_spans (
-	`trace_id_high` BIGINT NOT NULL DEFAULT 0 COMMENT 'If non zero, this means the trace uses 128 bit traceIds instead of 64 bit',
-	`trace_id` BIGINT NOT NULL,
-	`id` BIGINT NOT NULL,
-	`name` VARCHAR(255) NOT NULL,
-	`parent_id` BIGINT,
-	`debug` BIT(1),
-	`start_ts` BIGINT COMMENT 'Span.timestamp(): epoch micros used for endTs query and to implement TTL',
-	`duration` BIGINT COMMENT 'Span.duration(): micros used for minDuration and maxDuration query'
-) ENGINE=InnoDB ROW_FORMAT=COMPRESSED CHARACTER SET=utf8 COLLATE utf8_general_ci;
-ALTER TABLE zipkin_spans ADD UNIQUE KEY(`trace_id_high`, `trace_id`, `id`) COMMENT 'ignore insert on duplicate';
-ALTER TABLE zipkin_spans ADD INDEX(`trace_id_high`, `trace_id`, `id`) COMMENT 'for joining with zipkin_annotations';  
-ALTER TABLE zipkin_spans ADD INDEX(`trace_id_high`, `trace_id`) COMMENT 'forgetTracesByIds';  
-ALTER TABLE zipkin_spans ADD INDEX(`name`) COMMENT 'for getTraces and getSpanNames';  
-ALTER TABLE zipkin_spans ADD INDEX(`start_ts`) COMMENT 'for getTraces ordering and range';  
-CREATE TABLE IF NOT EXISTS zipkin_annotations (
-	`trace_id_high` BIGINT NOT NULL DEFAULT 0 COMMENT 'If non zero, this means the trace uses 128 bit traceIds instead of 64 bit',  
-	`trace_id` BIGINT NOT NULL COMMENT 'coincides with zipkin_spans.trace_id',
-	`span_id` BIGINT NOT NULL COMMENT 'coincides with zipkin_spans.id',
-	`a_key` VARCHAR(255) NOT NULL COMMENT 'BinaryAnnotation.key or Annotation.value if type == -1',  
-	`a_value` BLOB COMMENT 'BinaryAnnotation.value(), which must be smaller than 64KB',
-	`a_type` INT NOT NULL COMMENT 'BinaryAnnotation.type() or -1 if Annotation',  
-	`a_timestamp` BIGINT COMMENT 'Used to implement TTL; Annotation.timestamp or zipkin_spans.timestamp',  
-	`endpoint_ipv4` INT COMMENT 'Null when Binary/Annotation.endpoint is null',
-	`endpoint_ipv6` BINARY(16) COMMENT 'Null when Binary/Annotation.endpoint is null, or no IPv6 address',  
-	`endpoint_port` SMALLINT COMMENT 'Null when Binary/Annotation.endpoint is null',
-	`endpoint_service_name` VARCHAR(255) COMMENT 'Null when Binary/Annotation.endpoint is null'  
-) ENGINE=InnoDB ROW_FORMAT=COMPRESSED CHARACTER SET=utf8 COLLATE utf8_general_ci;  
-ALTER TABLE zipkin_annotations ADD UNIQUE KEY(`trace_id_high`, `trace_id`, `span_id`, `a_key`, `a_timestamp`) COMMENT 'Ignore insert on duplicate';  
-ALTER TABLE zipkin_annotations ADD INDEX(`trace_id_high`, `trace_id`, `span_id`) COMMENT 'for joining with zipkin_spans';  
-ALTER TABLE zipkin_annotations ADD INDEX(`trace_id_high`, `trace_id`) COMMENT 'for getTraces/ByIds';  
-ALTER TABLE zipkin_annotations ADD INDEX(`endpoint_service_name`) COMMENT 'for getTraces and getServiceNames';  
-ALTER TABLE zipkin_annotations ADD INDEX(`a_type`) COMMENT 'for getTraces';
-ALTER TABLE zipkin_annotations ADD INDEX(`a_key`) COMMENT 'for getTraces';
-ALTER TABLE zipkin_annotations ADD INDEX(`trace_id`, `span_id`, `a_key`) COMMENT 'for dependencies job';  
-CREATE TABLE IF NOT EXISTS zipkin_dependencies (
-	`day` DATE NOT NULL,
-	`parent` VARCHAR(255) NOT NULL,
-	`child` VARCHAR(255) NOT NULL,  
-	`call_count` BIGINT  
- ) ENGINE=InnoDB ROW_FORMAT=COMPRESSED CHARACTER SET=utf8 COLLATE utf8_general_ci;  
-ALTER TABLE zipkin_dependencies ADD UNIQUE KEY(`day`, `parent`, `child`);
+[mysql.sql](../files/config/Java/SpringCloud/zipkin-server-mysql.sql)
+
+
+
+##### 配置数据源
+
+```yaml
+zipkin:
+  storage:
+    # 存储类型 mem\mysql\elasticsearch
+    type: mysql
+    mysql:
+      jdbc-url:
+      host: localhost
+      port: 3306
+      username: username
+      password: password
+      db: zipkin
+      max-active: 10
+      use-ssl: false
 ```
 
 
 
-##### 配置启动服务端
+配置好服务端之后，可以在浏览器请求几次。回到数据库查看会发现数据已经持久化到 mysql 中
 
-```shell
-java -jar zipkin-server-2.21.7-exec.jar --STORAGE_TYPE=mysql --MYSQL_HOST=127.0.0.1 --MYSQL_TCP_PORT=3306 --MYSQL_DB=zipkin --MYSQL_USER=root --MYSQL_PASS=123456
+
+
+#### ES 存储跟踪数据
+
+配置
+
+```yaml
+zipkin:
+  storage:
+    # 存储类型 mem\mysql\elasticsearch
+    type: elasticsearch
+    elasticsearch:
+      # host is left unset intentionally, to defer the decision
+      hosts: localhost:9200
+      index: zipkin
 ```
-
-- STORAGE_TYPE : 存储类型 
-- MYSQL_HOST： mysql主机地址 
-- MYSQL_TCP_PORT：mysql端口 
-- MYSQL_DB： mysql数据库名称 
-- MYSQL_USER：mysql用户名 
-- MYSQL_PASS ：mysql密码
-
-配置好服务端之后，可以在浏览器请求几次。回到数据库查看会发现数据已经持久化到mysql中
 
 
 
@@ -5771,9 +5791,16 @@ seata:
 
 ###### 配置中心
 
+[Seata-Seata的高可用异地容灾架构搭建](../files/HTML/Java/SpringCloud/Seata-Seata的高可用异地容灾架构搭建.pdf)
+
 SeataServer.properties
 
 ```properties
+# service.vgroupMapping.demo_spring_cloud_alibaba_tx_group=default
+# 对应 seata server 的 seata.seaver.server-port
+# service.default.grouplist=192.168.31.90:10535
+# service.enableDegrade=false
+# service.disableGlobalTransaction=false
 # support: file 、 db 、 redis
 store.mode=db
 store.db.datasource=druid
@@ -5809,6 +5836,35 @@ security.ignore.urls=/,/**/*.css,/**/*.js,/**/*.html,/**/*.map,/**/*.svg,/**/*.p
 # 客户端与服务端传输方式
 transport.serialization=seata
 transport.compressor=none
+
+# RM配置
+client.rm.asyncCommitBufferLimit=10000
+client.rm.lock.retryInterval=10
+client.rm.lock.retryTimes=30
+client.rm.lock.retryPolicyBranchRollbackOnConflict=true
+client.rm.reportRetryCount=5
+client.rm.tableMetaCheckEnable=false
+client.rm.tableMetaCheckerInterval=60000
+client.rm.sqlParserType=druid
+client.rm.reportSuccessEnable=false
+client.rm.sagaBranchRegisterEnable=false
+# TM配置
+client.tm.commitRetryCount=5
+client.tm.rollbackRetryCount=5
+client.tm.defaultGlobalTransactionTimeout=60000
+client.tm.degradeCheck=false
+client.tm.degradeCheckAllowTimes=10
+client.tm.degradeCheckPeriod=2000
+
+# undo日志配置
+client.undo.dataValidation=true
+client.undo.logSerialization=jackson
+client.undo.onlyCareUpdateColumns=true
+client.undo.logTable=undo_log
+client.undo.compress.enable=true
+client.undo.compress.type=zip
+client.undo.compress.threshold=64k
+client.log.exceptionRate=100
 
 # 关闭metrics功能，提高性能
 metrics.enabled=false
