@@ -21,7 +21,7 @@ log_dir="/var/log/elasticsearch"
 log_file="elasticsearch.nohup"
 start_command="${base_dir}/bin/elasticsearch"
 mode=$1
-process_id=$(ps -eo pid,cmd | fgrep -i 'org.elasticsearch.server/org.elasticsearch.bootstrap.Elasticsearch' | grep -v grep | awk '{print $1}')
+process_id=$(ps -eo pid,cmd | fgrep -i "$base_dir"/ | fgrep -i 'org.elasticsearch.bootstrap.Elasticsearch' | grep -v grep | awk '{print $1}')
 echo "mode=${mode}, PID=${process_id}"
 case "$mode" in
   'start')
