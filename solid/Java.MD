@@ -11,6 +11,535 @@ java -jar ./test.jar -Dspring.config.additional-location=../config/application-m
 
 
 
+## 工具/组件
+
+### 异常处理
+
+#### 基本类
+
+##### 断言接口
+
+```java
+/**
+ * <b><code>Assert</code></b>
+ * <p/>
+ * 异常断言接口
+ * <p/>
+ * <b>Creation Time:</b> 2022/8/24 上午11:37.
+ *
+ * @author yang xiong
+ */
+public interface IAssert {
+
+    /**
+     * @description: 断言对象为 not null，如果对象为 null，则抛出异常
+     * @param obj 待判断对象
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:55
+     */
+    void assertNotNull(Object obj) throws BaseException;
+
+    /**
+     * @description:
+     * 断言对象为 not null，如果对象为 null，则抛出异常
+     * 异常信息支持传递参数方式，避免在判断之前进行字符串拼接操作
+     *
+     * @param obj 待判断对象
+     * @param args message占位符对应的参数列表
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:56
+     */
+    void assertNotNull(Object obj, Object... args) throws BaseException;
+
+    /**
+     * @description: 断言对象为 null，如果对象为 not null，则抛出异常
+     * @param obj 待判断对象
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:55
+     */
+    void assertNull(Object obj) throws BaseException;
+
+    /**
+     * @description:
+     * 断言对象为 null，如果对象为 not null，则抛出异常
+     * 异常信息支持传递参数方式，避免在判断之前进行字符串拼接操作
+     *
+     * @param obj 待判断对象
+     * @param args message占位符对应的参数列表
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:56
+     */
+    void assertNull(Object obj, Object... args) throws BaseException;
+
+    /**
+     * @description: 断言对象为 false，如果对象为空或 true，则抛出异常
+     * @param obj 待判断对象
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:56
+     */
+    void assertFalse(Boolean obj) throws BaseException;
+
+    /**
+     * @description:
+     * 断言对象为 false，如果对象为空或 true，则抛出异常
+     * 异常信息支持传递参数方式，避免在判断之前进行字符串拼接操作
+     * @param obj 待判断对象
+     * @param args message占位符对应的参数列表
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:59
+     */
+    void assertFalse(Boolean obj, Object... args) throws BaseException;
+
+    /**
+     * @description: 断言对象为 true，如果对象为空或 false，则抛出异常
+     * @param obj 待判断对象
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:56
+     */
+    void assertTrue(Boolean obj) throws BaseException;
+
+    /**
+     * @description:
+     * 断言对象为 true，如果对象为空或 false，则抛出异常
+     * 异常信息支持传递参数方式，避免在判断之前进行字符串拼接操作
+     * @param obj 待判断对象
+     * @param args message占位符对应的参数列表
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:59
+     */
+    void assertTrue(Boolean obj, Object... args) throws BaseException;
+
+    /**
+     * @description: 断言 Collection 对象为 not null 且 not empty ，如果对象为 null 或 empty，则抛出异常
+     * @param collection 待判断 Collection 对象
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:56
+     */
+    void assertNotEmpty(Collection<?> collection) throws BaseException;
+
+    /**
+     * @description:
+     * 断言 Collection 对象为 not null 且 not empty ，如果对象为 null 或 empty，则抛出异常
+     * 异常信息支持传递参数方式，避免在判断之前进行字符串拼接操作
+     * @param collection 待判断 Collection 对象
+     * @param args message占位符对应的参数列表
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:59
+     */
+    void assertNotEmpty(Collection<?> collection, Object... args) throws BaseException;
+
+    /**
+     * @description: 断言 Collection 对象为 null 或 empty，如果对象为 not null 且 not empty，则抛出异常
+     * @param collection 待判断 Collection 对象
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:56
+     */
+    void assertEmpty(Collection<?> collection) throws BaseException;
+
+    /**
+     * @description:
+     * 断言 Collection 对象为 null 或 empty，如果对象为 not null 且 not empty，则抛出异常
+     * 异常信息支持传递参数方式，避免在判断之前进行字符串拼接操作
+     * @param collection 待判断 Collection 对象
+     * @param args message占位符对应的参数列表
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:59
+     */
+    void assertEmpty(Collection<?> collection, Object... args) throws BaseException;
+}
+```
+
+
+
+##### 创建异常接口
+
+```java
+/**
+ * <b><code>IBaseException</code></b>
+ * <p/>
+ * 创建异常接口
+ * <p/>
+ * <b>Creation Time:</b> 2022/8/24 上午11:53.
+ *
+ * @author yang xiong
+ */
+public interface IExceptionFactory {
+    /**
+     * @description: 创建异常
+     * @param args
+     * @return {@link BaseException}
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:38
+     */
+    BaseException newException(Object... args);
+
+    /**
+     * @description: 创建异常
+     * @param t
+     * @param args
+     * @return {@link BaseException}
+     * @throws
+     * @author yang xiong
+     * @date 2022/8/24 上午11:38
+     */
+    BaseException newException(Throwable t, Object... args);
+}
+```
+
+
+
+##### 断言接口默认实现类
+
+```java
+/**
+ * <b><code>AbstractAssert</code></b>
+ * <p/>
+ * 异常断言接口默认实现类， 由于枚举不能继承，所以不能使用抽象类
+ * <p/>
+ * <b>Creation Time:</b> 2022/8/24 上午11:51.
+ *
+ * @author yang xiong
+ */
+public interface IBaseAssert extends IExceptionFactory, IAssert {
+    @Override
+    default void assertNotNull(Object obj) throws BaseException {
+        if (obj == null) {
+            throw newException(obj);
+        }
+    }
+
+    @Override
+    default void assertNotNull(Object obj, Object... args) throws BaseException {
+        if (obj == null) {
+            throw newException(args);
+        }
+    }
+    @Override
+    default void assertNull(Object obj) throws BaseException {
+        if (obj != null) {
+            throw newException(obj);
+        }
+    }
+
+    @Override
+    default void assertNull(Object obj, Object... args) throws BaseException {
+        if (obj != null) {
+            throw newException(args);
+        }
+    }
+
+    @Override
+    default void assertFalse(Boolean obj) throws BaseException {
+        if (!Boolean.FALSE.equals(obj)) {
+            throw newException(obj);
+        }
+    }
+
+    @Override
+    default void assertFalse(Boolean obj, Object... args) throws BaseException {
+        if (!Boolean.FALSE.equals(obj)) {
+            throw newException(args);
+        }
+    }
+
+    @Override
+    default void assertTrue(Boolean obj) throws BaseException {
+        if (!Boolean.TRUE.equals(obj)) {
+            throw newException(obj);
+        }
+    }
+
+    @Override
+    default void assertTrue(Boolean obj, Object... args) throws BaseException {
+        if (!Boolean.TRUE.equals(obj)) {
+            throw newException(args);
+        }
+    }
+
+    @Override
+    default void assertNotEmpty(Collection<?> collection) throws BaseException {
+        if (null == collection || collection.isEmpty()) {
+            throw newException(collection);
+        }
+    }
+
+    @Override
+    default void assertNotEmpty(Collection<?> collection, Object... args) throws BaseException {
+        if (null == collection || collection.isEmpty()) {
+            throw newException(args);
+        }
+    }
+
+    @Override
+    default void assertEmpty(Collection<?> collection) throws BaseException {
+        if (null != collection && !collection.isEmpty()) {
+            throw newException(collection);
+        }
+    }
+
+    @Override
+    default void assertEmpty(Collection<?> collection, Object... args) throws BaseException {
+        if (null != collection && !collection.isEmpty()) {
+            throw newException(args);
+        }
+    }
+}
+```
+
+
+
+##### 响应枚举值接口
+
+```java
+/**
+ * <b><code>IResponseEnum</code></b>
+ * <p/>
+ * 响应枚举值接口
+ * <p/>
+ * <b>Creation Time:</b> 2022/8/24 下午12:05.
+ *
+ * @author yang xiong
+ */
+public interface IExceptionAssertResponseEnum {
+    int getCode();
+    String getMessage();
+}
+
+```
+
+
+
+##### 基础异常类
+
+```java
+/**
+ * <b><code>BaseException</code></b>
+ * <p/>
+ * 基础异常类
+ * <p/>
+ * <b>Creation Time:</b> 2022/8/24 下午12:31.
+ *
+ * @author yang xiong
+ */
+
+public abstract class BaseException extends Exception {
+    private IExceptionAssertResponseEnum exceptionAssertResponseEnum;
+    private Object[] args;
+    private String message;
+    private Throwable cause;
+
+    public BaseException(IExceptionAssertResponseEnum exceptionAssertResponseEnum, Object[] args, String message){
+        this.exceptionAssertResponseEnum = exceptionAssertResponseEnum;
+        this.args = args;
+        this.message = message;
+    }
+
+    public BaseException(IExceptionAssertResponseEnum exceptionAssertResponseEnum, Object[] args, String message, Throwable cause) {
+        this.exceptionAssertResponseEnum = exceptionAssertResponseEnum;
+        this.args = args;
+        this.message = message;
+        this.cause = cause;
+    }
+
+    public IExceptionAssertResponseEnum getExceptionAssertResponseEnum() {
+        return exceptionAssertResponseEnum;
+    }
+
+    public Object[] getArgs() {
+        return args;
+    }
+
+    @Override
+    public String getMessage() {
+        return message;
+    }
+
+    @Override
+    public Throwable getCause() {
+        return cause;
+    }
+}
+```
+
+
+
+#### 具体业务异常处理
+
+
+
+##### 创建异常接口实现类
+
+```java
+/**
+ * <b><code>AbstractBusinessExceptionAssert</code></b>
+ * <p/>
+ * 创建异常接口实现类，由于枚举不能继承，所以不能使用抽象类
+ * <p/>
+ * <b>Creation Time:</b> 2022/8/24 下午12:09.
+ *
+ * @author yang xiong
+ */
+public interface IBaseBusinessExceptionFactory extends IExceptionAssertResponseEnum, IBaseAssert {
+    @Override
+    default BaseException newException(Object... args) {
+        String msg = MessageFormat.format(this.getMessage(), args);
+
+        return new BaseBusinessException(this, args, msg);
+    }
+
+    @Override
+    default BaseException newException(Throwable t, Object... args) {
+        String msg = MessageFormat.format(this.getMessage(), args);
+
+        return new BaseBusinessException(this, args, msg, t);
+    }
+}
+
+```
+
+
+
+##### 业务异常类
+
+```java
+/**
+ * <b><code>BusinessException</code></b>
+ * <p/>
+ * 业务异常
+ * <p/>
+ * <b>Creation Time:</b> 2022/8/24 下午12:34.
+ *
+ * @author yang xiong
+ */
+public class BaseBusinessException extends BaseException {
+
+    private static final long serialVersionUID = 1L;
+
+    public BaseBusinessException(IExceptionAssertResponseEnum exceptionAssertResponseEnum, Object[] args, String message) {
+        super(exceptionAssertResponseEnum, args, message);
+    }
+
+    public BaseBusinessException(IExceptionAssertResponseEnum exceptionAssertResponseEnum, Object[] args, String message, Throwable cause) {
+        super(exceptionAssertResponseEnum, args, message, cause);
+    }
+}
+```
+
+
+
+##### 业务异常断言响应枚举
+
+```java
+/**
+ * <b><code>BusinessExceptionAssertResponseEnum</code></b>
+ * <p/>
+ * 业务异常断言响应枚举
+ * <p/>
+ * <b>Creation Time:</b> 2022/8/24 下午12:19.
+ *
+ * @author yang xiong
+ */
+public enum BaseBusinessExceptionAssertResponseEnum implements IBaseBusinessExceptionFactory {
+
+    /**
+     * 通用异常
+     */
+    EXCEPTION(100001, "{0}"),
+
+    /**
+     * 未找到文件
+     */
+    FILE_NOT_FOUND(200001, "未找到文件:{0}."),
+
+    /**
+     * 未找到文件
+     */
+    FILE_NOT_FOUND_IN_DIR(200002, "在目录:{0},未找到文件:{1}.");
+
+    /**
+     * 返回码
+     */
+    private int code;
+
+    /**
+     * 返回消息
+     */
+    private String message;
+
+    BaseBusinessExceptionAssertResponseEnum(int code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+
+    @Override
+    public int getCode() {
+        return code;
+    }
+
+    @Override
+    public String getMessage() {
+        return message;
+    }
+}
+
+```
+
+
+
+#### SpringBoot 全局异常处理
+
+```java
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    /**
+     * @description: 自定义异常类-业务异常
+     * @param e
+     * @return {@link ResponseResult< Integer>}
+     * @throws
+     * @author yang xiong
+     * @date 2022/9/8 上午11:30
+     */
+    @ExceptionHandler({
+            BaseException.class,
+            BusinessException.class
+    })
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseResult<Integer> businessException(BaseException e) {
+        log.error(e.getMessage(), e);
+        return ResponseResult.failed(e.getExceptionAssertResponseEnum().getCode(),e.getMessage());
+    }
+}
+```
+
+
+
 # Spring
 
 
@@ -325,6 +854,12 @@ Spring Cloud原生及其他组件
 | Conﬁg         | 分布式配置中心 |
 | Gateway       | API服务网关    |
 | Sleuth/Zipkin | 分布式链路追踪 |
+
+
+
+![image-20231030233544758](../pictures/202310/001.jpg)
+
+
 
 ## 环境搭建
 
@@ -4911,7 +5446,9 @@ zipkin:
 
 #### ES 存储跟踪数据
 
-配置
+##### 配置
+
+新增以下 elasticsearch 配置
 
 ```yaml
 zipkin:

@@ -55,8 +55,10 @@ path.logs: /var/log/elasticsearch8
 # 这个参数是用来同时设置bind_host和publish_host上面两个参数
 network.host: 0.0.0.0
 #
-# 设置节点间交互的tcp端口，默认是9300
+# 设置节点间交互的tcp端口，默认是9300(es7)
 transport.tcp.port: 9300
+# es8 为：
+transport.port: 9300
 #
 # 设置是否压缩tcp传输时的数据，默认为false，不压缩
 # transport.tcp.compress: true
