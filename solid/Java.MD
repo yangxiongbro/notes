@@ -15,6 +15,8 @@ java -jar ./test.jar -Dspring.config.additional-location=../config/application-m
 
 ### 异常处理
 
+[为什么不建议用 try catch 处理异常？](https://mp.weixin.qq.com/s/MmovlYs_E8ZZIpFEYSGhIA)
+
 #### 基本类
 
 ##### 断言接口
