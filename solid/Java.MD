@@ -819,6 +819,10 @@ logger.debug("File name is C:\\\\{}.", "file.zip"); //output:File name is C:\fil
 
 
 
+## 国际化
+
+[springboot国际化配置 - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/602254731)
+
 
 
 # SpringCloud
