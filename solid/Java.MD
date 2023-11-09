@@ -15,7 +15,7 @@ java -jar ./test.jar -Dspring.config.additional-location=../config/application-m
 
 ### 异常处理
 
-[为什么不建议用 try catch 处理异常？](https://mp.weixin.qq.com/s/MmovlYs_E8ZZIpFEYSGhIA)
+[为什么不建议用 try catch 处理异常？](../files/HTML/Java/SpringBoot/为什么不建议用 try catch 处理异常？.pdf)
 
 #### 基本类
 
@@ -822,6 +822,12 @@ logger.debug("File name is C:\\\\{}.", "file.zip"); //output:File name is C:\fil
 ## 国际化
 
 [springboot国际化配置 - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/602254731)
+
+
+
+## 全局异常处理
+
+
 
 
 
