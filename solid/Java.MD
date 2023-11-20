@@ -542,6 +542,153 @@ public class GlobalExceptionHandler {
 
 
 
+## 日志
+
+[java日志组件介绍(common-logging,log4j,slf4j,logback)](../files/HTML/Java/SpringBoot/java日志组件介绍(common-logging,log4j,slf4j,logback).pdf)
+
+### Logback 日志
+
+#### 依赖
+
+```xml
+<!-- 使用 slf4j 接口 -->
+<!-- <dependency> -->
+<!--     <groupId>org.slf4j</groupId> -->
+<!--     <artifactId>slf4j-api</artifactId> -->
+<!--     <version>2.0.9</version> -->
+<!--     <optional>true</optional> -->
+<!-- </dependency> -->
+<!-- 使用 commons-logging 接口 -->
+<dependency>
+    <groupId>commons-logging</groupId>
+    <artifactId>commons-logging</artifactId>
+    <version>1.2</version>
+    <optional>true</optional>
+</dependency>
+<dependency>
+    <groupId>ch.qos.logback</groupId>
+    <artifactId>logback-classic</artifactId>
+    <version>1.4.11</version>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <version>1.18.30</version>
+    <scope>provided</scope>
+    <optional>true</optional>
+</dependency>
+```
+
+
+
+#### logback.xml 配置文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    status : 这个用于设置log4j2自身内部的信息输出,可以不设置,当设置成trace时,会看到log4j2内部各种详细输出。
+    因此我们直接设置成OFF
+ -->
+<Configuration status="OFF">
+
+    <property name="logging.path" value="logs" />
+
+    <!-- %d{yyyy-MM-dd HH:mm:ss.SSS} 日志输出时间 -->
+    <!-- %thread 输出日志的进程名字，这在Web应用以及异步任务处理中很有用 -->
+    <!-- %-5level 日志级别，并且使用5个字符靠左对齐 -->
+    <!-- %logger{50} 日志输出者的名字 -->
+    <!-- %msg 日志消息 -->
+    <!-- %n 平台的换行符 -->
+    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"/>
+    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n" />
+    <!--1. 输出到控制台-->
+    <!--此日志appender是为开发使用，只配置最底级别-->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- LevelFilter 过滤器，如果事件的级别等于配置的级别，则根据 onMatch 属性的配置接受或者拒绝该事件-->
+        <!-- <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter> -->
+        <!-- ThresholdFilter 过滤器，将拒绝级别低于阈值的事件，控制台输出的日志级别是大于或等于此级别的日志信息-->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>DEBUG</level>
+        </filter>
+        <!--日志输出格式-->
+        <encoder>
+            <Pattern>${CONSOLE_LOG_PATTERN}</Pattern>
+            <!-- 设置字符集 -->
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!--2. 输出到文档-->
+    <!-- 2.1 level为 DEBUG 日志，时间滚动输出 -->
+    <appender name="FULL_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 正在记录的日志文档的路径及文档名 -->
+        <file>${logging.path}/CommonJava-current.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <!-- 日志记录器的滚动策略，按日期，按大小记录 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 日志归档 -->
+            <fileNamePattern>${logging.path}/CommonJava-%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>1GB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <!--日志文档保留天数-->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FULL_FILE"/>
+    </root>
+</Configuration>
+```
+
+
+
+#### 输出日志
+
+```java
+@Slf4j
+public class LogTest {
+    private static final Logger logger = LoggerFactory.getLogger(LogTest.class);
+
+    @Test
+    public void slf4jApiTest() {
+        logger.info("Current Time:" + System.currentTimeMillis());
+        logger.info("Current Time: {}", System.currentTimeMillis());
+        logger.trace("trace log");
+        logger.warn("warn log");
+        logger.debug("debug log");
+        logger.info("info log");
+        logger.error("error log");
+    }
+
+    /**
+     * 需要导入 lombok 包，以及使用 @Slf4j 注解
+     **/
+    @Test
+    public void lombokLogTest() {
+        log.info("Current Time:" + System.currentTimeMillis());
+        log.info("Current Time: {}", System.currentTimeMillis());
+        log.trace("trace log");
+        log.warn("warn log");
+        log.debug("debug log");
+        log.info("info log");
+        log.error("error log");
+    }
+}
+```
+
+
+
 # Spring
 
 
