@@ -8,7 +8,8 @@
     <contextName>logback-spring</contextName>
 
     <!-- name的值是变量的名称，value的值时变量定义的值。通过定义的值会被插入到logger上下文中。定义后，可以使“${}”来使用变量。 -->
-    
+    <!-- 通过环境变量 -Dcommon.log.home=/var/logs/common 指定存储位置 -->
+    <!-- <property name="logging.path" value="${common.log.home:-./logs}"/> -->
     <springProfile name="dev">
         <property name="logging.path" value="logs" />
     </springProfile>
@@ -29,7 +30,7 @@
     <!-- %msg 日志消息 -->
     <!-- %n 平台的换行符 -->
     <property name="CONSOLE_LOG_PATTERN" value="${CONSOLE_LOG_PATTERN:-%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}"/>
-    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n" />
+    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}" />
 
     <!--1. 输出到控制台-->
     <!--此日志appender是为开发使用，只配置最底级别-->
@@ -109,6 +110,11 @@
 
     <!-- root节点是必选节点，用来指定最基础的日志输出级别 -->
     <!-- level:默认是DEBUG -->
+    <!-- 通过环境变量 -Dcommon.log.level=DEBUG 指定日志级别 -->
+    <!-- <root level="${common.log.level:-DEBUG}">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FULL_FILE"/>
+    </root> -->
     <springProfile name="prod">
         <root level="INFO">
             <appender-ref ref="CONSOLE"/>

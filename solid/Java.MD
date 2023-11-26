@@ -15,6 +15,8 @@ java -jar ./test.jar -Dspring.config.additional-location=../config/application-m
 
 ### 异常处理
 
+[为什么不建议用 try catch 处理异常？](https://mp.weixin.qq.com/s/MmovlYs_E8ZZIpFEYSGhIA)
+
 [为什么不建议用 try catch 处理异常？](../files/HTML/Java/SpringBoot/为什么不建议用 try catch 处理异常？.pdf)
 
 #### 基本类
@@ -592,7 +594,8 @@ public class GlobalExceptionHandler {
  -->
 <Configuration status="OFF">
 
-    <property name="logging.path" value="logs" />
+    <!-- -Dcommon.log.home=/var/logs/common -->
+    <property name="logging.path" value="${common.log.home:-./logs}"/>
 
     <!-- %d{yyyy-MM-dd HH:mm:ss.SSS} 日志输出时间 -->
     <!-- %thread 输出日志的进程名字，这在Web应用以及异步任务处理中很有用 -->
@@ -600,8 +603,8 @@ public class GlobalExceptionHandler {
     <!-- %logger{50} 日志输出者的名字 -->
     <!-- %msg 日志消息 -->
     <!-- %n 平台的换行符 -->
-    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"/>
-    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n" />
+    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{50} - %msg%n"/>
+    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{50} - %msg%n"/>
     <!--1. 输出到控制台-->
     <!--此日志appender是为开发使用，只配置最底级别-->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -644,10 +647,16 @@ public class GlobalExceptionHandler {
         </rollingPolicy>
     </appender>
 
-    <root level="INFO">
+    <logger name="!com.common.java" level="OFF"/>
+
+    <!-- root节点是必选节点，用来指定最基础的日志输出级别 -->
+    <!-- level:默认是DEBUG -->
+    <!-- -Dcommon.log.level=INFO -->
+    <root level="${common.log.level:-DEBUG}">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FULL_FILE"/>
     </root>
+
 </Configuration>
 ```
 
@@ -815,7 +824,7 @@ logging:
     # 呈现日志级别时使用的格式（默认%5p）。（仅默认的Logback设置受支持。）
     level: DEBUG
     console: ${CONSOLE_LOG_PATTERN:-%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"
     # 日志时间格式（仅默认的Logback设置受支持。）
     # dateformat=
     # 日志文件中日志的模式
@@ -974,7 +983,144 @@ logger.debug("File name is C:\\\\{}.", "file.zip"); //output:File name is C:\fil
 
 ## 全局异常处理
 
+[为什么不建议用 try catch 处理异常？](https://mp.weixin.qq.com/s/MmovlYs_E8ZZIpFEYSGhIA)
 
+[为什么不建议用 try catch 处理异常？](../files/HTML/Java/SpringBoot/为什么不建议用 try catch 处理异常？.pdf)
+
+```java
+/**
+ * <b><code>GlobalExceptionHandler</code></b>
+ * <p/>
+ * 全局异常处理
+ * 要在 Application 包下，若没有则在 Spplication 启动类上使用 scanBasePackages 指定包名
+ * <p/>
+ * <b>Creation Time:</b> 2023/11/9 22:16
+ *
+ * @author yang xiong
+ * @since CommonSpring 1.0
+ */
+
+@Slf4j
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    /**
+     * 获取国际化消息
+     *
+     * @param e 异常
+     * @return
+     */
+    public String getMessage(BaseException e) {
+//        String code = "response." + e.getExceptionAssertResponseEnum().toString();
+//        String message = unifiedMessageSource.getMessage(code, e.getArgs());
+//        if (message == null || message.isEmpty()) {
+//            return e.getMessage();
+//        }
+
+        return e.getMessage();
+    }
+
+    /**
+     * 业务异常
+     *
+     * @param e 异常
+     * @return 异常结果
+     */
+//    @ExceptionHandler(value = BusinessException.class)
+//    @ResponseBody
+//    public BaseResponse handleBusinessException(BaseException e) {
+//        log.error("{}", e.getMessage());
+//
+//        return new ER(e.getExceptionAssertResponseEnum().getCode(), getMessage(e));
+//    }
+
+    /**
+     * 自定义异常
+     *
+     * @param e 异常
+     * @return 异常结果
+     */
+    @ExceptionHandler(value = BaseException.class)
+    @ResponseBody
+    public BaseResponse handleBaseException(BaseException e) {
+        log.error("GlobalExceptionHandler#handleBaseException: {}", e);
+        return new ER(e.getExceptionAssertResponseEnum().getCode(), getMessage(e));
+    }
+
+    /**
+     * Controller上一层相关异常
+     *
+     * @param e 异常
+     * @return 异常结果
+     */
+    @ExceptionHandler({
+            NoHandlerFoundException.class,
+            HttpRequestMethodNotSupportedException.class,
+            HttpMediaTypeNotSupportedException.class,
+            MissingPathVariableException.class,
+            MissingServletRequestParameterException.class,
+            TypeMismatchException.class,
+            HttpMessageNotReadableException.class,
+            HttpMessageNotWritableException.class,
+            HttpMediaTypeNotAcceptableException.class,
+            ServletRequestBindingException.class,
+            ConversionNotSupportedException.class,
+            MissingServletRequestPartException.class,
+            AsyncRequestTimeoutException.class
+    })
+    @ResponseBody
+    public BaseResponse handleServletException(Exception e) {
+        log.error("GlobalExceptionHandler#handleServletException: {}", e);
+        CommonBusinessResponseEnum commonBusinessResponseEnum = CommonBusinessResponseEnum.SERVLET_EXCEPTION;
+        try {
+            commonBusinessResponseEnum = CommonBusinessResponseEnum.valueOf(StringsUtils.upperCamelCase2allCapsCase(e.getClass().getSimpleName()));
+        } catch (IllegalArgumentException e1) {
+            log.error("class [{}] not defined in enum {}", e.getClass().getName(), CommonBusinessResponseEnum.class.getName());
+        }
+        return new ER(commonBusinessResponseEnum.getCode(), commonBusinessResponseEnum.toString());
+    }
+
+
+    /**
+     * 参数绑定/校验异常，将校验失败的所有异常组合成一条错误信息
+     *
+     * @param e 异常
+     * @return 异常结果
+     */
+    @ExceptionHandler({
+            BindException.class,
+            MethodArgumentNotValidException.class
+    })
+    @ResponseBody
+    public BaseResponse handleBindException(BindException e) {
+        log.error("GlobalExceptionHandler#handleBindException: {}", e);
+        StringBuilder msg = new StringBuilder();
+        for (ObjectError error : e.getBindingResult().getAllErrors()) {
+            msg.append(", ");
+            if (error instanceof FieldError) {
+                msg.append(((FieldError) error).getField()).append(": ");
+            }
+            msg.append(error.getDefaultMessage() == null ? "" : error.getDefaultMessage());
+        }
+        return new ER(CommonResponseEnum.ARGUE_ERROR.getCode(), msg.substring(2));
+    }
+
+    /**
+     * 未定义异常
+     *
+     * @param e 异常
+     * @return 异常结果
+     */
+    @ExceptionHandler(value = Exception.class)
+    @ResponseBody
+    public BaseResponse handleException(Exception e) {
+        log.error("GlobalExceptionHandler#handleException: {}", e);
+        return new ER(CommonResponseEnum.INTERNAL_SERVER_ERROR.getCode(), CommonResponseEnum.INTERNAL_SERVER_ERROR.toString());
+    }
+
+}
+
+```
 
 
 
