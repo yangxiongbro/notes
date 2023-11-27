@@ -5999,9 +5999,76 @@ spring.cloud.stream.bindings.outputOrder.producer.partitionCount=2
 
 
 
+## 服务网关
+
+### Zuul
+
+https://github.com/Netflix/zuul/wiki
+
+
+
+### Gateway
+
+#### 概述
+
+##### Spring Cloud Gateway 是什么
+
+https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.2.1.RELEASE/reference/html/
+
+​		Spring Cloud Gateway 是 Spring Cloud 的一个全新项目,基于 Spring 5.0+Spring Boot 2.0 和 Project Reactor 等技术开发的网关，它旨在为微服务架构提供一种简单有效的统一的 API 路由管理方式。
+
+​		Sprina Cloud Gateway 作为 Spring Cloud 生态系统中的网关，目标是替代 Zuul，在 Spring Cloud 2.0 以上版本中，没有对新版本的 Zuul 2.0 以上最新高性能版本进行集成，仍然还是使用的 Zuul 1.x 非 Reactor 模式的老版本，而为了提升网关的性能，Spring Cloud Gateway 是基于 WebFlux 框架实现的，而 WebFlux 框架底层则使用了高性能的 Reactor 模式通信框架 Netty。
+
+​		Spring Cloud Gateway 的目标提供统一的路由方式且基于 Filter 链的方式提供了网关基本的功能，例如: 安全，监控/指标，和限流。
+
+
+
+##### Spring Cloud Gateway 具有如下特性
+
+- 基于 Spring Framework 5, Project Reactor 和 Spring Boot 2.0 进行构建动态路由
+- 能够匹配任何请求属性
+- 可以对路由指定 Predicate (断言) 和 Filter (过滤器)
+- 集成 Hystrix 的断路器功能
+- 集成 Spring Cloud 服务发现功能
+- 易于编写的 Predicate (断言) 和 Filter (过滤器)
+- 请求限流功能
+- 支持路径重写
+
+
+
+##### Spring Cloud Gateway 与 Zuul 的区别
+
+在SpringCloud Finchley 正式版之前，Spring Cloud 推荐的网关是 Netflix 提供的Zuul
+
+Zuul 1.x 是一个基于阻塞 I/ O的 API Gateway
+
+Zuul 1.x 基于 Servlet 2.5 使用阻塞架构它不支持任何长连接(如 WebSocket) Zuul 的设计模和 Nginx 较像，每次 I/O 操作都是从工作线程中选择一个执行，请求线程被阻塞到工作线程完成，但是差别是 Nginx 用 C++ 实现，Zuul 用 Java 实现，而 JVM 本身会有第一次加载较慢的情况，使得 Zuul 的性能相对较差
+
+Zuul 2.x 理念先进，想基于 Netty 非阻塞和支持长连接，Spring Cloud 目前还没有整合。Zuul 2.x 的性能较 Zuul 1.x 有较大提升。在性能方面，根据官方提供的基准测试，Spring Cloud Gateway 的 RPS (每秒请求数) 是 Zuul 的 1.6 倍
+
+Spring Cloud Gateway 建立在 Spring Framework 5、Project Reactor 和 Spring Boot 2 之上，使用非阳塞API
+
+Spring Cloud Gateway 还支持 WebSocket，并且与 Spring 紧密集成拥有更好的开发体验
+
+
+
+##### WebFlux 是什么
+
+https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactor/html
+
+
+
+传统的 Web 框架，比如说 Struts2，Spring MVC 等都是基于 Servlet API 与 Servlet 容器基础之上运行的
+
+但是在 Servlet3.1 之后有了异步非阻塞的支持。而 WebFlux 是一个典型异步非阻塞的框架，它的核心是基于 Reactor 的相关 API 实现的。相对于传统的 web 框架来说，它可以运行在诸如 Netty，Undertow 及支持 Servlet3.1 的容器上，非阻塞式+函数式编程(Spring5 必须让你使用 Java8)
+
+Spring WebFlux 是 Spring 5.0 引入的新的响应式框架，区别于 Spring MVC，它不需要依赖 Servlet APl，它是完全异步非阻塞的，并且基于 Reactor 来实现响应式流规范
+
+
+
 ## 配置中心
 
-### SpringCloud Conﬁg
+### Spring Cloud Conﬁg
 
 #### 概述
 
