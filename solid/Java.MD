@@ -4455,6 +4455,8 @@ Nginx+lua实现
 
 ### Zuul(1.x)
 
+https://github.com/Netflix/zuul/wiki
+
 #### 简介
 
 ZUUL是Netflix开源的微服务网关，它可以和Eureka、Ribbon、Hystrix等组件配合使用，Zuul组件的核心是一系列的过滤器，这些过滤器可以完成以下功能： 动态路由：动态将请求路由到不同后端集群 压力测试：逐渐增加指向集群的流量，以了解性能负载分配：为每一种负载类型分配对应容量，并弃用超出限定值的请求静态响应处理：边缘位置进行响应，避免转发到内部集群身份认证和安全: 识别每一个资源的验证要求，并拒绝那些不符的请求。Spring Cloud对Zuul进行 了整合和增强。
@@ -4714,26 +4716,109 @@ public class ZuulFilterImpl extends ZuulFilter{
 
 #### 简介
 
-Spring Cloud Gateway 是 Spring 官方基于 Spring 5.0，Spring Boot 2.0 和 Project Reactor 等技术开 发的网关，旨在为微服务架构提供一种简单而有效的统一的 API 路由管理方式，统一访问接口。Spring Cloud Gateway 作为 Spring Cloud 生态系中的网关，目标是替代 Netflix ZUUL，其不仅提供统一的路 由方式，并且基于 Filter 链的方式提供了网关基本的功能，例如：安全，监控/埋点，和限流等。它是基 于Nttey的响应式开发模式。
-
 | 组件                 | RPS(request per second) |
 | -------------------- | ----------------------- |
 | Spring Cloud Gateway | Requests/sec: 32213.38  |
 | Zuul1X               | Requests/sec: 20800.13  |
 
-**核心概念**
 
-**路由（route）** 路由是网关最基础的部分，路由信息由一个ID、一个目的URL、一组断言工厂和一 组Filter组成。如果断言为真，则说明请求URL和配置的路由匹配。 
 
-**断言（predicates）** Java8中的断言函数，Spring Cloud Gateway中的断言函数输入类型是 Spring5.0框架中的ServerWebExchange。Spring Cloud Gateway中的断言函数允许开发者去定 义匹配来自Http Request中的任何信息，比如请求头和参数等。 
+##### Spring Cloud Gateway 是什么
 
-**过滤器（filter）** 一个标准的Spring webFilter，Spring Cloud Gateway中的Filter分为两种类型， 分别是Gateway Filter和Global Filter。过滤器Filter可以对请求和响应进行处理。
+https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.2.1.RELEASE/reference/html/
+
+​		Spring Cloud Gateway 是 Spring Cloud 的一个全新项目,基于 Spring 5.0+Spring Boot 2.0 和 Project Reactor 等技术开发的网关，它旨在为微服务架构提供一种简单有效的统一的 API 路由管理方式。
+
+​		Sprina Cloud Gateway 作为 Spring Cloud 生态系统中的网关，目标是替代 Zuul，在 Spring Cloud 2.0 以上版本中，没有对新版本的 Zuul 2.0 以上最新高性能版本进行集成，仍然还是使用的 Zuul 1.x 非 Reactor 模式的老版本，而为了提升网关的性能，Spring Cloud Gateway 是基于 WebFlux 框架实现的，而 WebFlux 框架底层则使用了高性能的 Reactor 模式通信框架 Netty。
+
+​		Spring Cloud Gateway 的目标提供统一的路由方式且基于 Filter 链的方式提供了网关基本的功能，例如: 安全，监控/指标，和限流。
+
+
+
+##### Spring Cloud Gateway 具有如下特性
+
+- 基于 Spring Framework 5, Project Reactor 和 Spring Boot 2.0 进行构建动态路由
+- 能够匹配任何请求属性
+- 可以对路由指定 Predicate (断言) 和 Filter (过滤器)
+- 集成 Hystrix 的断路器功能
+- 集成 Spring Cloud 服务发现功能
+- 易于编写的 Predicate (断言) 和 Filter (过滤器)
+- 请求限流功能
+- 支持路径重写
+
+
+
+##### Spring Cloud Gateway 与 Zuul 的区别
+
+在SpringCloud Finchley 正式版之前，Spring Cloud 推荐的网关是 Netflix 提供的Zuul
+
+Zuul 1.x 是一个基于阻塞 I/ O的 API Gateway
+
+Zuul 1.x 基于 Servlet 2.5 使用阻塞架构它不支持任何长连接(如 WebSocket) Zuul 的设计模和 Nginx 较像，每次 I/O 操作都是从工作线程中选择一个执行，请求线程被阻塞到工作线程完成，但是差别是 Nginx 用 C++ 实现，Zuul 用 Java 实现，而 JVM 本身会有第一次加载较慢的情况，使得 Zuul 的性能相对较差
+
+Zuul 2.x 理念先进，想基于 Netty 非阻塞和支持长连接，Spring Cloud 目前还没有整合。Zuul 2.x 的性能较 Zuul 1.x 有较大提升。在性能方面，根据官方提供的基准测试，Spring Cloud Gateway 的 RPS (每秒请求数) 是 Zuul 的 1.6 倍
+
+Spring Cloud Gateway 建立在 Spring Framework 5、Project Reactor 和 Spring Boot 2 之上，使用非阳塞API
+
+Spring Cloud Gateway 还支持 WebSocket，并且与 Spring 紧密集成拥有更好的开发体验
+
+
+
+##### WebFlux 是什么
+
+https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactor/html
+
+
+
+传统的 Web 框架，比如说 Struts2，Spring MVC 等都是基于 Servlet API 与 Servlet 容器基础之上运行的
+
+但是在 Servlet3.1 之后有了异步非阻塞的支持。而 WebFlux 是一个典型异步非阻塞的框架，它的核心是基于 Reactor 的相关 API 实现的。相对于传统的 web 框架来说，它可以运行在诸如 Netty，Undertow 及支持 Servlet3.1 的容器上，非阻塞式+函数式编程(Spring5 必须让你使用 Java8)
+
+Spring WebFlux 是 Spring 5.0 引入的新的响应式框架，区别于 Spring MVC，它不需要依赖 Servlet APl，它是完全异步非阻塞的，并且基于 Reactor 来实现响应式流规范
+
+
+
+#### **核心概念**
+
+##### Route(路由)
+
+路由是构建网关的基本模块，它由 ID，目标 URI，一系列的断言和过滤器组成，如果断言为 true 则匹配该路由
+
+
+
+##### Predicate(断言)
+
+参考的是 Java8 的 iava.util.function.Predicate
+开发人员可以匹配 HTTP 请求中的所有内容(例如请求头或请求参数)，如果请求与断言相匹配则进行路由
+
+
+
+##### Filter(过滤)
+
+指的是 Spring 框架中 GatewayFilter 的实例，使用过滤器，可以在请求被路由前或者之后对请求进行修改
+
+
+
+#### 工作流程
+
+路由转发+执行过滤器链
+
+![](D:\documents\notes\pictures\202311\001.png)
+
+​		客户端向 Spring Cloud Gateway 发出请求。然后在 Gateway Handler Mapping 中找到与请求相匹配的路由，将其发送到 Gateway
+Web Handler
+
+​		Handler 再通过指定的过滤器链来将请求发送到我们实际的服务执行业务逻辑，然后返回。过滤器之间用虚线分开是因为过滤器可能会在发送代理请求之前(“pre”)或之后(“post”)执行业务逻辑 
+
+​		Filter 在“pre”类型的过滤器可以做参数校验、权限校验、流量监控、日志输出、协议转换等，在“post”类型的过滤器中可以做响应内容、响应头的修改，日志的输出，流量监控等有着非常重要的作用
+
+
 
 
 
 #### 搭建SCG网关服务器
 
-创建新的子模块shop_server_scg
+创建新的子模块 shop_server_scg
 
 ##### pom.xml
 
@@ -4744,8 +4829,8 @@ Spring Cloud Gateway 是 Spring 官方基于 Spring 5.0，Spring Boot 2.0 和 Pr
 			<artifactId>spring-cloud-starter-gateway</artifactId>
 		</dependency>
       <!-- 
-注意SpringCloud Gateway使用的web框架为webflux，和SpringMVC不兼容。引入的限流组件是 hystrix。redis底层不再使用jedis，而是lettuce。
-所以scg不需要下面两个依赖，并把他们从父工程移除，移到需要的子工程 
+注意 SpringCloud Gateway 使用的 web 框架为 webflux，和 SpringMVC 不兼容。引入的限流组件是 hystrix。redis 底层不再使用jedis，而是lettuce。
+所以 SCG 不需要下面两个依赖，并把他们从父工程移除，移到需要的子工程 
 -->
         <dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -5998,71 +6083,6 @@ spring.cloud.stream.bindings.outputOrder.producer.partitionCount=2
 ### Kafka
 
 
-
-## 服务网关
-
-### Zuul
-
-https://github.com/Netflix/zuul/wiki
-
-
-
-### Gateway
-
-#### 概述
-
-##### Spring Cloud Gateway 是什么
-
-https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.2.1.RELEASE/reference/html/
-
-​		Spring Cloud Gateway 是 Spring Cloud 的一个全新项目,基于 Spring 5.0+Spring Boot 2.0 和 Project Reactor 等技术开发的网关，它旨在为微服务架构提供一种简单有效的统一的 API 路由管理方式。
-
-​		Sprina Cloud Gateway 作为 Spring Cloud 生态系统中的网关，目标是替代 Zuul，在 Spring Cloud 2.0 以上版本中，没有对新版本的 Zuul 2.0 以上最新高性能版本进行集成，仍然还是使用的 Zuul 1.x 非 Reactor 模式的老版本，而为了提升网关的性能，Spring Cloud Gateway 是基于 WebFlux 框架实现的，而 WebFlux 框架底层则使用了高性能的 Reactor 模式通信框架 Netty。
-
-​		Spring Cloud Gateway 的目标提供统一的路由方式且基于 Filter 链的方式提供了网关基本的功能，例如: 安全，监控/指标，和限流。
-
-
-
-##### Spring Cloud Gateway 具有如下特性
-
-- 基于 Spring Framework 5, Project Reactor 和 Spring Boot 2.0 进行构建动态路由
-- 能够匹配任何请求属性
-- 可以对路由指定 Predicate (断言) 和 Filter (过滤器)
-- 集成 Hystrix 的断路器功能
-- 集成 Spring Cloud 服务发现功能
-- 易于编写的 Predicate (断言) 和 Filter (过滤器)
-- 请求限流功能
-- 支持路径重写
-
-
-
-##### Spring Cloud Gateway 与 Zuul 的区别
-
-在SpringCloud Finchley 正式版之前，Spring Cloud 推荐的网关是 Netflix 提供的Zuul
-
-Zuul 1.x 是一个基于阻塞 I/ O的 API Gateway
-
-Zuul 1.x 基于 Servlet 2.5 使用阻塞架构它不支持任何长连接(如 WebSocket) Zuul 的设计模和 Nginx 较像，每次 I/O 操作都是从工作线程中选择一个执行，请求线程被阻塞到工作线程完成，但是差别是 Nginx 用 C++ 实现，Zuul 用 Java 实现，而 JVM 本身会有第一次加载较慢的情况，使得 Zuul 的性能相对较差
-
-Zuul 2.x 理念先进，想基于 Netty 非阻塞和支持长连接，Spring Cloud 目前还没有整合。Zuul 2.x 的性能较 Zuul 1.x 有较大提升。在性能方面，根据官方提供的基准测试，Spring Cloud Gateway 的 RPS (每秒请求数) 是 Zuul 的 1.6 倍
-
-Spring Cloud Gateway 建立在 Spring Framework 5、Project Reactor 和 Spring Boot 2 之上，使用非阳塞API
-
-Spring Cloud Gateway 还支持 WebSocket，并且与 Spring 紧密集成拥有更好的开发体验
-
-
-
-##### WebFlux 是什么
-
-https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactor/html
-
-
-
-传统的 Web 框架，比如说 Struts2，Spring MVC 等都是基于 Servlet API 与 Servlet 容器基础之上运行的
-
-但是在 Servlet3.1 之后有了异步非阻塞的支持。而 WebFlux 是一个典型异步非阻塞的框架，它的核心是基于 Reactor 的相关 API 实现的。相对于传统的 web 框架来说，它可以运行在诸如 Netty，Undertow 及支持 Servlet3.1 的容器上，非阻塞式+函数式编程(Spring5 必须让你使用 Java8)
-
-Spring WebFlux 是 Spring 5.0 引入的新的响应式框架，区别于 Spring MVC，它不需要依赖 Servlet APl，它是完全异步非阻塞的，并且基于 Reactor 来实现响应式流规范
 
 
 
