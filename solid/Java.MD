@@ -4844,70 +4844,67 @@ Web Handler
   </dependencies>
 ```
 
-##### application.properties
+##### 配置
+
+###### 配置方法一
+
+在 yaml 配置文件配置
+
+[Spring Cloud Gateway Nacos 实现动态路由_nacos 动态路由_hundan_520520的博客-CSDN博客](https://blog.csdn.net/hundan_520520/article/details/129158544)
 
 ```properties
-spring.http.encoding.force=true
-spring.http.encoding.charset=UTF-8
-spring.http.encoding.enabled=true
-server.tomcat.uri-encoding=UTF-8
-server.port=9100
-spring.application.name=shop-server-scg
+spring:
+  cloud:
+    # Spring Cloud Gateway
+    gateway:
+      enabled: true
+      # 定义路由规则
+      routes:
+        # 我们自定义的路由 ID，保持唯一
+      - id: order_route
+        # 匹配后提供服务的路由地址
+        uri: http://127.0.0.1:9006
+        # 路由条件，Predicate 接受一个输入参数，返回一个布尔值结果。该接口包含多种默认方法来将 Predicate 组合成其他复杂的逻辑（比如：与，或，非）
+        predicates:
+          # 断言，路径相匹配的进行路由
+        - Path=/demo_spring_cloud_alibaba/order/**
+          # 更多路由规则
+		  # 路由断言之后匹配
+		- After=xxxxx
+		  # 路由断言之前匹配
+		- Before=xxxxx
+		  # 路由断言之间
+		- Between=xxxxx,xxx
+		  # 路由断言Cookie匹配,此predicate匹配给定名称(chocolate)和正则表达式(ch.p)
+		- Cookie=chocolate, ch.p
+		  # 路由断言Header匹配，header名称匹配X-Request-Id,且正则表达式匹配\d+
+		- Header=X-Request-Id, \d+
+		  # 路由断言匹配Host匹配，匹配下面Host主机列表,**代表可变参数
+		- Host=**.somehost.org,**.anotherhost.org
+		  # 路由断言Method匹配，匹配的是请求的HTTP方法
+		- Method=GET
+		  # 路由断言匹配，{segment}为可变参数
+		- Path=/foo/{segment},/bar/{segment}
+		  # 路由断言Query匹配，将请求的参数param(baz)进行匹配，也可以进行regexp正则表达式匹配 (参数包含foo,并且foo的值匹配ba.)
+		- Query=baz 或 Query=foo,ba.
+		  # 路由断言RemoteAddr匹配，将匹配192.168.1.1~192.168.1.254之间的ip地址，其中24为子网掩码位数即255.255.255.0
+		- RemoteAddr=192.168.1.1/24
+        filters:
+          # 路由转发是直接将匹配的路由path直接拼接到映射路径（URI）之后
+          # 重写转发路径,通过RewritePath配置重写转发的url，将order-service/(?<segment>.*),重写为{segment}
+        - RewritePath=/order-service/(?<segment>.*), /$\{segment}
 
-# Spring Cloud Gateway
-# 定义路由规则
-# 我们自定义的路由 ID，保持唯一
-spring.cloud.gateway.routes[0].id=order-service-id
-# 目标服务地址
-spring.cloud.gateway.routes[0].uri=http://127.0.0.1:8000
-# 路由条件，Predicate 接受一个输入参数，返回一个布尔值结果。该接口包含多种默认方法来将 Predicate 组合成其他复杂的逻辑（比如：与，或，非）
-spring.cloud.gateway.routes[0].predicates[0]=Path=/order-service/**
-# 路由转发是直接将匹配的路由path直接拼接到映射路径（URI）之后
-# 重写转发路径,通过RewritePath配置重写转发的url，将order-service/(?<segment>.*),重写为{segment}
-spring.cloud.gateway.routes[0].filters[0]=RewritePath=/order-service/(?<segment>.*), /$\{segment}
-
-# 更多路由规则
-# 路由断言之后匹配
-#spring.cloud.gateway.routes[0].id=after_route
-#spring.cloud.gateway.routes[0].uri=https://xxx.com
-#spring.cloud.gateway.routes[0].predicates[0]=After=xxxxx
-# 路由断言之前匹配
-#spring.cloud.gateway.routes[0].id=before_route
-#spring.cloud.gateway.routes[0].uri=https://xxx.com
-#spring.cloud.gateway.routes[0].predicates[0]=Before=xxxxx
-# 路由断言之间
-#spring.cloud.gateway.routes[0].id=between_route
-#spring.cloud.gateway.routes[0].uri=https://xxx.com
-#spring.cloud.gateway.routes[0].predicates[0]=Between=xxxxx,xxx
-# 路由断言Cookie匹配,此predicate匹配给定名称(chocolate)和正则表达式(ch.p)
-#spring.cloud.gateway.routes[0].id=cookie_route
-#spring.cloud.gateway.routes[0].uri=https://xxx.com
-#spring.cloud.gateway.routes[0].predicates[0]=Cookie=chocolate, ch.p
-# 路由断言Header匹配，header名称匹配X-Request-Id,且正则表达式匹配\d+
-#spring.cloud.gateway.routes[0].id=header_route
-#spring.cloud.gateway.routes[0].uri=https://xxx.com
-#spring.cloud.gateway.routes[0].predicates[0]=Header=X-Request-Id, \d+
-# 路由断言匹配Host匹配，匹配下面Host主机列表,**代表可变参数
-#spring.cloud.gateway.routes[0].id=host_route
-#spring.cloud.gateway.routes[0].uri=https://xxx.com
-#spring.cloud.gateway.routes[0].predicates[0]=Host=**.somehost.org,**.anotherhost.org
-# 路由断言Method匹配，匹配的是请求的HTTP方法
-#spring.cloud.gateway.routes[0].id=method_route
-#spring.cloud.gateway.routes[0].uri=https://xxx.com
-#spring.cloud.gateway.routes[0].predicates[0]=Method=GET
-# 路由断言匹配，{segment}为可变参数
-#spring.cloud.gateway.routes[0].id=host_route
-#spring.cloud.gateway.routes[0].uri=https://xxx.com
-#spring.cloud.gateway.routes[0].predicates[0]=Path=/foo/{segment},/bar/{segment}
-# 路由断言Query匹配，将请求的参数param(baz)进行匹配，也可以进行regexp正则表达式匹配 (参数包含foo,并且foo的值匹配ba.)
-#spring.cloud.gateway.routes[0].id=query_route
-#spring.cloud.gateway.routes[0].uri=https://xxx.com
-#spring.cloud.gateway.routes[0].predicates[0]=Query=baz 或 Query=foo,ba.
-# 路由断言RemoteAddr匹配，将匹配192.168.1.1~192.168.1.254之间的ip地址，其中24为子网掩码位数即255.255.255.0
-#spring.cloud.gateway.routes[0].id=remoteaddr_route
-#spring.cloud.gateway.routes[0].uri=https://xxx.com
-#spring.cloud.gateway.routes[0].predicates[0]=RemoteAddr=192.168.1.1/24
 ```
+
+
+
+###### 配置方法二
+
+代码中注入 RouteLocator 的 Bean
+
+
+
+
 
 ##### 启动类
 
