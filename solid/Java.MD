@@ -4816,18 +4816,19 @@ Web Handler
 
 
 
-#### 搭建SCG网关服务器
+#### 搭建SCG网关服务器(Eureka)
 
-创建新的子模块 shop_server_scg
+创建新的子模块 SCG
 
-##### pom.xml
+##### 依赖
 
 ```xml
   <dependencies>
-  		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-gateway</artifactId>
-		</dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-gateway</artifactId>
+            <version>3.1.9</version>
+        </dependency>
       <!-- 
 注意 SpringCloud Gateway 使用的 web 框架为 webflux，和 SpringMVC 不兼容。引入的限流组件是 hystrix。redis 底层不再使用jedis，而是lettuce。
 所以 SCG 不需要下面两个依赖，并把他们从父工程移除，移到需要的子工程 
@@ -4850,89 +4851,30 @@ Web Handler
 
 在 yaml 配置文件配置
 
-[Spring Cloud Gateway Nacos 实现动态路由_nacos 动态路由_hundan_520520的博客-CSDN博客](https://blog.csdn.net/hundan_520520/article/details/129158544)
-
-```properties
-spring:
-  cloud:
-    # Spring Cloud Gateway
-    gateway:
-      enabled: true
-      # 定义路由规则
-      routes:
-        # 我们自定义的路由 ID，保持唯一
-      - id: order_route
-        # 匹配后提供服务的路由地址
-        uri: http://127.0.0.1:9006
-        # 路由条件，Predicate 接受一个输入参数，返回一个布尔值结果。该接口包含多种默认方法来将 Predicate 组合成其他复杂的逻辑（比如：与，或，非）
-        predicates:
-          # 断言，路径相匹配的进行路由
-        - Path=/demo_spring_cloud_alibaba/order/**
-          # 更多路由规则
-		  # 路由断言之后匹配
-		- After=xxxxx
-		  # 路由断言之前匹配
-		- Before=xxxxx
-		  # 路由断言之间
-		- Between=xxxxx,xxx
-		  # 路由断言Cookie匹配,此predicate匹配给定名称(chocolate)和正则表达式(ch.p)
-		- Cookie=chocolate, ch.p
-		  # 路由断言Header匹配，header名称匹配X-Request-Id,且正则表达式匹配\d+
-		- Header=X-Request-Id, \d+
-		  # 路由断言匹配Host匹配，匹配下面Host主机列表,**代表可变参数
-		- Host=**.somehost.org,**.anotherhost.org
-		  # 路由断言Method匹配，匹配的是请求的HTTP方法
-		- Method=GET
-		  # 路由断言匹配，{segment}为可变参数
-		- Path=/foo/{segment},/bar/{segment}
-		  # 路由断言Query匹配，将请求的参数param(baz)进行匹配，也可以进行regexp正则表达式匹配 (参数包含foo,并且foo的值匹配ba.)
-		- Query=baz 或 Query=foo,ba.
-		  # 路由断言RemoteAddr匹配，将匹配192.168.1.1~192.168.1.254之间的ip地址，其中24为子网掩码位数即255.255.255.0
-		- RemoteAddr=192.168.1.1/24
-        filters:
-          # 路由转发是直接将匹配的路由path直接拼接到映射路径（URI）之后
-          # 重写转发路径,通过RewritePath配置重写转发的url，将order-service/(?<segment>.*),重写为{segment}
-        - RewritePath=/order-service/(?<segment>.*), /$\{segment}
-
-```
+同 nacos
 
 
 
 ###### 配置方法二
 
-代码中注入 RouteLocator 的 Bean
+同 nacos
 
 
 
+##### 负载均衡配置
 
-
-##### 启动类
-
-```java
-@SpringBootApplication
-public class ShopServerScgApplication {
-	public static void main(String[] args) {
-		SpringApplication.run(ShopServerScgApplication.class, args);
-	}
-}
-```
-
-配置好SCG路由之后启动服务，在浏览器中输入http://localhost:9100/order-service/order/buy?uid=1&pid=2&number=3，即可访问到订单微服务
-
-#### 动态路由(Eureka)
-
-##### pom.xml
+###### pom.xml
 
 增加下列依赖项
 
 ```xml
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-		</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
 ```
 
-##### application.properties
+###### application.properties
 
 增加Eureka Client配置，修改路由uri为微服务的名称
 
@@ -4954,7 +4896,247 @@ eureka.instance.ipAddress=127.0.0.1
 spring.cloud.gateway.routes[0].uri=lb://shop-service-order
 ```
 
-配置好动态路由之后启动服务，在浏览器中输入http://localhost:9100/order-service/order/buy?uid=1&pid=2&number=3，即可访问到订单微服务
+
+
+##### 启动类
+
+```java
+@SpringBootApplication
+public class SCGApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(SCGApplication.class, args);
+    }
+}
+```
+
+配置好 SCG 路由之后启动服务，在浏览器中输入 http://localhost:9009/demo_spring_cloud_alibaba/order/1，即可经过 SCG 访问到订单微服务
+
+
+
+#### 搭建SCG网关服务器(Nacos)
+
+创建新的子模块 SCG
+
+##### 依赖
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-gateway</artifactId>
+        <version>3.1.9</version>
+    </dependency>
+    <!-- 服务发现 -->
+    <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+    </dependency>
+    <!-- 服务配置 -->
+    <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-bootstrap</artifactId>
+        <version>3.1.6</version>
+    </dependency>
+    <!--
+            注意 SpringCloud Gateway 使用的 web 框架为 webflux，和 SpringMVC 不兼容。引入的限流组件是 hystrix。redis 底层不再使用jedis，而是lettuce。
+            所以 SCG 不需要下面两个依赖，并把他们从父工程移除，移到需要的子工程
+        -->
+    <!-- <dependency> -->
+    <!--     <groupId>org.springframework.boot</groupId> -->
+    <!--     <artifactId>spring-boot-starter-web</artifactId> -->
+    <!-- </dependency> -->
+    <!-- <dependency> -->
+    <!--     <groupId>org.springframework.boot</groupId> -->
+    <!--     <artifactId>spring-boot-starter-tomcat</artifactId> -->
+    <!--     <scope>provided</scope> -->
+    <!-- </dependency> -->
+    <!--open feign-->
+</dependencies>
+```
+
+##### 配置
+
+[Spring Cloud Gateway Nacos 实现动态路由_nacos 动态路由_hundan_520520的博客-CSDN博客](https://blog.csdn.net/hundan_520520/article/details/129158544)
+
+
+
+bootstrap
+
+```yaml
+spring:
+  application:
+    name: SCG
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      config:
+        server-addr: 192.168.31.90:18848
+        file-extension: yaml
+        namespace: ed2069f3-cc54-4a62-b044-95061643ae84
+        group: MY_GROUP
+        username: app
+        password: Senna&app@P1
+```
+
+
+
+```yaml
+server:
+  port: 9009
+  servlet:
+    context-path: /demo_spring_cloud_alibaba/scg
+mybatis-plus:
+  mapper-location: classpath*:mapper/**/*.xml
+logging:
+  config: classpath:logback-spring.xml
+
+spring:
+  datasource:
+    url: jdbc:mysql://192.168.31.101:3306/demo_spring_cloud_alibaba?useSSL=false&serverTimezone=Hongkong&useUnicode=true&characterEncoding=utf-8&autoReconnect=true
+    username: young
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.31.90:18848
+        namespace: ed2069f3-cc54-4a62-b044-95061643ae84
+        group: MY_GROUP
+        username: app
+        password: Senna&app@P1
+```
+
+
+
+###### 配置方法一
+
+在 yaml 配置文件配置
+
+```yaml
+spring:
+  cloud:
+    # Spring Cloud Gateway
+    gateway:
+      enabled: true
+      # 定义路由规则
+      routes:
+        # 我们自定义的路由 ID，保持唯一
+      - id: order_route
+        # 匹配后提供服务的路由地址
+        uri: http://127.0.0.1:9006
+        # 路由条件，Predicate 接受一个输入参数，返回一个布尔值结果。该接口包含多种默认方法来将 Predicate 组合成其他复杂的逻辑（比如：与，或，非）
+        predicates:
+          # 断言，路径相匹配的进行路由
+        - Path=/demo_spring_cloud_alibaba/order/**
+          # 更多路由规则
+		  # 路由断言之后匹配，在改时间之后当前路由才生效
+		- After=2023-11-30T23:30:00.000+08:00
+		  # 路由断言之前匹配，类似 After
+		- Before=xxxxx
+		  # 路由断言之间
+		- Between=xxxxx,xxx
+		  # 路由断言Cookie匹配,此predicate匹配给定名称(chocolate)和正则表达式(ch.p)
+		- Cookie=chocolate, ch.p
+		  # 路由断言 Header 匹配，header 名称匹配 X-Request-Id,header 值且正则表达式匹配\d+
+		- Header=X-Request-Id, \d+
+		  # 路由断言匹配Host匹配，匹配下面Host主机列表,**代表可变参数
+		- Host=**.somehost.org,**.anotherhost.org
+		  # 路由断言Method匹配，匹配的是请求的HTTP方法
+		- Method=GET
+		  # 路由断言匹配，{segment}为可变参数
+		- Path=/foo/{segment},/bar/{segment}
+		  # 路由断言Query匹配，将请求的参数param(baz)进行匹配，也可以进行regexp正则表达式匹配 (参数包含foo,并且foo的值匹配ba.)
+		- Query=baz 或 Query=foo,ba.
+		  # 路由断言RemoteAddr匹配，将匹配192.168.1.1~192.168.1.254之间的ip地址，其中24为子网掩码位数即255.255.255.0
+		- RemoteAddr=192.168.1.1/24
+        filters:
+          # 过滤器工厂会在匹的请求头加上一对请求头，名为X-Reouest-Id值为1024
+        - AddRequestParameter=X-Reuest-Id,1024
+          # 路由转发是直接将匹配的路由path直接拼接到映射路径（URI）之后
+          # 重写转发路径,通过RewritePath配置重写转发的url，将order-service/(?<segment>.*),重写为{segment}
+        - RewritePath=/order-service/(?<segment>.*), /$\{segment}
+
+```
+
+
+
+###### 配置方法二
+
+代码中注入 RouteLocator 的 Bean
+
+```java
+@Configuration
+public class GatewayConfig {
+    @Bean
+    public RouteLocator routes(RouteLocatorBuilder builder) {
+        return builder.routes()
+                .route("order_route",
+                        r -> r.path("/demo_spring_cloud_alibaba/order/**")
+//                .filters(
+//                        f -> f.circuitBreaker(c -> c.name("myCircuitBreaker").fallbackUri("forward:/inCaseOfFailureUseThis"))
+//                                .rewritePath("/consumingServiceEndpoint", "/backingServiceEndpoint")
+//                )
+                .uri("http://127.0.0.1:9006"))
+        .build();
+    }
+}
+```
+
+
+
+##### 负载均衡配置
+
+###### 依赖
+
+```xml
+<!--open feign-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+    <version>3.1.6</version>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+    <version>3.1.7</version>
+</dependency>
+```
+
+
+
+###### 配置
+
+```yaml
+spring:
+  cloud:
+    gateway:
+      enabled: true
+      routes:
+        # 更改 uri 配置，根据注册中心服务进行负载均衡
+        # uri: http://127.0.0.1:9006
+        uri: lb://Order
+```
+
+
+
+##### 启动类
+
+```java
+@SpringBootApplication
+@EnableDiscoveryClient
+public class SCGApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(SCGApplication.class, args);
+    }
+}
+```
+
+配置好 SCG 路由之后启动服务，在浏览器中输入 http://localhost:9009/demo_spring_cloud_alibaba/order/1，即可经过 SCG 访问到订单微服务
 
 
 
@@ -4996,6 +5178,8 @@ HTTP Request ----------> Filter ----------> Filter ----------> Filter ----------
 
 ##### GatewayFilter
 
+[Spring Cloud Gateway](https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.2.1.RELEASE/reference/html/#gatewayfilter-factories)
+
 局部过滤器（GatewayFilter），是针对单个路由的过滤器。可以对访问的URL过滤，进行切面处理。在 Spring Cloud Gateway中通过GatewayFilter的形式内置了很多不同类型的局部过滤器。这里简单将 Spring Cloud Gateway内置的所有过滤器工厂整理成了一张表格，虽然不是很详细，但能作为速览使 用。如下：
 
 | 过滤器工厂                  | 作用                                                         | 参数                                                         |
@@ -5003,24 +5187,24 @@ HTTP Request ----------> Filter ----------> Filter ----------> Filter ----------
 | AddRequestHeader            | 为原始请求添加Header                                         | Header的名称及值                                             |
 | AddRequestParameter         | 为原始请求添加请求参数                                       | 参数名称及值                                                 |
 | AddResponseHeader           | 为原始响应添加Header                                         | Header的名称及值                                             |
-| DedupeResponseHeader        | 剔除响应头中重复的值                                         | 需要去重的Header名 称及去重策略                              |
+| DedupeResponseHeader        | 剔除响应头中重复的值                                         | 需要去重的Header名称及去重策略                               |
 | Hystrix                     | 为路由引入Hystrix的断路器保护                                | HystrixCommand的名 称                                        |
 | FallbackHeaders             | 为fallbackUri的请求头中添加具 体的异常信息                   | Header的名称                                                 |
 | PrefixPath                  | 为原始请求路径添加前缀                                       | 前缀路径                                                     |
 | PreserveHostHeader          | 为请求添加一个 preserveHostHeader=true的属 性，路由过滤器会检查该属性以 决定是否要发送原始的Host | 无                                                           |
 | RequestRateLimiter          | 用于对请求限流，限流算法为令 牌桶                            | keyResolver、 rateLimiter、 statusCode、 denyEmptyKey、 emptyKeyStatus |
 | RedirectTo                  | 将原始请求重定向到指定的URL                                  | http状态码及重定向的 url                                     |
-| RemoveHopByHopHeadersFilter | 为原始请求删除IETF组织规定的 一系列Header                    | 默认就会启用，可以通 过配置指定仅删除哪些 Header             |
+| RemoveHopByHopHeadersFilter | 为原始请求删除IETF组织规定的 一系列Header                    | 默认就会启用，可以通过配置指定仅删除哪些 Header              |
 | RemoveRequestHeader         | 为原始请求删除某个Header                                     | Header名称                                                   |
 | RemoveResponseHeader        | 为原始响应删除某个Header                                     | Header名称                                                   |
-| RewritePath                 | 重写原始的请求路径                                           | 原始路径正则表达式以 及重写后路径的正则表 达式               |
-| RewriteResponseHeader       | 重写原始响应中的某个Header                                   | Header名称，值的正 则表达式，重写后的值                      |
+| RewritePath                 | 重写原始的请求路径                                           | 原始路径正则表达式以及重写后路径的正则表达式                 |
+| RewriteResponseHeader       | 重写原始响应中的某个Header                                   | Header名称，值的正则表达式，重写后的值                       |
 | SaveSession                 | 在转发请求之前，强制执行 WebSession::save操作                | 无                                                           |
-| secureHeaders               | 为原始响应添加一系列起安全作用的响应头                       | 无，支持修改这些安全 响应头的值                              |
+| secureHeaders               | 为原始响应添加一系列起安全作用的响应头                       | 无，支持修改这些安全响应头的值                               |
 | SetPath                     | 修改原始的请求路径                                           | 修改后的路径                                                 |
-| SetResponseHeader           | 修改原始响应中某个Header的值                                 | Header名称，修改后 的值                                      |
-| SetStatus                   | 修改原始响应的状态码                                         | HTTP 状态码，可以是 数字，也可以是字符串                     |
-| StripPrefix                 | 用于截断原始请求的路径                                       | 使用数字表示要截断的 路径的数量                              |
+| SetResponseHeader           | 修改原始响应中某个Header的值                                 | Header名称，修改后的值                                       |
+| SetStatus                   | 修改原始响应的状态码                                         | HTTP 状态码，可以是数字，也可以是字符串                      |
+| StripPrefix                 | 用于截断原始请求的路径                                       | 使用数字表示要截断的路径的数量                               |
 | Retry                       | 针对不同的响应进行重试                                       | retries、statuses、 methods、series                          |
 | RequestSize                 | 设置允许接收最大请求包的大 小。如果请求包大小超过设置的 值，则返回 413 Payload Too Large | 请求包大小，单位为字 节，默认值为5M                          |
 | ModifyRequestBody           | 在转发请求之前修改原始请求体 内容                            | 修改后的请求体内容                                           |
@@ -5029,6 +5213,8 @@ HTTP Request ----------> Filter ----------> Filter ----------> Filter ----------
 每个过滤器工厂都对应一个实现类，并且这些类的名称必须以 GatewayFilterFactory 结尾，这是 Spring Cloud Gateway的一个约定，例如 AddRequestHeader 对应的实现类为 AddRequestHeaderGatewayFilterFactory 。对于这些过滤器的使用方式可以参考官方文档.
 
 ##### GlobalFilter
+
+[Spring Cloud Gateway](https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.2.1.RELEASE/reference/html/#global-filters)
 
 全局过滤器（GlobalFilter）作用于所有路由，Spring Cloud Gateway 定义了Global Filter接口，用户 可以自定义实现自己的Global Filter。通过全局过滤器可以实现对权限的统一校验，安全性验证等功 能，并且全局过滤器也是程序员使用比较多的过滤器。 
 
@@ -5080,7 +5266,7 @@ GlobalFilter ------ |
 
 
 
-###### 例子
+###### 自定义过滤器
 
 ```java
 @Component
