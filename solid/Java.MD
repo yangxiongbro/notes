@@ -7285,6 +7285,46 @@ Ramp-up period(seconds):决定多长时间启动所有线程,如果ramp-up perio
 
 
 
+# 鉴权
+
+## SSO(单点登录)
+
+多系统，单一位置登录，实现多系统访问的一种技术。
+
+
+
+### Session
+
+#### Session 跨域
+
+​		所谓 Session 跨域就是摒弃了系统提供的 Session，而使用自定义的类似 Session 的机制来保存客户端数据的一种解决方案。
+
+​		如：通过设置 cookie 的 domain 来实现 cookie 的跨域传递。在 cookie 中传递一个自定义的 session_id。这个session_id 是客户端的唯一标记。将这个标记作为 key，将客户端需要保存的数据作为 value,在服务端进行保存（数据库保存或 NoSQL 保存）。这种机制就是 Session 的跨域解决。
+
+​		什么是域：在应用模型，一个完整的，有独立访问路径的功能集合称为一个域。如：百度称为一个应用或系统。百度下有若干的域，如：搜索引擎 (www.baidu.com)，百度贴吧(tieba.baidu.com)，百度知道 (zhidao.baidu.com)，百度地图 (map.baidu.com)等。域信息有时也称为多级域名。域的划分: 以IP，端口，域名，主机名为标准，实现划分。
+
+​		什么是跨域：客户端请求的时候，请求的服务器，不是同一个 IP，端口，域名，主机名的时候，都称为跨域。
+
+
+
+#### Spring Session 共享
+
+​		spring-session 技术是 spring 提供的用于处理集群会话共享的解决方案。spring-session 技术是将用户 session 数据保存到三方存储容器中，如：mysql，redis 等。
+
+​		spring-session 技术是解决同域名下的多服务器集群 session 共享问题的。不能解决跨域 session 共享问题。
+
+
+
+#### Nginx Session 共享
+
+​		nginx 中的 ip_hash 技术能够将某个 ip 的请求定向到同一台后端，这样一来这个 ip 下的某个客户端和某个后端就能建立起稳固的 session，ip_hash 是在 upstream 配置中定义的，具体如下：
+
+
+
+## OAuth2.0
+
+
+
 # Nginx
 
 ## 安装配置部署管理
