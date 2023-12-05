@@ -7313,11 +7313,62 @@ Ramp-up period(seconds):决定多长时间启动所有线程,如果ramp-up perio
 
 ​		spring-session 技术是解决同域名下的多服务器集群 session 共享问题的。不能解决跨域 session 共享问题。
 
+​		使用：配置一个 Spring 提供的 Filter，实现数据的拦截保存，并转换为 spring-session 需要的会话对象。必须提供一个数据库的表格信息（由 spring-session 提供，找 spring-session-jdbc.jar/org/springframework/session/jdbc/*.sql，根据具体的数据库找对应的SQL 文件，做表格的创建）。
+
+​		spring-session 表：保存客户端 session 对象的表格。
+
+​		spring-session-attributes 表：保存客户端 session 中的 attributes 属性数据的表格。
+
+​		spring-session 框架，是结合 Servlet 技术中的 HTTPSession 完成的会话共享机制。在代码中是直接操作 HttpSession 对象的。
+
+![](../pictures/202312/001.png)
+
 
 
 #### Nginx Session 共享
 
 ​		nginx 中的 ip_hash 技术能够将某个 ip 的请求定向到同一台后端，这样一来这个 ip 下的某个客户端和某个后端就能建立起稳固的 session，ip_hash 是在 upstream 配置中定义的，具体如下：
+
+```properties
+http {
+    ...
+    upstream nacoscluster {
+        server 192.168.31.100:8840;
+        server 192.168.31.100:8842;
+        server 192.168.31.100:8844;
+        ip_hash;
+    }
+
+    server {
+        listen       8848;
+        server_name  localhost;
+
+        location / {
+            proxy_pass http://nacoscluster/;
+            proxy_set_header Host $http_host;
+            proxy_set_header Cookie $http_cookie;
+            proxy_set_header X-Real-lP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            client_max_body_size 100m;
+        }
+    }
+    
+    ...
+
+}
+
+```
+
+
+
+​		ip_hash 是容易理解的，但是因为仅仅能用 ip 这个因子来分配后端，因此 ip_hash 是有缺陷的，不能在一些情况下使用：
+
+​		nginx 不是最前端的服务器。
+
+​		ip_hash 要求 nginx 一定是最前端的服务器，否则 nginx 得不到正确 ip，就不能根据 ip 作 hash。警如使用的是 squid 为最前端，那么 nginx 取 ip 时只能得到 squid 的服务器 ip 地址，用这个地址来作分流是肯定错乱的。
+
+​		假如 nginx 后端又有其它负载均衡，将请求又通过另外的方式分流了，那么某个客户端的请求肯定不能定位到同一台 session 应用服务器上。
 
 
 
@@ -7346,6 +7397,31 @@ cd /opt/apps/nginx-1.24.0
 # PCRE 作用是让 Nginx 支持 Rewrite 功能。
 # --with-stream : 支持 TCP 转发
 sudo ./configure --prefix=/opt/apps/nginx --with-stream --with-http_stub_status_module --with-http_ssl_module
+
+# 参数说明
+# 安装目录位置
+--prefix=/usr/local/nginx
+# 启动的时候进程描述文件保存位置和进程文件名
+--pid-path=/var/run/nginx/nginxpid
+# 锁定文件
+--lock-path=/var/lock/nginx.lock
+# 错误日志
+--error-log-path=/var/log/nginx/error.log
+# 访问日志
+--http-log-path=/var/log/nginx/access.log
+# 解压压缩模式
+--with-http_gzip_static_module
+# 客户端定义
+--http-client-body-temp-path=/var/temp/nginx/client
+# 代理临时目录位置
+--http-proxy-temp-path=/var/temp/nginx/proxy
+# 快速访问临时目录
+--http-fastcgi-temp-path=/var/temp/nginx/fastcgi
+# sgi访问目录
+--http-uwsgi-temp-path=/var/temp/nginx/uwsgi
+# scgi访问临时目录
+--http-scgi-temp-path=/var/temp/nginx/scgi
+
 sudo make && sudo make install
 cd .. && sudo rm -r /opt/apps/nginx-1.24.0
 /opt/apps/nginx/sbin/nginx -v
@@ -7454,6 +7530,8 @@ sudo /opt/apps/nginx/sbin/nginx
 sudo /opt/apps/nginx/sbin/nginx -s reload
 # 重启 Nginx
 sudo /opt/apps/nginx/sbin/nginx -s reopen
+# 停止接受新的请求并处理完当前请求后停止 Nginx
+sudo /opt/apps/nginx/sbin/nginx -s quit
 # 停止 Nginx
 sudo /opt/apps/nginx/sbin/nginx -s stop
 # Nginx 有哪些模块
