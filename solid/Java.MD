@@ -7577,6 +7577,255 @@ AES 的 key 要求长度为 16。
 
 
 
+
+
+## 安全框架
+
+### 概述
+
+​	什么是安全框架？解决系统安全问题的框架。如果没有安全框架，我们需要手动处理每个资源的访问控制，非常麻烦。使用安全框架，我们可以通过配置的方式实现对资源的访问限制。
+
+
+
+### 常用安全框架
+
+- Spring Security：Spring 家族一员。是一个能够为基于 Spring 的企业应用系统提供声明式的安全访问控制解决方案的安全框架。它提供了一组可以在 Spring 应用上下文中配置的 Bean，充分利用了 Spring IoC，DI（控制反转Inversion of Control,DI:Dependency Injection 依赖注入）和AOP（面向切面编程）功能，为应用系统提供声明式的安全访问控制功能，减少了为企业系统安全控制编写大量重复代码的工作。
+
+  
+
+- Apache Shiro：一个功能强大且易于使用的 Java 安全框架,提供了认证、授权、加密和会话管理。
+
+
+
+### SpringSecurity
+
+#### 简介
+
+​		Spring Security 是一个高度自定义的安全框架。利用 Spring oC/DI 和 AOP 功能，为系统提供了声明式安全访问控制功能，减少了为系统安全而编写大量重复代码的工作。使用 Spring Secruity 的原因有很多，但大部分都是发现了 JavaEE 的 Servlet 规范或 EJ 规范中的安全功能缺乏典型企业应用场景。同时认识到他们在 WAR 或 EAR 级别无法称植。因此如果你更换服务器环境，还有大量工作去重新配置你的应用程序。使用 Spring Security 解决了这些问题也为你提供许多其他有用的、可定制的安全功能。正如你可能知道的两个应用程序的两个主要区域是“认证“和“授权”（或者访问控制）。这两点也是 Spring Security 重要核心功能。“认证”，是建立一个他声明的主体的过程（一个“主体”一般是指用户，设备或一些可以在你的应用程序中执行动作的其他系统），通俗点说就是系统认为用户是否能登录。“授权”指确定一个主体是否允许在你的应用程序执行一个动作的过程。通俗点进就是系统判断用户是否有权限去做某些事情。
+
+​		Spring Security 以“The Acegi Secutity System for Spring”的名字始于 2003 年年底。其前身为 acegi 项目。起因是 Spring 开发者邮件列表中一个问题，有人提问是否考虑提供一个基于 Spring 的安全实现。限制于时间问题，开发出了一个简单的安全实现，但是并没有深入研究。几周后，Spring 杜区中其他成员同样询问了安全问题，代码提供给了这些人。2004 年 01 月份已经有 20 人左右使用这个项目。随着更多人的加入，在 2004 年 03 月左右在 sourceforge 中建立了一个项目，在最开始并没有认证模块，所有的认证功能都是依赖容器完成的，而 acei 则注重授权。但是随着更多人的使用，基于容器的认证就显现出了不足。acegi 中也加入了认证功能。大约 1 年后 acegi 成为 Spring 子项目在 2006 年 05 月发布了 acegi 1.0.0 版本。2007 年底 acegi 更名为 Spring Security。
+
+
+
+#### 依赖
+
+```xml
+<!-- Spring Security组件-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+<!--web组件-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+```
+
+
+
+#### 自定义登录逻辑
+
+
+
+##### UserDetailsService
+
+使用 username 调用 UserDetailsService 的 loadUserByUsername 返回 UserDetails(impl by User)，
+
+loadUserByUsername 根据用户名查找用户信息
+
+找到用户信息之后使用 PasswordEncoder(impl by BCryptPasswordEncoder) 对登陆密码进行编码和匹配数据库密码，匹配得上则创建 User 并返回，否则抛出异常
+
+
+
+
+
+##### PasswordEncoder
+
+Spring Security 要求容器中必须有 PasswordEncoder 实例。所以当自定义登录逻辑时要求必须给容器注入PaswordEncoder 的 bean 对象。
+
+在Spring Security 中内置了很多解析器。推荐使用 `BCryptPasswordEncoder` 实现类。
+
+###### 接口介绍
+
+BCryptPasswordEncoder 是 Spring Security 官方推荐的密码解析器，平时多使用这个解析器 BCryptPasswordEncoder 是对 bcrypt 强散列方法的具体实现。是基于 Hash 算法实现的单向加密。可以通过 strength 控制加密强度，默认 10。
+
+**encode**
+
+`String encode(CharSequence rawPassword);`
+
+对登陆密码按照特定的编码规则进行编码，推荐使用SHA-A 或者 Hash 加 8 byte 盐/随机盐。
+
+
+
+**matches**
+
+`boolean matches(CharSequence rawPassword, String encodedPassword);`
+
+验证从存储中获取的编码密码与登录的原始密码是否匹配。如果密码匹配，则返回
+`true` 如果不匹配，则返回 `false`。第一个参数表示登录的原始密码。第二个参数表示存储的密码。
+
+
+
+**upgradeEncoding**
+
+`default boolean upgradeEncoding(String encodedPassword)`
+
+对登陆密码进行二次加密
+
+如果编码之后的密码能够再次进行编码且达到更安全的结果则返回 `true`，否则返回 `false`。
+默认返回 `false`。
+
+
+
+##### 编码
+
+###### 配置
+
+```yaml
+server:
+  port: 9009
+  servlet:
+    context-path: /common/auth
+```
+
+
+
+###### 配置类
+
+​		当进行自定义登录逻辑时需要用到 UserDetailsService 和 PasswordEncoder。但是 Spring Security 要求：当进行自定义登录逻辑时容器内必须有 PasswordEncoder 实例。所以不能直接 new 对象。
+
+```java
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        // 表单提交
+        http.formLogin()
+                // 自定义登灵页面
+                .loginPage("/login.html")
+                // UsernamePasswordAuthenticationFilter
+                // 自定义表单账号参数名
+                // .usernameParameter("username")
+                // 自定义表单密码参数名
+                // .passwordParameter("password")
+                // 必须和表单提交的接口一样，会去执行自定义登灵逻辑
+                .loginProcessingUrl("/login")
+                // 登录成功后跳转的页面，POST 请求
+                .successForwardUrl("/login/success_forward")
+                // 登录失败后跳转的页面，POST 请求
+                .failureForwardUrl("/login/failure_forward");
+
+        // 授权
+        http.authorizeRequests()
+                // 放行 /login.html，不需要认证
+                .antMatchers("/login.html").permitAll()
+                // 放行 /error.html，不需要认证
+                .antMatchers("/error.html").permitAll()
+                // 所有请求都必须认证才能访问，必须登录
+                .anyRequest().authenticated();
+
+        // 关闭 csrf 防护
+        http.csrf().disable();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+
+
+###### 登录逻辑
+
+```java
+@Service
+public class UserDetailsServiceImpl implements UserDetailsService {
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        //1.根据用户名去数据库查询，如果不存在抛UsernameNotFoundException异常
+        if (!"admin".equals(username)) {
+            throw new UsernameNotFoundException("用户名不存在");
+        }
+        //2.比较密码(注册时已经加密过)，如果匹配成功返回UserDetails
+        String rawPassword = "1234";
+        String passwordFromStorage = passwordEncoder.encode(rawPassword);
+        System.out.println("自定义登录");
+        System.out.println(passwordFromStorage);
+        return new User(username, passwordFromStorage,AuthorityUtils.commaSeparatedStringToAuthorityList("admin,normal"));
+    }
+}
+
+```
+
+
+
+###### 页面转跳
+
+```java
+@RestController
+@RequestMapping("/login")
+public class LoginController {
+
+    @PostMapping("/success_forward")
+    public String successForward(){
+        return "successForward!";
+    }
+
+    @PostMapping("/failure_forward")
+    public String failureForward(){
+        return "failureForward!";
+    }
+}
+```
+
+
+
+###### 登录页面
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+    <body>
+        <form action="/common/auth/login" method="post">
+            用户名: <input type="text" name="username"/><br/>
+            密码: <input type="password" name="password"/><br/>
+            <input type="submit" value="登录"/>
+        </form>
+    </body>
+</html>
+```
+
+
+
+###### 错误页面
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+    <body>
+        操作失败，请重新登录 <a href=“/login.html“>跳转</a>
+    </body>
+</html>
+```
+
+
+
 # Nginx
 
 ## 安装配置部署管理
@@ -7673,7 +7922,6 @@ http {
             proxy_pass http://nacoscluster/;
         }
     }
-
 }
 
 ```
