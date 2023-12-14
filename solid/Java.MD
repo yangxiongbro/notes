@@ -7713,9 +7713,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // 必须和表单提交的接口一样，会去执行自定义登灵逻辑
                 .loginProcessingUrl("/login")
                 // 登录成功后跳转的页面，POST 请求
-                .successForwardUrl("/login/success_forward")
+//                .successForwardUrl("/login/success_forward")
+                // 自定义登陆成功处理器
+                .successHandler(new MyAuthenticationSuccessHandler("/common/auth/main.html"))
                 // 登录失败后跳转的页面，POST 请求
-                .failureForwardUrl("/login/failure_forward");
+//                .failureForwardUrl("/login/failure_forward");
+                // 自定义登录失败处理器
+                .failureHandler(new MyAuthenticationFailureHandler("/common/auth/error.html"));
 
         // 授权
         http.authorizeRequests()
@@ -7723,7 +7727,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/login.html").permitAll()
                 // 放行 /error.html，不需要认证
                 .antMatchers("/error.html").permitAll()
-                // 所有请求都必须认证才能访问，必须登录
+                // 所有请求都必须认证才能访问，必须登录，anyRequest 要放在最后
                 .anyRequest().authenticated();
 
         // 关闭 csrf 防护
@@ -7735,6 +7739,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return new BCryptPasswordEncoder();
     }
 }
+
 ```
 
 
@@ -7770,18 +7775,20 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 ###### 页面转跳
 
 ```java
-@RestController
+@Controller
 @RequestMapping("/login")
 public class LoginController {
 
     @PostMapping("/success_forward")
+//    @ResponseBody
     public String successForward(){
-        return "successForward!";
+        return "redirect:/main.html";
     }
 
     @PostMapping("/failure_forward")
+//    @ResponseBody
     public String failureForward(){
-        return "failureForward!";
+        return "redirect:/error.html";
     }
 }
 ```
@@ -7823,6 +7830,225 @@ public class LoginController {
     </body>
 </html>
 ```
+
+
+
+###### 主页面
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+    <body>
+        登陆成功！！！
+    </body>
+</html>
+```
+
+
+
+###### 自定义登陆成功处理器
+
+```java
+public class MyAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
+
+    private String url;
+
+    public MyAuthenticationSuccessHandler(String url) {
+        this.url = url;
+    }
+
+    @Override
+    public void onAuthenticationSuccess (HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
+        System.out.println("自定义登陆成功处理器");
+        User user = (User) authentication.getPrincipal();
+        System.out.println(user.getUsername());
+        // 输出nul1
+        System.out.println(user.getPassword());
+        System.out.println(user.getAuthorities());
+        response.sendRedirect(url);
+    }
+}
+```
+
+
+
+###### 自定义登录失败处理器
+
+```java
+public class MyAuthenticationFailureHandler implements AuthenticationFailureHandler {
+
+    private String url;
+
+    public MyAuthenticationFailureHandler(String url) {
+        this.url = url;
+    }
+
+    @Override
+    public void onAuthenticationFailure(HttpServletRequest reguest, HttpServletResponse response, AuthenticationException exception) throws IOException {
+        System.out.println("自定义登录失败处理器");
+        response.sendRedirect(url);
+    }
+}
+```
+
+
+
+#### 访问控制 url 匹配
+
+​		认证中所有常用配置，主要是对 `http.formLogin()` 进行操作。而在配置类中 `http.authorizeRequests()` 主要是对 url 进行控制，也就是我们所说的授权（访问控制）。`http,authorizeRequests()` 也支持连缀写法，总体公式为：
+
+url 匹配规则.权限控制方法
+
+​		通过上面的公式可以有很多 url 匹配规则和很多权限控制方法。这些内容进行各种组合就形成了 Spring Security 中的授权。
+
+​		在所有匹配规则中取所有规则的交集。配置顺序影响了之后授权效果，范围越小的应该放在前面，范围越大的应该放到后面。
+
+
+
+##### anyRequest()
+
+​		 `anyRequest()`，表示匹配所有的请求。一般情况下此方法都会使用，设置全部内容都需要进行认证。
+
+```java
+.anyRequest().authenticated();
+```
+
+
+
+##### antMatcher()
+
+方法定义如下
+
+```java
+public C antMatchers(String ...antPatterns);
+public C antMatchers(HttpMethod method, String ...antPatterns);
+```
+
+参数是不定向参数，每个参数是一个 ant 表达式，用于匹配 url 规则
+
+规则如下:
+
+- `?`：匹配一个字符
+- `*`：匹配 0 个或多个字符
+- `**`：匹配 0 个或多个目录
+
+在实际项目中经常需要放行所有静态资源，
+
+例如放行 `js` 文件夹下所有文件。
+
+```java
+.antMatchers("/js/**"，"/css/**").permitAll()
+```
+
+还有一种配置方式是只要是 `.js` 文件都放行
+
+```java
+.antMatchers("/**/*.js").permitAll()
+```
+
+
+
+##### regexMatcher()
+
+方法定义如下
+
+```java
+public C regexMatcher(String ...regexPatterns);
+public C regexMatcher(HttpMethod method, String ...regexPatterns);
+```
+
+​		使用正则表达式进行匹配。和 `antMatohers()` 主要的区别就是参数，`antMatchers()` 参数是 ant 表达式 `regexMatchers()` 参数是正则表达式。
+
+例如所有以  `.js` 结尾的文件都被放行
+
+```java
+regexMatchers(".+[.]js").permitAll();
+```
+
+
+
+##### 两个参数时使用方式
+
+​		无论是 `antMatchers()` 还是 `regexMatchers()` 都具有两个参数的方法，其中第一个参数都是 `HttpMethod` 表示请求方式，当设置了 `HttpMethod` 后表示只有特定的请求方式才执行对应的权限设置。
+
+枚举类型 `HttpMethod` 内置属性如下：
+
+```java
+public enum HttpMethod {
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    PATCH,
+    DELETE,
+    OPTIONS,
+    TRACE;
+}
+```
+
+
+
+##### mvcMatcher()
+
+
+
+
+
+#### 内置权限控制
+
+permitAll
+
+denyAll
+
+anonymous
+
+authenticated
+
+fullyAuthenticated
+
+rememberMe
+
+
+
+#### 角色权限判断
+
+​		除了上面的内置权限控制。Spring Security 中还支持很多其他权限控制，这些方法一般都用于用户已经被认证后，判断用户是否具有特定的要求。
+
+##### hasAuthority(String)
+
+​		判断用户是否具有特定的权限，用户的权限是在自定义登录逻辑中创建 User 对象时指定的。下图中 admin 和 normal 就是用户的权限。admin 和 normal 严格区分大小写。
+
+```java
+return new User(username, passwordFromStorage, AuthorityUtils.commaSeparatedStringToAuthorityList("admin,normal"));
+```
+
+在配置类中通过 `hasAuthority("admin")` 设置具有 admin 权限时才能访问。
+
+```java
+.antMatchers("/main1.html").hasAuthority("admin")
+```
+
+
+
+##### hasAnyAuthority(String ...)
+
+​		如果用户具备给定权限中某一个，就允许访问。
+
+下面代码中由于大小写和用户的权限不相同，所以用户无权访问
+
+```java
+.antMatchers("/main1.html").hasAuthority("adMin”“admin")
+```
+
+##### hasRole(String)
+
+​		如果用户具备给定角色就允许访问。否则出现 403。
+
+参数取值来源于自定义登录逻辑 UserDetailsService 实现类中创建 User 对象时给 User 赋予的授权。
 
 
 
