@@ -8044,11 +8044,93 @@ return new User(username, passwordFromStorage, AuthorityUtils.commaSeparatedStri
 .antMatchers("/main1.html").hasAuthority("adMin”“admin")
 ```
 
+
+
 ##### hasRole(String)
 
 ​		如果用户具备给定角色就允许访问。否则出现 403。
 
-参数取值来源于自定义登录逻辑 UserDetailsService 实现类中创建 User 对象时给 User 赋予的授权。
+参数取值来源于自定义登录逻辑 UserDetailsService 实现类中创建 User 对象时给 User 赋予的授权，角色名称以 `ROLE_`开头的才为角色。
+
+示例
+
+```java
+.antMatchers("/main1.html").hasRole("admin")
+```
+
+
+
+##### hasAnyRole(String)
+
+​		如果用户具备给定角色中某一个，就允许访问。
+
+示例
+
+```java
+.antMatchers("/main1.html").hasAnyRole("adMin”“admin")
+```
+
+
+
+#### IP 权限判断
+
+
+
+##### hasIpAddress(String)
+
+
+
+#### 基于表达式的访问控制
+
+之前的用户权限判断实际上底层实现都是调用 access (表达式)
+
+可以通过 access() 实现和之前的权限控制完成相同的功能。
+
+以 `hasRole` 和 `permitAll` 举例
+
+```java
+// login.html不需要被认证
+// .antMatchers("/Login.html").permitAll()
+.antMatchers("/login.html").access("permitAll")
+// error.htmL不需要被认证
+.antMatchers("/error.html").permitAl1()
+// .antMatchers("/main.html").hasRole(“abc");
+.antMatchers("/main.html").access("hasRole('abc'");
+```
+
+
+
+##### 自定义 access
+
+```java
+.anyRequest().access("@myServiceImpl.hasPermission(request, authentication)");
+```
+
+
+
+```java
+public interface MyService{
+    boolean hasPermission(HttpServletRequest request，Authenticationauthentication);
+}
+
+@Service
+public class MyServiceImpl implements MyService {
+    @Override
+    public boolean hasPermission(HttpServletRequest request，Authenticationauthentication){
+        // 获取主体
+        Object obj= authentication.getPrincipal();
+    	// 判断主体是否属于 UserDetails
+        if (obj instanceof UserDetails){
+            // 获取权限
+            UserDetails userDetails = (UserDetails) obj;
+            Collection<? extends GrantedAuthority> authorities = userDetails.getAuthorities();
+            // 判断请求的URI是否在权限里
+            return authorities.contains(new SimpleGrantedAuthority(request.getRequestURI()));
+        }
+        return false;
+    }
+}
+```
 
 
 
