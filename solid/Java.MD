@@ -8080,6 +8080,53 @@ return new User(username, passwordFromStorage, AuthorityUtils.commaSeparatedStri
 
 
 
+#### 自定义 403 处理
+
+##### handler
+
+```java
+@Component
+public class MyAccessDeniedHandler implements AccessDeniedHandler {
+    @Override
+    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
+        // 响应状态
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        // 返回 json 格式
+        response.setHeader("Content-Type","application/json;charset=utf-8");
+        PrintWriter writer = response.getWriter();
+        writer.write("{\"status\":\"error\",\"msg\":\"没有权限\"}");
+        writer.flush();
+        writer.close();
+    }
+}
+
+```
+
+
+
+##### 配置
+
+```java
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Autowired
+    private AccessDeniedHandler accessDeniedHandler;
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        // 异常处理
+        http.exceptionHandling()
+                .accessDeniedHandler(accessDeniedHandler);
+
+        // 关闭 csrf 防护
+        http.csrf().disable();
+    }
+}
+```
+
+
+
 #### 基于表达式的访问控制
 
 之前的用户权限判断实际上底层实现都是调用 access (表达式)
@@ -8095,7 +8142,8 @@ return new User(username, passwordFromStorage, AuthorityUtils.commaSeparatedStri
 // error.htmL不需要被认证
 .antMatchers("/error.html").permitAl1()
 // .antMatchers("/main.html").hasRole(“abc");
-.antMatchers("/main.html").access("hasRole('abc'");
+// 不能带上前缀 ROLE_
+.antMatchers("/main.html").access("hasRole('abc')");
 ```
 
 
@@ -8128,6 +8176,213 @@ public class MyServiceImpl implements MyService {
             return authorities.contains(new SimpleGrantedAuthority(request.getRequestURI()));
         }
         return false;
+    }
+}
+```
+
+
+
+#### 基于注解的访问控制
+
+​		在 Spring Security 中提供了一些访问控制的注解。这些注解都是默认是都不可用的，需要通过 @EnableGlobalMethodSecurity 进行开启后使用。
+
+​		如果设置的条件允许，程序正常执行。如果不允许会报 500
+
+`org.springframework.security.access.AccessDeniedException` 不允许访问
+
+​		这些注解可以写到 Service 接口或方法上，也可以写到 Controller 或 Controller 的方法上。通常情况下都是写在控制器方法上的，控制接口 URL 是否允许被访问。
+
+
+
+##### @Secured
+
+`@Secured` 是专门用于判断是否具有角色的。能写在方法或类上。参数要以 `ROLE_` 开头。
+
+```java
+@Target({ElementType.METHOD, ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+@Documented
+public @interface Secured {
+    /**
+     *
+     * Returns the list of security configuration attributes (e.g. ROLE_USER, ROLE_ADMIN)
+     *
+     * @return String[] The secure method attributes
+     */
+    public String[] value();
+}
+```
+
+
+
+###### 开启`Secured`
+
+在启动类（也可以在配置类等能够扫描的类上）上添加 `@EnableGlobalMethodSecurity(securedEnabled = true)`
+
+```java
+@EnableGlobalMethodSecurity(securedEnabled = true)
+@SpringBootApplication
+public class CommonAuthApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(CommonAuthApplication.class, args);
+    }
+
+}
+```
+
+
+
+###### 使用`Secured`
+
+在控制器方法上添加 `@Secured` 注解
+
+```java
+/**
+ * 成功后跳转页面
+ */
+@Secured("ROLE_abc")
+@PostMapping("/success_forward")
+public String successForward(){
+    return "redirect:/main.html";
+}
+```
+
+
+
+###### 配置类
+
+```java
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        // 表单提交
+        http.formLogin()
+                // 自定义登灵页面
+                .loginPage("/login.html")
+                .loginProcessingUrl("/login")
+                // 登录成功后跳转的页面，POST 请求
+                .successForwardUrl("/login/success_forward")
+                // 登录失败后跳转的页面，POST 请求
+                .failureForwardUrl("/login/failure_forward");
+        ;
+
+        // 授权
+        http.authorizeRequests()
+                // 放行 /login.html，不需要认证
+                .antMatchers("/login.html").permitAll()
+                // 放行 /error.html，不需要认证
+                .antMatchers("/error.html").permitAll()
+                // 所有请求都必须认证才能访问，必须登录，anyRequest 要放在最后
+                .anyRequest().authenticated();
+
+        // 关闭 csrf 防护
+        http.csrf().disable();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+
+
+##### @PreAuthorize/@PostAuthorize
+
+@PreAuthorize 和@PostAuthorize 都是方法或类级别注解。
+
+```java
+@Target({ElementType.METHOD, ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+@Documented
+public @interface PreAuthorize (
+    /**
+     * @returm the Spring-EL expression to be evaluated before invoking the protected
+     * method
+     */
+    String value();
+}
+```
+
+- `@PreAuthorize` 表示访问方法或类在执行之前先判断权限，大多情况下都是使用这个注解，注解的参数和 `access()` 方法参数取值相同，都是权限表达式。
+- `@PostAuthorize` 表示方法或类执行结束后判断权限，此注解很少被便用到。
+
+
+
+###### 开启注解
+
+```java
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+@SpringBootApplication
+public class CommonAuthApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(CommonAuthApplication.class, args);
+    }
+
+}
+
+```
+
+
+
+###### 使用注解
+
+```java
+/**
+ * 成功后跳转页面
+ */
+// PreAuthorize 允许角色以 ROLE_ 开头，也可以不以 ROLE_ 开头，但是配置类不允许以 ROLE_ 开头
+@PreAuthorize("ROLE_abc")
+@PostMapping("/success_forward")
+public String successForward(){
+    return "redirect:/main.html";
+}
+```
+
+
+
+###### 配置类
+
+```java
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        // 表单提交
+        http.formLogin()
+                // 自定义登灵页面
+                .loginPage("/login.html")
+                .loginProcessingUrl("/login")
+                // 登录成功后跳转的页面，POST 请求
+                .successForwardUrl("/login/success_forward")
+                // 登录失败后跳转的页面，POST 请求
+                .failureForwardUrl("/login/failure_forward");
+        ;
+
+        // 授权
+        http.authorizeRequests()
+                // 放行 /login.html，不需要认证
+                .antMatchers("/login.html").permitAll()
+                // 放行 /error.html，不需要认证
+                .antMatchers("/error.html").permitAll()
+                // 所有请求都必须认证才能访问，必须登录，anyRequest 要放在最后
+                .anyRequest().authenticated();
+
+        // 关闭 csrf 防护
+        http.csrf().disable();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
     }
 }
 ```
