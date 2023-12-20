@@ -7733,13 +7733,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         // 关闭 csrf 防护
         http.csrf().disable();
     }
+}
+
+```
+
+
+
+```java
+@Configuration
+public class EncoderConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
     }
 }
-
 ```
 
 
@@ -8385,6 +8393,106 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return new BCryptPasswordEncoder();
     }
 }
+```
+
+
+
+#### RememberMe
+
+​		Spring Security 中 Remember Me 为“记住我”功能，用户只需要在登录时勾选 remember-me 复选框，取值为 true。Spring Security 会自动把用户信息存储到数据源中，以后就可以不登录进行访问。
+
+
+
+##### 依赖
+
+​		Spring Security 实现 Remember Me 功能时底层实现依赖 Spring-JDBC，所以需要导入 Spring-JDBC。以后多使用 MyBatis 框架而很少直接导入 spring-JDBC，所以此处导入 mybatis 启动器同时还需要添加 MySQL 驱动。
+
+```xml
+<dependency>
+    <groupId>com.baomidou</groupId>
+    <artifactId>mybatis-plus-boot-starter</artifactId>
+    <version>3.5.3</version>
+</dependency>
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>8.0.31</version>
+</dependency>
+```
+
+
+
+##### 数据源配置
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://192.168.31.101:3306/common_auth?useSSL=false&serverTimezone=Hongkong&useUnicode=true&characterEncoding=utf-8&autoReconnect=true
+    username: young
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+```
+
+
+
+##### 配置类配置
+
+```java
+@Configuration
+public class RememberMeConfig {
+    @Autowired
+    private DataSource dataSource;
+
+    @Bean
+    public PersistentTokenRepository persistentTokenRepository(){
+        JdbcTokenRepositoryImpl jdbcTokenRepository = new JdbcTokenRepositoryImpl();
+        jdbcTokenRepository.setDataSource(dataSource);
+        // 自动建表，第一次启动时需要，第二次启动时注释掉
+        // jdbcTokenRepository.setCreateTableOnStartup(true);
+        return jdbcTokenRepository;
+    }
+}
+
+```
+
+
+
+```java
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Autowired
+    private PersistentTokenRepository persistentTokenRepository;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        // .....
+        // 记住我
+        http.rememberMe()
+                // 数据源
+                .tokenRepository(persistentTokenRepository)
+                // 参数
+                // .rememberMeParameter()
+                // 过期时间 60s(默认两周)
+                 .tokenValiditySeconds(60)
+                // 自定义登录逻辑
+                 .userDetailsService(userDetailsService)
+        ;
+
+        // ......
+    }
+}
+```
+
+
+
+##### 页面
+
+```html
+记住我: <input type="checkbox" name="remember-me"/><br/>
 ```
 
 
