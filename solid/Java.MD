@@ -8537,7 +8537,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 spring:
   thymeleaf:
     prefix: classpath:/templates/
-    suffix: html
+    suffix: .html
     mode: HTML5
     encoding: UTF-8
     servlet:
@@ -8609,14 +8609,55 @@ UsernamePasswordAuthenticationToken 中所有 getXXX 的内容，包含父类中
 @RequestMapping("/hello_world")
 public class HelloWorldController {
     @GetMapping("/demo")
-    public String demo(Map<String,Object> map){
-        map.put("name", "Lily");
+    public String demo(){
         return "demo";
     }
 }
 ```
 
 
+
+#### 退出登录
+
+实现退出非常简单，只要在页面中添加 `/上下文路径/logout`  的超链接即可。
+
+```html
+<a href="/common/auth/logout">退出登录</a>
+```
+
+为了实现更好的效果，通常添加退出的配置。默认的退出 url 为 `/logout`，退出成功后重定向到 `/login?logout`
+
+LogoutConfigurer
+
+```java
+public final class LogoutConfigurer<H extends HttpSecurityBuilder<H>> extends AbstractHttpConfigurer<LogoutConfigurer<H>, H> {
+    private List<LogoutHandler> logoutHandlers = new ArrayList();
+    private SecurityContextLogoutHandler contextLogoutHandler = new SecurityContextLogoutHandler();
+    private String logoutSuccessUrl = "/login?logout";
+    private LogoutSuccessHandler logoutSuccessHandler;
+    private String logoutUrl = "/logout";
+    private RequestMatcher logoutRequestMatcher;
+    private boolean permitAll;
+    private boolean customLogoutSuccess;
+    private LinkedHashMap<RequestMatcher, LogoutSuccessHandler> defaultLogoutSuccessHandlerMappings = new LinkedHashMap();
+    // ......
+}
+```
+
+
+
+```java
+// 退出登录
+// 退出登录时
+// 1.使 Session 无效
+// 2.清除授权信息
+http.logout()
+        // 修改退出登录 url
+        .logoutUrl("/user/logout")
+        // 退出成功后重定的页面
+        .logoutSuccessUrl("/login")
+;
+```
 
 
 
