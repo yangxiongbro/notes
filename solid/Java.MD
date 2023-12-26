@@ -8661,6 +8661,90 @@ http.logout()
 
 
 
+​		也可以自己进行定义退出成功处理器。需要实现 LogoutSuccessHandler 接口。与登录成功处理器和登录失败处理器类似。
+
+
+
+#### CSRF
+
+##### 什么是CSRF
+
+​		CSRF (Cross-site request forgery) 跨站请求伪造，也被称为 OneClick Attack 或者 Session Riding，通过伪造用户请求访问受信任站点的非法请求访问。
+
+​		跨域：只要网络协议，ip 地址，端口中任何一个不相同就是跨域请求。
+
+​		客户端与服务进行交互时，由于 http 协议本身是无状态协议，所以引入了 cookie 进行记录客户端身份。在 cookie 中会存放session id 用来识别客户端身份的。在跨域的情况下，session id 可能被第三方恶意劫持，通过这个 session id 向服务端发起请求时，服务端会认为这个请求是合法的，可能发生很多意想不到的事情。
+
+
+
+##### Spring Security 中的 CSRF
+
+​		从 Spring Security4 开始 CSRF 防护默认开启。默认会拦截请求。进行 CSRF 处理，CSRF 为了保证不是其他第三方网站访问，要求访问时携带参数名为 `_csrf` 值为token（token 在服务端产生）的内容，如果 token 和服务端的 token 匹配成功，则正常访问。
+
+
+
+##### 示例
+
+###### 页面
+
+loginWithCsrf.html
+
+```html
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <form action="/common/auth/login" method="post">
+        <input type="hidden" th:value="${_csrf.token}" name="_csrf" th:if="${_csrf}"/>
+        用户名: <input type="text" name="username" title="username"/><br/>
+        密码: <input type="password" name="password" title="password"/><br/>
+        <input type="submit" value="登录" />
+    </form>
+</body>
+</html>
+```
+
+###### 配置
+
+```java
+@Override
+protected void configure(HttpSecurity http) throws Exception {
+    // 表单提交
+    http.formLogin()
+        // 自定义登灵页面
+        // .loginPage("/login.html")
+        .loginPage("/login/loginWithCsrf")
+    // 授权
+	http.authorizeRequests()
+        // 放行登录，不需要认证
+        .antMatchers("/login/loginWithCsrf").permitAll()
+
+	// 关闭 csrf 防护
+	// http.csrf().disable();
+}
+```
+
+###### Controller
+
+```java
+@Controller
+@RequestMapping("/login")
+public class LoginController {
+    @GetMapping("/loginWithCsrf")
+    public String loginWithCsrf(){
+        return "loginWithCsrf";
+    }
+}
+```
+
+登录之后查看 login 接口会发现表单中多了一个 `_csrf` 参数
+
+
+
 # Nginx
 
 ## 安装配置部署管理
