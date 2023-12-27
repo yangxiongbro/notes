@@ -7289,6 +7289,8 @@ Ramp-up period(seconds):决定多长时间启动所有线程,如果ramp-up perio
 
 ## SSO(单点登录)
 
+### 简介
+
 多系统，单一位置登录，实现多系统访问的一种技术。
 
 
@@ -7574,6 +7576,271 @@ AES 的 key 要求长度为 16。
 
 
 ## OAuth2.0
+
+### 简介
+
+​		第三方认证技术方案最主要是解决认证协议的通用标准问题，因为要实现跨系统认证，各系统之间要遵循一定的接口协议。
+OAuth 协议为用户资源的授权提供了一个安全的、开放而又简易的标准。同时，任何第三方都可以使用 OAuth 认证服务，任何服务提供商都可以实现自身的 OAUTH 认证服务，因而 OAuth 是开放的。业界提供了 OAuth 的多种实现如 PHP、JavaScript，Java，Ruby 等各种语言开发包，大大节约了程序员的时间，因而 OAuth 是简易的。互联网很多服务如 Open API，很多大公司如 Google，Yahoo，Microsoft 等都提供了 OAuth 认证服务，这些都足以说明 OAuth 标准逐渐成为开放资源授权的标准。
+
+​		OAuth 协议目前发展到 2.0 版本，1.0 版本过于复杂，2.0 版本已得到广泛应用。
+
+参考: https://baike.baidu.com/item/oAuth/7153134
+
+OAuth 协议: https://tools.ietf.org/html/rfc6749
+
+
+
+### 认证流程
+
+OAuth2.0 认证流程如下
+
+引自 OAuth2.0 协议 rfc6749 https://tools.ietf.org/html/rfc6749
+
+```
+     +--------+                               +---------------+
+     |        |--(A)- Authorization Request ->|   Resource    |
+     |        |                               |     Owner     |
+     |        |<-(B)-- Authorization Grant ---|               |
+     |        |                               +---------------+
+     |        |
+     |        |                               +---------------+
+     |        |--(C)-- Authorization Grant -->| Authorization |
+     | Client |                               |     Server    |
+     |        |<-(D)----- Access Token -------|               |
+     |        |                               +---------------+
+     |        |
+     |        |                               +---------------+
+     |        |--(E)----- Access Token ------>|    Resource   |
+     |        |                               |     Server    |
+     |        |<-(F)--- Protected Resource ---|               |
+     +--------+                               +---------------+
+```
+
+#### 客户端
+
+​		本身不存储资源，需要通过资源拥有者的授权去请求资源服务器的资源，比如: Android 客户端、Web 客户端（浏览器端）、微信客户端等。
+
+#### 资源拥有者
+
+​		通常为用户，也可以是应用程序，即该资源的拥有者。
+
+#### 授权服务器（也称认证服务器）
+
+​		用来对资源拥有的身份进行认证、对访问资源进行授权。客户端要想访问资源需要通过认证服务器由资源拥有者授权后方可访问。
+
+#### 资源服务器
+
+​		存储资源的服务器，比如，网站用户管理服务器存储了网站用户信息，网站相册服务器存储了用户的相册信息，微信的资源服务存储了微信的用户信息等。客户端最终访问资源服务器获取资源信息。
+
+> 资源服务器和认证服务器可以是一个服务也可以分开的服务，如果是分开的服务资源服务器通堂要请求认证服务器来校验令牌的合法性。
+
+
+
+#### 例子
+
+下边分析一个 OAuth2.0 认证的例子，网站使用微信认证的过程
+
+```mermaid
+sequenceDiagram
+participant 用户
+participant 网站
+participant 微信认证
+participant 微信用户
+用户 ->> 网站: 访问登陆页面
+网站 ->> 微信认证: 请求认证
+微信认证 ->> 用户: 授权页面
+用户 ->> 微信认证: 用户授权
+网站 ->> 微信认证: 申请令牌
+微信认证 ->> 网站: 返回令牌
+网站 ->> 微信用户: 请求获取用户信息
+微信用户 ->> 微信用户: 校验令牌的合法性
+微信用户 ->> 网站: 响应用户信息
+网站 ->> 用户: 显示用户信息
+```
+
+
+
+
+
+### 常用术语
+
+- 客户凭证（client Credentials）：客户端的 clientld 和密码用于认证客户
+- 令牌（tokens）：授权服务器在接收到客户请求后，颁发的访问令牌
+- 作用域（scopes）：客户请求访问令牌时，由资源拥有者额外指定的细分权限（permission）
+
+
+
+### 令牌类型
+
+- 授权码：仅用于授权码授权类型，用于交换获取访问令牌和刷新令牌
+- 访问令牌：用于代表一个用户或服务直接去访问受保护的资源
+- 刷新令牌：用于去授权服务器获取一个刷新访问令牌
+- BearerToken：不管谁拿到Token都可以访问资源，类似现金
+- Proof of Possesson(PoP) Token：可以校验 client 是否对 Token 有明确的拥有权
+
+
+
+### 特点
+
+#### 优点
+
+- 更安全，客户端不接触用户密码，服务器端更易集中保护
+- 广泛传播并被持续采用
+- 短寿命和封装的 token
+- 资源服务器和授权服务器解耦
+- 集中式授权，简化客户端
+- HTTP/JSON 友好，易于请求和传递 token
+- 考虑多种客户端架构场景
+- 客户可以具有不同的信任级别
+
+
+
+#### 缺点
+
+- 协议框架太宽泛，造成各种实现的兼容性和互操作性差
+- 不是一个认证协议，本身并不能告诉你任何用户信息
+
+
+
+### 授权模式
+
+#### 授权码模式（Authorization Code）
+
+常用
+
+```
+ +----------+
+     | Resource |
+     |   Owner  |
+     |          |
+     +----------+
+          ^
+          |
+         (B)
+     +----|-----+          Client Identifier      +---------------+
+     |         -+----(A)-- & Redirection URI ---->|               |
+     |  User-   |                                 | Authorization |
+     |  Agent  -+----(B)-- User authenticates --->|     Server    |
+     |          |                                 |               |
+     |         -+----(C)-- Authorization Code ---<|               |
+     +-|----|---+                                 +---------------+
+       |    |                                         ^      v
+      (A)  (C)                                        |      |
+       |    |                                         |      |
+       ^    v                                         |      |
+     +---------+                                      |      |
+     |         |>---(D)-- Authorization Code ---------'      |
+     |  Client |          & Redirection URI                  |
+     |         |                                             |
+     |         |<---(E)----- Access Token -------------------'
+     +---------+       (w/ Optional Refresh Token)
+```
+
+
+
+#### 简化授权模式（Implicit）
+
+```
+     +----------+
+     | Resource |
+     |  Owner   |
+     |          |
+     +----------+
+          ^
+          |
+         (B)
+     +----|-----+          Client Identifier     +---------------+
+     |         -+----(A)-- & Redirection URI --->|               |
+     |  User-   |                                | Authorization |
+     |  Agent  -|----(B)-- User authenticates -->|     Server    |
+     |          |                                |               |
+     |          |<---(C)--- Redirection URI ----<|               |
+     |          |          with Access Token     +---------------+
+     |          |            in Fragment
+     |          |                                +---------------+
+     |          |----(D)--- Redirection URI ---->|   Web-Hosted  |
+     |          |          without Fragment      |     Client    |
+     |          |                                |    Resource   |
+     |     (F)  |<---(E)------- Script ---------<|               |
+     |          |                                +---------------+
+     +-|--------+
+       |    |
+      (A)  (G) Access Token
+       |    |
+       ^    v
+     +---------+
+     |         |
+     |  Client |
+     |         |
+     +---------+
+```
+
+
+
+#### 密码模式（Resource Owner Password Credentials）
+
+```
+  +----------+
+     | Resource |
+     |  Owner   |
+     |          |
+     +----------+
+          v
+          |    Resource Owner
+         (A) Password Credentials
+          |
+          v
+     +---------+                                  +---------------+
+     |         |>--(B)---- Resource Owner ------->|               |
+     |         |         Password Credentials     | Authorization |
+     | Client  |                                  |     Server    |
+     |         |<--(C)---- Access Token ---------<|               |
+     |         |    (w/ Optional Refresh Token)   |               |
+     +---------+                                  +---------------+
+```
+
+
+
+#### 客户端模式（Client Credentials）
+
+```
+     +---------+                                  +---------------+
+     |         |                                  |               |
+     |         |>--(A)- Client Authentication --->| Authorization |
+     | Client  |                                  |     Server    |
+     |         |<--(B)---- Access Token ---------<|               |
+     |         |                                  |               |
+     +---------+                                  +---------------+
+```
+
+
+
+#### 刷新令牌（Refresh Tokens）
+
+当 Access Token 过期之后需要使用 Access Token 去 Authorization Server 获取新的 Access Token。不需要重新走一遍授权流程。
+
+```
+  +--------+                                           +---------------+
+  |        |--(A)------- Authorization Grant --------->|               |
+  |        |                                           |               |
+  |        |<-(B)----------- Access Token -------------|               |
+  |        |               & Refresh Token             |               |
+  |        |                                           |               |
+  |        |                            +----------+   |               |
+  |        |--(C)---- Access Token ---->|          |   |               |
+  |        |                            |          |   |               |
+  |        |<-(D)- Protected Resource --| Resource |   | Authorization |
+  | Client |                            |  Server  |   |     Server    |
+  |        |--(E)---- Access Token ---->|          |   |               |
+  |        |                            |          |   |               |
+  |        |<-(F)- Invalid Token Error -|          |   |               |
+  |        |                            +----------+   |               |
+  |        |                                           |               |
+  |        |--(G)----------- Refresh Token ----------->|               |
+  |        |                                           |               |
+  |        |<-(H)----------- Access Token -------------|               |
+  +--------+           & Optional Refresh Token        +---------------+
+```
 
 
 
