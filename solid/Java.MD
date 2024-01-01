@@ -9012,6 +9012,39 @@ public class LoginController {
 
 
 
+### SpringSecurityOAuth2
+
+授权服务器
+
+![](..\pictures\20240101\001.png)
+
+Authorize Endpoint：授权端点，进行授权
+
+Token Endpoint：令牌端点，经过授权拿到对应的 Token
+
+Introspection Endpoint：校验端点，校验 Token 的合法性
+
+Revocation Endpoint：撤销端点，撤销授权
+
+
+
+架构
+
+![](..\pictures\20240101\002.png)
+
+
+
+流程
+
+1. 用户访问，此时没有 Token。Oauth2RestTemplate 会报错，这个报错信息会被 Oauth2ClientContextFilter 捕获并重定向到认证服务器
+2. 认证服务器通过 Authorization Endpoint 进行授权，并通过 AuthorizationServerTokenServices 生成授权码并返回给客户端
+3. 客户端拿到授权码去认证服务器通过 Token Endpoint 调用 AuthorizationServerTokenServices 生成 Token 并返回给客户端
+4. 客户端拿到 Token 去资源服务器访问资源，一般会通过 Oauth2AuthenticationManager 调用ResourceServerTokenServices 进行校验。校验通过可以获取资源
+
+
+
+
+
 # Nginx
 
 ## 安装配置部署管理
