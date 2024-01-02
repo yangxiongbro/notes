@@ -7738,6 +7738,203 @@ participant 微信用户
 
 
 
+##### 例子
+
+###### 依赖
+
+```xml
+<!-- Spring Security Oauth2组件 -->
+<!-- 包含了spring-cloud-starter-security，所以不需要在单独进行引入 -->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-oauth2</artifactId>
+    <version>2.2.5.RELEASE</version>
+</dependency>
+<!--web组件-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-configuration-processor</artifactId>
+</dependency>
+
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-dependencies</artifactId>
+            <version>2021.0.9</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+
+
+###### EncoderConfig
+
+```java
+@Configuration
+public class EncoderConfig {
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+
+
+###### SecurityConfig
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .antMatchers("/oauth/**", "/login/**", "logout/**").permitAll()
+                .anyRequest().authenticated()
+                .and()
+                .formLogin().permitAll()
+                .and()
+                .csrf().disable()
+        ;
+    }
+}
+```
+
+
+
+###### AuthorizationServerConfig
+
+```java
+@Configuration
+@EnableAuthorizationServer
+public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdapter {
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
+        clients.inMemory()
+                // 客户端 ID
+                .withClient("client")
+                // 密钥
+                .secret(passwordEncoder.encode("111"))
+                // 重定向地址
+                .redirectUris("http://www.baidu.com")
+                // 授权范围
+                .scopes("all")
+                /**
+                 * 授权类型
+                 * authorization_code: 授权码模式
+                 */
+                .authorizedGrantTypes("authorization_code");
+    }
+}
+```
+
+
+
+###### ResourceServerConfig
+
+```java
+@Configuration
+@EnableResourceServer
+public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
+
+    @Override
+    public void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .anyRequest().authenticated()
+                .and()
+                .requestMatchers()
+                .antMatchers("/user/**")
+                ;
+    }
+}
+```
+
+
+
+###### UserController
+
+```
+@RestController
+@RequestMapping("/user")
+public class UserController {
+
+    @GetMapping
+    public Object userInfo(Authentication authentication){
+        return authentication.getPrincipal();
+    }
+}
+```
+
+
+
+###### 测试
+
+GET http://localhost:9009/common/auth/oauth/authorize?response_type=code&client_id=client&redirect_uri=http://www.baidu.com&scope=all
+
+return https://www.baidu.com/?code=qSG3xy
+
+
+
+POST http://localhost:9009/common/auth/oauth/token
+
+Authorization(Basic Auth)
+
+Username: 客户端标识
+
+Password: 客户端密钥
+
+Body(x-www-form-unlencoded)
+
+grant_type: authorization_code
+code: qSG3xy
+client_id: client
+redirect_uri: http://www.baidu.com
+scopes: all
+
+
+
+return
+
+{
+
+  "access_token": "o5KRPWUFx34c5M1ODO6oO6VlyIk",
+
+  "token_type": "bearer",
+
+  "expires_in": 43199,
+
+  "scope": "all"
+
+}
+
+
+
+GET http://localhost:9009/common/auth/user
+
+Authorization(Bearer Token)
+
+Token: o5KRPWUFx34c5M1ODO6oO6VlyIk
+
+return: 返回用户信息
+
+
+
 #### 简化授权模式（Implicit）
 
 ```
