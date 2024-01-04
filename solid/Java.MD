@@ -7738,203 +7738,6 @@ participant 微信用户
 
 
 
-##### 例子
-
-###### 依赖
-
-```xml
-<!-- Spring Security Oauth2组件 -->
-<!-- 包含了spring-cloud-starter-security，所以不需要在单独进行引入 -->
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-oauth2</artifactId>
-    <version>2.2.5.RELEASE</version>
-</dependency>
-<!--web组件-->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-web</artifactId>
-</dependency>
-
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-configuration-processor</artifactId>
-</dependency>
-
-<dependencyManagement>
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-dependencies</artifactId>
-            <version>2021.0.9</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
-    </dependencies>
-</dependencyManagement>
-```
-
-
-
-###### EncoderConfig
-
-```java
-@Configuration
-public class EncoderConfig {
-
-    @Bean
-    public PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder();
-    }
-}
-```
-
-
-
-###### SecurityConfig
-
-```java
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
-
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-                .antMatchers("/oauth/**", "/login/**", "logout/**").permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .formLogin().permitAll()
-                .and()
-                .csrf().disable()
-        ;
-    }
-}
-```
-
-
-
-###### AuthorizationServerConfig
-
-```java
-@Configuration
-@EnableAuthorizationServer
-public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdapter {
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Override
-    public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
-        clients.inMemory()
-                // 客户端 ID
-                .withClient("client")
-                // 密钥
-                .secret(passwordEncoder.encode("111"))
-                // 重定向地址
-                .redirectUris("http://www.baidu.com")
-                // 授权范围
-                .scopes("all")
-                /**
-                 * 授权类型
-                 * authorization_code: 授权码模式
-                 */
-                .authorizedGrantTypes("authorization_code");
-    }
-}
-```
-
-
-
-###### ResourceServerConfig
-
-```java
-@Configuration
-@EnableResourceServer
-public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
-
-    @Override
-    public void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-                .anyRequest().authenticated()
-                .and()
-                .requestMatchers()
-                .antMatchers("/user/**")
-                ;
-    }
-}
-```
-
-
-
-###### UserController
-
-```
-@RestController
-@RequestMapping("/user")
-public class UserController {
-
-    @GetMapping
-    public Object userInfo(Authentication authentication){
-        return authentication.getPrincipal();
-    }
-}
-```
-
-
-
-###### 测试
-
-GET http://localhost:9009/common/auth/oauth/authorize?response_type=code&client_id=client&redirect_uri=http://www.baidu.com&scope=all
-
-return https://www.baidu.com/?code=qSG3xy
-
-
-
-POST http://localhost:9009/common/auth/oauth/token
-
-Authorization(Basic Auth)
-
-Username: 客户端标识
-
-Password: 客户端密钥
-
-Body(x-www-form-unlencoded)
-
-grant_type: authorization_code
-code: qSG3xy
-client_id: client
-redirect_uri: http://www.baidu.com
-scopes: all
-
-
-
-return
-
-{
-
-  "access_token": "o5KRPWUFx34c5M1ODO6oO6VlyIk",
-
-  "token_type": "bearer",
-
-  "expires_in": 43199,
-
-  "scope": "all"
-
-}
-
-
-
-GET http://localhost:9009/common/auth/user
-
-Authorization(Bearer Token)
-
-Token: o5KRPWUFx34c5M1ODO6oO6VlyIk
-
-return: 返回用户信息
-
-
-
 #### 简化授权模式（Implicit）
 
 ```
@@ -9239,6 +9042,455 @@ Revocation Endpoint：撤销端点，撤销授权
 4. 客户端拿到 Token 去资源服务器访问资源，一般会通过 Oauth2AuthenticationManager 调用ResourceServerTokenServices 进行校验。校验通过可以获取资源
 
 
+
+#### 授权码模式
+
+
+
+##### 依赖
+
+```xml
+<!-- Spring Security Oauth2组件 -->
+<!-- 包含了spring-cloud-starter-security，所以不需要在单独进行引入 -->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-oauth2</artifactId>
+    <version>2.2.5.RELEASE</version>
+</dependency>
+<!--web组件-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-configuration-processor</artifactId>
+</dependency>
+
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-dependencies</artifactId>
+            <version>2021.0.9</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+
+
+##### EncoderConfig
+
+```java
+@Configuration
+public class EncoderConfig {
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+
+
+##### UserDetailsService
+
+```java
+@Service
+public class UserDetailsServiceImpl implements UserDetailsService {
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        //1.根据用户名去数据库查询，如果不存在抛UsernameNotFoundException异常
+        if (!"admin".equals(username)) {
+            throw new UsernameNotFoundException("用户名不存在");
+        }
+        //2.比较密码(注册时已经加密过)，如果匹配成功返回UserDetails
+        // 123
+        String rawPassword = "1234";
+        String passwordFromStorage = passwordEncoder.encode(rawPassword);
+        System.out.println("自定义登录");
+        System.out.println(passwordFromStorage);
+        return new User(username, passwordFromStorage, AuthorityUtils.commaSeparatedStringToAuthorityList("admin,normal"));
+    }
+}
+```
+
+
+
+##### SecurityConfig
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .antMatchers("/oauth/**", "/login/**", "logout/**").permitAll()
+                .anyRequest().authenticated()
+                .and()
+                .formLogin().permitAll()
+                .and()
+                .csrf().disable()
+        ;
+    }
+}
+```
+
+
+
+##### AuthorizationServerConfig
+
+```java
+@Configuration
+@EnableAuthorizationServer
+public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdapter {
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
+        clients.inMemory()
+                // 客户端 ID
+                .withClient("client")
+                // 密钥
+                .secret(passwordEncoder.encode("111"))
+                // 重定向地址
+                .redirectUris("http://www.baidu.com")
+                // 授权范围
+                .scopes("all")
+                /**
+                 * 授权类型
+                 * authorization_code: 授权码模式
+                 */
+                .authorizedGrantTypes("authorization_code");
+    }
+}
+```
+
+
+
+##### ResourceServerConfig
+
+```java
+@Configuration
+@EnableResourceServer
+public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
+
+    @Override
+    public void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .anyRequest().authenticated()
+                .and()
+                .requestMatchers()
+                .antMatchers("/user/**")
+                ;
+    }
+}
+```
+
+
+
+##### UserController
+
+```
+@RestController
+@RequestMapping("/user")
+public class UserController {
+
+    @GetMapping
+    public Object userInfo(Authentication authentication){
+        return authentication.getPrincipal();
+    }
+}
+```
+
+
+
+##### 测试
+
+1.获取授权码
+
+GET http://localhost:9009/common/auth/oauth/authorize?response_type=code&client_id=client&redirect_uri=http://www.baidu.com&scope=all
+
+return https://www.baidu.com/?code=qSG3xy
+
+
+
+2.使用授权码获取 Token
+
+POST http://localhost:9009/common/auth/oauth/token
+
+Authorization(Basic Auth)
+
+Username: 客户端标识
+
+Password: 客户端密钥
+
+Body(x-www-form-unlencoded)
+
+grant_type: authorization_code
+code: qSG3xy
+client_id: client
+redirect_uri: http://www.baidu.com
+scopes: all
+
+
+
+return
+
+{ "access_token": "o5KRPWUFx34c5M1ODO6oO6VlyIk", "token_type": "bearer", "expires_in": 43199, "scope": "all"}
+
+
+
+3.通过 Token 获取用户资源
+
+GET http://localhost:9009/common/auth/user
+
+Authorization(Bearer Token)
+
+Token: o5KRPWUFx34c5M1ODO6oO6VlyIk
+
+return: 返回用户信息
+
+
+
+#### 密码模式
+
+
+
+##### 依赖
+
+与授权码模式一致。
+
+
+
+##### EncoderConfig
+
+与授权码模式一致。
+
+
+
+##### UserDetailsService
+
+与授权码模式一致。
+
+
+
+##### SecurityConfig
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .antMatchers("/oauth/**", "/login/**", "logout/**").permitAll()
+                .anyRequest().authenticated()
+                .and()
+                .formLogin().permitAll()
+                .and()
+                .csrf().disable()
+        ;
+    }
+
+    // 新增
+    @Bean
+    public AuthenticationManager authorizationManager() throws Exception {
+        return super.authenticationManager();
+    }
+}
+```
+
+
+
+##### AuthorizationServerConfig
+
+```java
+@Configuration
+@EnableAuthorizationServer
+public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdapter {
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private AuthenticationManager authorizationManager;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
+
+    @Override
+    public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
+        clients.inMemory()
+                // 客户端 ID
+                .withClient("client")
+                // 密钥
+                .secret(passwordEncoder.encode("111"))
+                // 重定向地址
+                .redirectUris("http://www.baidu.com")
+                // 授权范围
+                .scopes("all")
+                /**
+                 * 授权类型
+                 * authorization_code: 授权码模式
+                 * password: 密码模式
+                 */
+                .authorizedGrantTypes("authorization_code", "password");
+    }
+
+    @Override
+    public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
+        endpoints.authenticationManager(authorizationManager)
+                .userDetailsService(userDetailsService);
+    }
+
+}
+```
+
+
+
+##### ResourceServerConfig
+
+与授权码模式一致。
+
+
+
+##### UserController
+
+与授权码模式一致。
+
+
+
+##### 测试
+
+1.密码模式不需要授权码，直接使用账号密码请求 Token
+
+2.获取 Token
+
+POST http://localhost:9009/common/auth/oauth/token
+
+Authorization(Basic Auth)
+
+Username: 客户端标识
+
+Password: 客户端密钥
+
+Body(x-www-form-unlencoded)
+
+grant_type: password
+scopes: all
+username: admin
+password: 1234
+
+
+
+return
+
+{"access_token":"X4o2hZfJSUfL9n8jllPp0XudwNM","token_type":"bearer","expires_in":43199,"scope":"all"}
+
+
+
+3.通过 Token 获取用户资源
+
+GET http://localhost:9009/common/auth/user
+
+Authorization(Bearer Token)
+
+Token: o5KRPWUFx34c5M1ODO6oO6VlyIk
+
+return: 返回用户信息
+
+
+
+#### 在 Redis 中存储 Token
+
+将 Token 直接存在内存中，这在生产环境中是不合理的，下面将其改造成存储在 Redis 中。
+
+
+
+##### 依赖及配置
+
+```xml
+<!--redis 依赖-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+    <version>3.2.1</version>
+</dependency>
+<!-- commons-poo12 对象池依赖 -->
+<dependency>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-pool2</artifactId>
+</dependency>
+```
+
+
+
+```yaml
+spring:
+  redis:
+    host: 192.168.31.101
+    port: 6379
+    password: 123456
+```
+
+
+
+##### Redis 配置类
+
+```java
+@Configuration
+public class RedisConfig {
+    @Autowired
+    private RedisConnectionFactory redisConnectionFactory;
+
+    @Bean
+    public RedisTokenStore redisTokenStore(){
+        return new RedisTokenStore(redisConnectionFactory);
+    }
+}
+```
+
+
+
+##### AuthorizationServerConfig
+
+```java
+@Configuration
+@EnableAuthorizationServer
+public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdapter {
+
+	// ..... 
+    
+    @Resource
+    private TokenStore redisTokenStore;
+
+	// ..... 
+
+    @Override
+    public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
+        endpoints.authenticationManager(authorizationManager)
+                .userDetailsService(userDetailsService)
+            // 增加配置
+                .tokenStore(redisTokenStore);
+    }
+
+}
+```
 
 
 
