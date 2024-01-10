@@ -7476,7 +7476,7 @@ jti:jwt的唯一身份标识，主要用来作为一次性token,从而回避重�
 
 公共的声明
 
-​		公共的声明可以添加任何的信息，，一般添加用户的相关信息或其他业务需要的必要信息但不建议添加敏感信息，因为该部分在客户端可解密。
+​		公共的声明可以添加任何的信息，一般添加用户的相关信息或其他业务需要的必要信息但不建议添加敏感信息，因为该部分在客户端可解密。
 
 私有的声明
 
@@ -7533,6 +7533,149 @@ jti:jwt的唯一身份标识，主要用来作为一次性token,从而回避重�
 ​		Local Storage 的生命周期是永久的，关闭页面或览器之后，Local Storage 中的数据也不会消失。Local Storage 除非主动删除数据，否则数据永远不会消失。
 
 ​		Session Storage 是会话相关的本地存储单元，生命周期是在在当前会话下有效。Session Storage 引入了一个“浏览器窗口”的概念，Session Storage 是在同源的窗口中始终存在的数据。只要这个浏览器窗口没有关闭，即使刷新页面或者进入同源另一个页面，数据依然存在。但是 Session Storage 在关闭了浏览器窗口后就会被销毁。同时独立的打开同一个窗口同一个页面，Session Storage 也是不一样的。
+
+
+
+#### JJWT
+
+https://github.com/jwtk/jjwt
+
+##### 简介
+
+JJWT 是一个提供端到端的 JWT 创建和验证的 Java 库。永远免费和开源(Apache License，版本2.0)，JJWT 很容易使用和理解。它被设计成一个以建筑为中心的流畅界面，隐藏了它的大部分复杂性。
+
+
+
+###### JJWT 签名算法
+
+| 标示符 | 签名算法                                          |
+| ------ | ------------------------------------------------- |
+| HS256  | 使用SHA-256的HMAC                                 |
+| HS384  | 使用SHA-384的HMAC                                 |
+| HS512  | 使用SHA-512的HMAC                                 |
+| ES256  | 使用P-256 和SHA-256的ECDSA                        |
+| ES384  | 使用P-384 和SHA-384的ECDSA                        |
+| ES512  | 使用P-512 和SHA-512的ECDSA                        |
+| RS256  | 使用SHA-256的RSASSA-PKCS-v1_5                     |
+| RS384  | 使用SHA-384的RSASSA-PKCS-v1_5                     |
+| RS512  | 使用SHA-512的RSASSA-PKCS-v1_5                     |
+| PS256  | RSASSA-PSS using SHA-256 and MGF1 with SHA-256    |
+| PS384  | RSASSA-PSS using SHA-384 and MGF1 with SHA-384    |
+| PS512  | RSASSA-PSS using SHA-512 and MGF1 with SHA-512    |
+| EdDSA  | Edwards-Curve Digital Signature Algorithm (EdDSA) |
+
+如果有以下使用场景，需要额外导入 bcprov-jdk15on 的库
+
+- JDK 10或更早的版本， 需要使用RSASSA-PSS (PS256, PS384, PS512) 签名算法
+- JDK 10或更早的版本， 需要使用EdECDH（X25519 或 X448）椭圆曲线 Diffie-Hellman 加密。
+- JDK14或更早版本， 需要使用EdDSA (Ed25519 or Ed448) 椭圆曲线签名算法
+  注意：如果是JDK15及之后的版本， 则不需要添加
+
+```xml
+<dependency>
+    <groupId>org.bouncycastle</groupId>
+    <artifactId>bcprov-jdk15on</artifactId>
+    <version>1.70</version>
+    <scope>runtime</scope>
+</dependency>
+```
+
+
+
+##### 依赖
+
+```xml
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt</artifactId>
+    <version>0.12.3</version>
+</dependency>
+```
+
+
+
+```java
+MacAlgorithm alg = Jwts.SIG.HS256; //or HS384 or HS512
+SecretKey key = alg.key().build();
+```
+
+
+
+##### 生成 JWT
+
+```java
+private String genToken(SecretKey key){
+
+    JwtBuilder jwtBuilder = Jwts.builder()
+        .header()
+        .add("aHeaderName", "aHeaderValue")
+        .add(new HashMap<>())
+        .and()
+        .id("888")
+        .subject("Rose")
+        .issuedAt(new Date())
+        .signWith(key)
+        .expiration(new Date(System.currentTimeMillis() + 60 * 1000)) // token 过期时间，不设置则不会过期
+        .claim("logo", "logo.jpg") //自定 claim
+        .claims(new HashMap<>());
+
+    String token = jwtBuilder.compact();
+    System.out.println(token);
+
+    String[] split = token.split("\\.");
+    System.out.println(Base64.getDecoder().decode(split[0]));
+    System.out.println(Base64.getDecoder().decode(split[1]));
+    // System.out.println(Base64.getDecoder().decode(split[2]));
+    return token;
+}
+```
+
+
+
+##### 解析 JWT
+
+```java
+public void parseToken(String token, SecretKey key){
+    System.out.println("------------------------------>parseToken");
+    Jws<Claims> jwt = Jwts.parser()
+            .verifyWith(key) // <---- publicKey, not privateKey
+            .build()
+            .parseSignedClaims(token);
+    System.out.println("header:alg -> " + jwt.getHeader().get("alg"));
+    System.out.println("header:aHeaderName -> " + jwt.getHeader().get("aHeaderName"));
+    System.out.println("payload:id -> " + jwt.getPayload().getId());
+    System.out.println("payload:subject -> " + jwt.getPayload().getSubject());
+    System.out.println("payload:issuedAt -> " + jwt.getPayload().getIssuedAt());
+    System.out.println("payload:logo -> " + jwt.getPayload().get("logo"));
+
+}
+```
+
+
+
+##### 密钥生成方式
+
+```java
+// 1.使用原始密码生成 key
+Password key = Keys.password(password.toCharArray());
+.signWith(key)
+.verifyWith(key)
+
+// 2.生成一个足够安全的 SecretKey 
+SecretKey key = Jwts.SIG.HS256.key().build();
+.signWith(key)
+.verifyWith(key)
+// 将 SecretKey 转为字符串以保存
+String secretString = Encoders.BASE64.encode(key.getEncoded());
+// 字符串转为 SecretKey
+SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretString));
+
+// 3.生成一对非对称密钥
+// or RS384, RS512, PS256, etc...
+KeyPair keyPair = Jwts.SIG.RS256.keyPair().build();
+.signWith(keyPair.getPrivate())
+.verifyWith(keyPair.getPublic())
+```
 
 
 
