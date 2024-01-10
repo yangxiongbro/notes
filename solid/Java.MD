@@ -7540,6 +7540,8 @@ jti:jwt的唯一身份标识，主要用来作为一次性token,从而回避重�
 
 https://github.com/jwtk/jjwt
 
+[JJWT使用完全指南 (xjx100.cn)](http://lihuaxi.xjx100.cn/news/1475247.html?action=onClick)
+
 ##### 简介
 
 JJWT 是一个提供端到端的 JWT 创建和验证的 Java 库。永远免费和开源(Apache License，版本2.0)，JJWT 很容易使用和理解。它被设计成一个以建筑为中心的流畅界面，隐藏了它的大部分复杂性。
