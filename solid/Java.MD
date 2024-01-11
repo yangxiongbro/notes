@@ -9672,6 +9672,12 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
 
 
 
+#### 集成 JWT
+
+
+
+
+
 # Nginx
 
 ## 安装配置部署管理
