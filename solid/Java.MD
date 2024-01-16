@@ -9674,7 +9674,133 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
 
 #### 集成 JWT
 
+##### 依赖
 
+```xml
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt</artifactId>
+    <version>0.12.3</version>
+</dependency>
+```
+
+
+
+##### TokenStoreConfig
+
+```java
+@Configuration
+public class TokenStoreConfig {
+    @Autowired
+    private RedisConnectionFactory redisConnectionFactory;
+
+    @Bean
+    public TokenStore jwtTokenStore(JwtAccessTokenConverter jwtAccessTokenConverter){
+        return new JwtTokenStore(jwtAccessTokenConverter);
+    }
+
+    @Bean
+    public JwtAccessTokenConverter jwtAccessTokenConverter(){
+        JwtAccessTokenConverter jwtAccessTokenConverter = new JwtAccessTokenConverter();
+        jwtAccessTokenConverter.setSigningKey("key");
+        return jwtAccessTokenConverter;
+    }
+}
+```
+
+
+
+##### AuthorizationServerConfig
+
+```java
+@Configuration
+@EnableAuthorizationServer
+public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdapter {
+
+	// ..... 
+    
+    @Autowired
+    @Qualifier("jwtTokenStore")
+    private TokenStore jwtTokenStore;
+
+    @Autowired
+    private JwtAccessTokenConverter jwtAccessTokenConverter;
+
+	// ..... 
+
+    @Override
+    public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
+        endpoints.authenticationManager(authorizationManager)
+                .userDetailsService(userDetailsService)
+            	// 增加配置
+                .tokenStore(jwtTokenStore)
+                .accessTokenConverter(jwtAccessTokenConverter);
+    }
+
+}
+```
+
+
+
+#### 扩展 JWT 中存储的内容
+
+
+
+##### Token 扩展增强
+
+```java
+@Component
+public class JwtTokenEnhancer implements TokenEnhancer {
+    @Override
+    public OAuth2AccessToken enhance(OAuth2AccessToken oAuth2AccessToken, OAuth2Authentication oAuth2Authentication) {
+        Map<String,Object> info = new HashMap<>();
+        info.put("enhance", "enhance info");
+        ((DefaultOAuth2AccessToken)oAuth2AccessToken).setAdditionalInformation(info);
+        return oAuth2AccessToken;
+    }
+}
+```
+
+
+
+##### AuthorizationServerConfig
+
+```java
+@Configuration
+@EnableAuthorizationServer
+public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdapter {
+
+	// ..... 
+    @Autowired
+    private JwtAccessTokenConverter jwtAccessTokenConverter;
+
+    @Autowired
+    @Qualifier("jwtTokenEnhancer")
+    private TokenEnhancer jwtTokenEnhancer;
+
+	// ..... 
+
+    @Override
+    public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
+        // ...
+            
+        TokenEnhancerChain tokenEnhancerChain = new TokenEnhancerChain();
+        List<TokenEnhancer> deletates = new ArrayList<>();
+        deletates.add(jwtTokenEnhancer);
+        deletates.add(jwtAccessTokenConverter);
+        
+        tokenEnhancerChain.setTokenEnhancers(deletates);
+        endpoints.authenticationManager(authorizationManager)
+                // ...
+                .tokenEnhancer(tokenEnhancerChain);
+    }
+
+}
+```
+
+
+
+新增的扩展将会保存在 JWT 中
 
 
 
