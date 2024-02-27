@@ -9674,7 +9674,9 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
 
 #### 集成 JWT
 
-##### 依赖
+##### 集成 JWT
+
+###### 依赖
 
 ```xml
 <dependency>
@@ -9686,7 +9688,7 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
 
 
 
-##### TokenStoreConfig
+###### TokenStoreConfig
 
 ```java
 @Configuration
@@ -9710,7 +9712,7 @@ public class TokenStoreConfig {
 
 
 
-##### AuthorizationServerConfig
+###### AuthorizationServerConfig
 
 ```java
 @Configuration
@@ -9742,11 +9744,11 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
 
 
 
-#### 扩展 JWT 中存储的内容
+##### 扩展 JWT 中存储的内容
 
 
 
-##### Token 扩展增强
+###### Token 扩展增强
 
 ```java
 @Component
@@ -9763,7 +9765,7 @@ public class JwtTokenEnhancer implements TokenEnhancer {
 
 
 
-##### AuthorizationServerConfig
+###### AuthorizationServerConfig
 
 ```java
 @Configuration
@@ -9801,6 +9803,56 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
 
 
 新增的扩展将会保存在 JWT 中
+
+
+
+##### 刷新令牌
+
+```java
+@Configuration
+@EnableAuthorizationServer
+public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdapter {
+
+    // ..
+
+    @Override
+    public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
+        clients.inMemory()
+                // ...
+                /**
+                 * 授权类型
+                 * authorization_code: 授权码模式
+                 * password: 密码模式
+                 * refresh_token: 刷新令牌
+                 */
+                .authorizedGrantTypes("authorization_code", "password", "refresh_token")
+                /**
+                 * token 失效时间
+                 */
+                .accessTokenValiditySeconds(60)
+                /**
+                 * 刷新令牌失效时间
+                 */
+                .refreshTokenValiditySeconds(3600);
+    }
+
+	// ...
+
+}
+```
+
+
+
+令牌失效后，向获取 Token 的接口发送刷新令牌即可获取新令牌
+
+grant_type:refresh_token
+refresh_token:eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX25hbWUiOiJhZG1pbiIsInNjb3BlIjpbImFsbCJdLCJhdGkiOiJueUt0NWhOX0JRQU5SYm1MaU5lRkx2LUNTVUEiLCJleHAiOjE3MDU1MDcxMDksImF1dGhvcml0aWVzIjpbImFkbWluIiwibm9ybWFsIl0sImp0aSI6Ii1hR3pxSzlPU180UHpweFdKLTFQSVlUd2FPQSIsImNsaWVudF9pZCI6ImNsaWVudCIsImVuaGFuY2UiOiJlbmhhbmNlIGluZm8ifQ.GBRbPMniHr1Wlne2jvlw9l_guodSbfuEvNZxJVnMuQ3OBlcKFl7_GL1FtUlyhy3gH4WSoHgY-mxd8exGnbzONhxJRQmsbnCgLeU2xEy4PmmwC2lpJTEDVFrIzp9Qfvc_vytFrmdI1jjjeWVXsm73aO5FzE1goFr5uFE5Xv6qjISc1ZirPsI4Vy0VZtLGxWMjo8P0k-dFv0Jmbi2hdT8uYVjj7GXK7i-wtfmeO62PxK57Fh5HMPBBxeQkSQmyIjUWuQROt7JuYUUqP9_spFtG1ANdLj4UQ_1jH5Dh-KrS2vneHxQGbN4IoTt8hqjuV_wC0MHh080nVwC7pGp3Fr6QwA
+
+
+
+#### 集成 SSO
+
+
 
 
 
