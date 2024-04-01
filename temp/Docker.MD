@@ -579,6 +579,7 @@ CMD ["/opt/kafka/bin/kafka-server-start.sh","/opt/kafka/config/my.server.propert
 
 ```sh
 #!/bin/bash
+# 告诉bash如果任何语句的执行结果不是true则应该退出
 set -e
 PORT=9092
 echo "broker.id=$BROKER_ID" > /opt/kafka/config/my.server.properties
