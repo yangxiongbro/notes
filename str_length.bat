@@ -16,5 +16,5 @@ if defined str (
 )
  
 :end
-echo %num%
+@REM echo %num%
 exit /b %num%

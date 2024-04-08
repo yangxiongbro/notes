@@ -37,3 +37,4 @@ for /f "delims=" %%i in (auto_retry.output.txt) do (
 
 :end
 echo ½áÊøÖØÊÔ
+del auto_retry.output.txt
