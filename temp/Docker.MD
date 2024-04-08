@@ -21,6 +21,18 @@ docker save [-o] [fineName] [IMAGE ID/REPOSITORY:TAG]
 docker load [-i/-q] [fineName]
 # --input , -i : 指定导入的文件，代替 STDIN
 # --quiet , -q : 精简输出信息
+# 将指定镜像保存成 tar 归档文件
+docker export [IMAGE ID/REPOSITORY:TAG] > [fineName] 
+# 导出镜像
+docker import [-c/-m] file|URL| - [REPOSITORY[:TAG]]
+#   -c, --change list       Apply Dockerfile instruction  the created image
+#   -m, --message string	Set commit message for imported image
+#       --platform string	Set platform if server is multi-platform capable
+
+# docker save保存的是镜像，docker export保存的是容器
+# docker save会保留镜像所有的历史记录，docker export不会，即没有commit历史
+# docker load用来载入镜像包，docker import用来载入容器包，但两者都会恢复为镜像；
+# docker load不能对载入的镜像重命名，而docker import可以为镜像指定新名称。
 
 # 将本地的镜像上传到镜像仓库,要先登陆到镜像仓库
 docker push [--disable-content-trust] NAME[:TAG]
