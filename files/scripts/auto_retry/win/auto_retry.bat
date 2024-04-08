@@ -23,11 +23,10 @@ if not defined cmd_str goto end
 !cmd_str! >auto_retry.output.txt 2>&1
 for /f "delims=" %%i in (auto_retry.output.txt) do ( 
   set "content=%%i"
-  echo !content!
   call str_length.bat !content!
   set "output_len=!ERRORLEVEL!"
-  echo !output_len!
-  if !content! gtr 4 (
+  echo !output_len!£∫!content!
+  if !output_len! gtr 4 (
     set content_start=!content:~0,5!
     if !content_start!==fatal (
       echo ÷ÿ ‘
