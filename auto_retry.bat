@@ -21,6 +21,7 @@ if not defined cmd_str goto end
 @REM git reset --hard origin/develop
 @REM git pull
 !cmd_str! >auto_retry.output.txt 2>&1
+timeout /t 2
 for /f "delims=" %%i in (auto_retry.output.txt) do ( 
   set "content=%%i"
   call str_length.bat !content!
