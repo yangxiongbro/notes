@@ -10030,3 +10030,8 @@ sudo kill -9 PID
 
 
 
+## 高可用集群
+
+使用 Keepalive 进行负载均衡
+
+[Nginx 部署与集群-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/2199087?from=15425)
