@@ -975,6 +975,247 @@ logger.debug("File name is C:\\\\{}.", "file.zip"); //output:File name is C:\fil
 
 
 
+### 配置 Redis
+
+#### 依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+```
+
+
+
+RedisConfig
+
+```java
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurerSupport;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.interceptor.KeyGenerator;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.RedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+import java.lang.reflect.Method;
+import java.time.Duration;
+
+/**
+ * <b><code>RedisConfig</code></b>
+ * <p/>
+ * redis配置
+ * <p/>
+ * <b>Creation Time:</b> 2024/6/5 22:52
+ *
+ * @author yang xiong
+ * @since CommonAuth 1.0
+ */
+@EnableCaching
+@Configuration
+public class RedisConfig extends CachingConfigurerSupport {
+
+    @Bean
+    public KeyGenerator keyGenerator() {
+        return (Object target, Method method, Object... params) -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append(target.getClass().getName());
+            sb.append(method.getName());
+            for (Object obj : params) {
+                sb.append(obj.toString());
+            }
+            return sb.toString();
+        };
+    }
+
+    /**
+     * SpringBoot配置redis作为默认缓存工具
+     * SpringBoot 2.0 以上版本的配置
+     * @param: redisTemplate - [RedisTemplate]
+     * @return: org.springframework.cache.CacheManager
+     * @throws 
+     * @author yang xiong
+     * @date 2024/6/5 23:07
+     **/
+    @Bean
+    public CacheManager cacheManager(RedisTemplate redisTemplate) {
+        RedisCacheConfiguration defaultCacheConfiguration = RedisCacheConfiguration
+                        .defaultCacheConfig()
+                        // 设置key为String
+                        .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(redisTemplate.getStringSerializer()))
+                        // 设置value 为自动转Json的Object
+                        .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(redisTemplate.getValueSerializer()))
+                        // 不缓存null
+                        .disableCachingNullValues()
+                        // 缓存数据保存1小时
+                        .entryTtl(Duration.ofHours(1));
+        RedisCacheManager cacheManager = RedisCacheManager.RedisCacheManagerBuilder
+                        // Redis 连接工厂
+                        .fromConnectionFactory(redisTemplate.getConnectionFactory())
+                        // 缓存配置
+                        .cacheDefaults(defaultCacheConfiguration)
+                        // 配置同步修改或删除 put/evict
+                        .transactionAware()
+                        .build();
+        return cacheManager;
+    }
+
+    /**
+     * @description: 配置一个 RedisTemplate<String,Object> 的 Bean
+     * @param: factory - [RedisConnectionFactory]
+     * @return: org.springframework.data.redis.core.RedisTemplate<java.lang.String,java.lang.Object>
+     * @throws
+     * @author yang xiong
+     * @date 2024/6/5 23:17
+     **/
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+        // 创建RedisTemplate<String, Object>对象
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        // 配置连接工厂
+        template.setConnectionFactory(factory);
+        RedisSerializer keySerializer = getKeySerializer();
+        RedisSerializer valueSerializer = getValueSerializer();
+        // redis key 序列化方式使用stringSerial
+        template.setKeySerializer(keySerializer);
+        // redis value 序列化方式使用jackson
+        template.setValueSerializer(valueSerializer);
+        // redis hash key 序列化方式使用stringSerial
+        template.setHashKeySerializer(keySerializer);
+        // redis hash value 序列化方式使用jackson
+        template.setHashValueSerializer(valueSerializer);
+        template.afterPropertiesSet();
+        return template;
+    }
+
+    private RedisSerializer getKeySerializer(){
+        return new StringRedisSerializer();
+    }
+
+    /**
+     * @description: 定义 Jackson2JsonRedisSerializer 序列化对象
+     * @param:
+     * @return: org.springframework.data.redis.serializer.RedisSerializer
+     * @throws
+     * @author yang xiong
+     * @date 2024/6/5 23:15
+     **/
+    private RedisSerializer getValueSerializer() {
+        ObjectMapper om = new ObjectMapper();
+        // 指定要序列化的域，field,get和set,以及修饰符范围，ANY是都有包括private和public
+        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        // 指定序列化输入的类型，类必须是非final修饰的，final修饰的类，比如String,Integer等会报异常
+        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+
+        Jackson2JsonRedisSerializer<Object> serializer = new Jackson2JsonRedisSerializer(Object.class);
+        serializer.setObjectMapper(om);
+
+        return serializer;
+    }
+
+}
+```
+
+
+
+#### RedisOperationsConfig
+
+配置常用 Operations 到容器中
+
+```java
+/**
+ * <b><code>RedisOperationsConfig</code></b>
+ * <p/>
+ * Operations配置
+ * <p/>
+ * <b>Creation Time:</b> 2024/6/5 23:20
+ *
+ * @author yang xiong
+ * @since CommonAuth 1.0
+ */
+@Configuration
+public class RedisOperationsConfig {
+    /**
+     * redis string
+     */
+    @Bean
+    public ValueOperations<String, Object> valueOperations(RedisTemplate<String, Object> redisTemplate) {
+        return redisTemplate.opsForValue();
+    }
+
+    /**
+     * redis hash
+     */
+    @Bean
+    public HashOperations<String, String, Object> hashOperations(RedisTemplate<String, Object> redisTemplate) {
+        return redisTemplate.opsForHash();
+    }
+
+    /**
+     * redis list
+     */
+    @Bean
+    public ListOperations<String, Object> listOperations(RedisTemplate<String, Object> redisTemplate) {
+        return redisTemplate.opsForList();
+    }
+
+    /**
+     * redis set
+     */
+    @Bean
+    public SetOperations<String, Object> setOperations(RedisTemplate<String, Object> redisTemplate) {
+        return redisTemplate.opsForSet();
+    }
+
+    /**
+     * redis zset
+     */
+    @Bean
+    public ZSetOperations<String, Object> zSetOperations(RedisTemplate<String, Object> redisTemplate) {
+        return redisTemplate.opsForZSet();
+    }
+}
+```
+
+
+
+#### 配置
+
+```yaml
+spring:
+  redis:
+    # Redis数据库索引（默认为0）
+    database: 0
+    host: 192.168.31.101
+    port: 6379
+    password: Senna&redis@P1
+    # 连接超时时间（毫秒）
+    timeout: 1000
+    jedis:
+      pool:
+        # 连接池最大连接数（使用负值表示没有限制）
+        max-active=20: 20
+        # 连接池最大阻塞等待时间（使用负值表示没有限制）
+        max-wait: -1
+        # 连接池中的最大空闲连接
+        max-idle: 10
+        # 连接池中的最小空闲连接
+        min-idle: 0
+```
+
+
+
 ## 国际化
 
 [springboot国际化配置 - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/602254731)
