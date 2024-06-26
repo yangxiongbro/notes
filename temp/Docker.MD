@@ -713,3 +713,158 @@ sudo docker exec -it fa52730455e2 /bin/bash
 
 
 ## cluster
+
+
+
+
+
+# Kubernetes
+
+[手把手教你部署一个最小化的 Kubernetes 集群 (qq.com)](https://mp.weixin.qq.com/s/MEopULKBhvejRiEfLXW3jw)
+
+[Debian11安装k8s - scmie - 博客园 (cnblogs.com)](https://www.cnblogs.com/scmie/articles/18222941)
+
+## K8s集群搭建
+
+```shell
+# 配置kubeadm的阿里云镜像源
+$ sudo vim /etc/apt/sources.list
+deb https://mirrors.aliyun.com/kubernetes/apt kubernetes-xenial main
+$ sudo gpg --keyserver keyserver.debian.com --recv-keys BA07F4FB
+$ sudo gpg --export --armor BA07F4FB | sudo apt-key add -
+
+# 配置docker安装
+# 阿里源
+curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker-archive-keyring.gpg
+# 官方源
+# $ curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker-archive-keyring.gpg
+# 本地 key
+# $ cat /home/young/docker.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker-archive-keyring.gpg
+
+# $ sudo gpg --recv-keys 0EBFCD88
+# $ sudo gpg --fingerprint 0EBFCD88
+# $ sudo gpg --fingerprint /etc/apt/trusted.gpg.d/docker.gpg
+
+$ sudo vim /etc/apt/sources.list
+# 阿里源 
+deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker-archive-keyring.gpg] https://mirrors.aliyun.com/docker-ce/linux/debian bullseye stable
+# 官方源
+# deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker-archive-keyring.gpg] https://download.docker.com/linux/debian bullseye stable
+
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io
+# 启动 Docker
+sudo systemctl enable docker
+sudo systemctl start docker
+
+# 建立 docker 组
+$ sudo groupadd docker
+# 将当前用户加入 docker 组
+$ sudo usermod -aG docker $USER
+# 测试 Docker 是否安装正确
+$ sudo docker run --rm hello-world
+
+
+```
+
+
+
+## kubernetes 环境配置
+
+```shell
+# 关闭swap
+sudo swapoff -a
+sudo sed -ri 's/.*swap.*/#&/' /etc/fstab
+
+# 同步各节点的时区
+# 设置系统时区为中国/上海
+timedatectl set-timezone Asia/Shanghai
+
+# 关闭各节点的防火墙
+sudo systemctl disable nftables.service 
+sudo systemctl stop nftables.service 
+sudo systemctl status nftables.service
+
+# 设置rp_filter的值
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+```
+
+
+
+## 安装 kubeadm（所有节点都需要安装）
+
+```shell
+wget https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.14/cri-dockerd-0.3.14.amd64.tgz
+tar xf cri-dockerd-0.3.14.amd64.tgz
+sudo cp cri-dockerd/cri-dockerd /usr/bin/
+sudo rm -r cri-dockerd
+
+# 配置启动⽂件，执行如下命令
+cat <<"EOF" > /usr/lib/systemd/system/cri-docker.service
+[Unit]
+Description=CRI Interface for Docker Application Container Engine
+Documentation=https://docs.mirantis.com
+After=network-online.target firewalld.service docker.service
+Wants=network-online.target
+Requires=cri-docker.socket
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/cri-dockerd --network-plugin=cni --pod-infra-container-image=registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.9
+ExecReload=/bin/kill -s HUP $MAINPID
+TimeoutSec=0
+RestartSec=2
+Restart=always
+
+# Note that StartLimit* options were moved from "Service" to "Unit" in systemd 229.
+# Both the old, and new location are accepted by systemd 229 and up, so using the old location
+# to make them work for either version of systemd.
+StartLimitBurst=3
+
+# Note that StartLimitInterval was renamed to StartLimitIntervalSec in systemd 230.
+# Both the old, and new name are accepted by systemd 230 and up, so using the old name to make
+# this option work for either version of systemd.
+StartLimitInterval=60s
+
+
+# Having non-zero Limit*s causes performance problems due to accounting overhead
+# in the kernel. We recommend using cgroups to do container-local accounting.
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+
+# Comment TasksMax if your systemd version does not support it.
+# Only systemd 226 and above support this option.
+TasksMax=infinity
+Delegate=yes
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# ⽣成 socket ⽂件，执行如下命令
+cat <<"EOF" > /usr/lib/systemd/system/cri-docker.socket
+[Unit]
+Description=CRI Docker Socket for the API
+PartOf=cri-docker.service
+
+[Socket]
+ListenStream=%t/cri-dockerd.sock
+SocketMode=0660
+SocketUser=root
+SocketGroup=docker
+
+[Install]
+WantedBy=sockets.target
+EOF
+
+# 启动 cri-docker 并设置开机⾃动启动
+systemctl daemon-reload
+systemctl enable cri-docker --now
+systemctl is-active cri-docker
+```
+
