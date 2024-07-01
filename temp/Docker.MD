@@ -764,29 +764,45 @@ $ sudo usermod -aG docker $USER
 # 测试 Docker 是否安装正确
 $ sudo docker run --rm hello-world
 
+# 镜像加速
+# 您可以通过修改daemon配置文件/etc/docker/daemon.json来使用加速器
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json <<-'EOF'
+{
+  "registry-mirrors": ["https://82m9ar63.mirror.aliyuncs.com"],
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2"
+}
+EOF
 
+sudo systemctl daemon-reload
+sudo systemctl restart docker
 ```
 
 
 
-## kubernetes 环境配置
+### kubernetes 环境配置
 
 ```shell
 # 关闭swap
-sudo swapoff -a
-sudo sed -ri 's/.*swap.*/#&/' /etc/fstab
+$ sudo swapoff -a
+$ sudo sed -ri 's/.*swap.*/#&/' /etc/fstab
 
 # 同步各节点的时区
 # 设置系统时区为中国/上海
-timedatectl set-timezone Asia/Shanghai
+$ timedatectl set-timezone Asia/Shanghai
 
 # 关闭各节点的防火墙
-sudo systemctl disable nftables.service 
-sudo systemctl stop nftables.service 
-sudo systemctl status nftables.service
+$ sudo systemctl disable nftables.service 
+$ sudo systemctl stop nftables.service 
+$ sudo systemctl status nftables.service
 
 # 设置rp_filter的值
-cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+$ cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 EOF
@@ -794,16 +810,16 @@ EOF
 
 
 
-## 安装 kubeadm（所有节点都需要安装）
+### 安装 kubeadm（所有节点都需要安装）
 
 ```shell
-wget https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.14/cri-dockerd-0.3.14.amd64.tgz
+$ wget https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.14/cri-dockerd-0.3.14.amd64.tgz
 tar xf cri-dockerd-0.3.14.amd64.tgz
-sudo cp cri-dockerd/cri-dockerd /usr/bin/
-sudo rm -r cri-dockerd
+$ sudo cp cri-dockerd/cri-dockerd /usr/bin/
+$ sudo rm -r cri-dockerd
 
 # 配置启动⽂件，执行如下命令
-cat <<"EOF" > /usr/lib/systemd/system/cri-docker.service
+$ sudo cat <<"EOF" > /usr/lib/systemd/system/cri-docker.service
 [Unit]
 Description=CRI Interface for Docker Application Container Engine
 Documentation=https://docs.mirantis.com
@@ -847,7 +863,7 @@ WantedBy=multi-user.target
 EOF
 
 # ⽣成 socket ⽂件，执行如下命令
-cat <<"EOF" > /usr/lib/systemd/system/cri-docker.socket
+$ sudo cat <<"EOF" > /usr/lib/systemd/system/cri-docker.socket
 [Unit]
 Description=CRI Docker Socket for the API
 PartOf=cri-docker.service
@@ -863,8 +879,271 @@ WantedBy=sockets.target
 EOF
 
 # 启动 cri-docker 并设置开机⾃动启动
-systemctl daemon-reload
-systemctl enable cri-docker --now
-systemctl is-active cri-docker
+$ sudo systemctl daemon-reload
+$ sudo systemctl enable cri-docker --now
+$ sudo systemctl is-active cri-docker
+```
+
+
+
+### 安装 kubeadm、kubelet 和 kubectl
+
+```shell
+# 安装使用 Kubernetes 存储库所需的包
+$ sudo apt update
+$ sudo apt install -y apt-transport-https ca-certificates curl gpg
+
+# 下载 Kubernetes 软件包存储库的公共签名密钥。 所有存储库都使用相同的签名密钥，因此您可以忽略 URL 中的版本
+# sudo mkdir -p -m 755 /etc/apt/keyrings
+$ curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/kubernetes-apt-keyring.gpg
+
+# 添加相应的 Kubernetes 存储库。请注意，此存储库包含软件包 仅适用于 Kubernetes 1.29;对于其他 Kubernetes 次要版本，您需要 更改 URL 中的 Kubernetes 次要版本以匹配所需的次要版本 （您还应该检查是否正在阅读 Kubernetes 版本的文档 您计划安装）
+$ echo 'deb [signed-by=/etc/apt/trusted.gpg.d/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+# 更新软件包索引，安装 kubelet、kubeadm 和 kubectl，并固定其版本
+$ sudo apt update
+$ sudo apt install -y kubelet kubeadm kubectl
+$ sudo apt-mark hold kubelet kubeadm kubectl
+
+# (可选）在运行 kubeadm 之前启用 kubelet 服务
+$ sudo systemctl enable --now kubelet
+```
+
+
+
+#### 下载各个机器需要的镜像
+
+```shell
+# 查看k8s所需的镜像版本
+kubeadm config images list
+
+# 下载k8s所需的镜像
+docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kube-apiserver:v1.29.6
+docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kube-controller-manager:v1.29.6
+docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kube-scheduler:v1.29.6
+docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kube-proxy:v1.29.6
+docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/coredns:v1.11.1
+docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.9
+docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/etcd:3.5.12-0
+
+# 查看是否全部下载（没有下载的单独下载）7个
+docker images
+```
+
+
+
+### 配置 cri-dockerd
+
+```shell
+# 上面配置过了查看一下/usr/lib/systemd/system/cri-docker.service的--pod-infra-container-image是不是下载的镜像
+# cat /usr/lib/systemd/system/cri-docker.service | grep registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.9
+
+#重启
+sudo systemctl daemon-reload && sudo systemctl restart cri-docker
+
+#检查效果
+cri-dockerd --version
+```
+
+
+
+### 集群搭建
+
+#### 集群初始化（Master节点执行）
+
+```shell
+# cat /etc/hosts
+sudo kubeadm reset --cri-socket=unix:///var/run/cri-dockerd.sock
+$ sudo kubeadm init \
+--apiserver-advertise-address=192.168.31.101 \
+--control-plane-endpoint=server01 \
+--image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers \
+--kubernetes-version=v1.29.4 \
+--service-cidr=10.96.0.0/16 \
+--pod-network-cidr=10.114.0.0/16 \
+--cri-socket=unix:///var/run/cri-dockerd.sock \
+--upload-certs
+
+[kubelet-check] The HTTP call equal to 'curl -sSL http://localhost:10248/healthz' failed with error: Get "http://localhost:10248/healthz": dial tcp [::1]:10248: connect: connection refused.
+
+cat /etc/docker/daemon.json
+{
+
+}
+
+# 执行下面三行代码让当前用户能使用集群命令
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+# 安装网络插件calico(可以使用其他的)，参数信息见下面说明
+#下面网站查看最新calico部署文件
+# https://docs.projectcalico.org/manifests/calico.yaml
+
+#下载到文件中
+$ curl https://calico-v3-25.netlify.app/archive/v3.25/manifests/calico.yaml -O  >> calico.yaml
+
+#使用kubectl命令安装
+$ kubectl apply -f calico.yaml
+
+This error is likely caused by:
+	- The kubelet is not running
+```
+
+
+
+#### 工作节点加入集群
+
+```shell
+# 忘记加入集群的命令可以用这个命令获取
+$ kubeadm token create --print-join-command
+
+# 将从节点加入集群，在从节点执行
+$ sudo kubeadm join server01:6443 \
+--token 98ci8i.4lpdtalg6y6g7fi4 \
+--discovery-token-ca-cert-hash sha256:67a3153af0ff19f8c5840947a37145abaad8060e084f5514ad4d541868dd0406 \
+--cri-socket=unix:///var/run/cri-dockerd.sock
+
+# 加入成功会出现
+# Run 'kubectl get nodes' on the control-plane to see this node join the cluster.
+
+# 遇到以下错误
+# root@k8s-node-2:~# kubeadm join k8s-master-1:6443 --token 0yncwd.j7xvheb2phj6o8q6 --discovery-token-ca-cert-hash sha256:9c98ae6274330d6c3db163d582e707e6fae8b51883cbbec0d0f3c13fefb1c85a 
+Found multiple CRI endpoints on the host. Please define which one do you wish to use by setting the 'criSocket' field in the kubeadm configuration file: unix:///var/run/containerd/containerd.sock, unix:///var/run/cri-dockerd.sock
+To see the stack trace of this error execute with --v=5 or higher
+
+# 原因：由于没有指定cri的套接字
+# 解决: 在join命令后加上以下选项
+# --cri-socket unix:///var/run/cri-dockerd.sock 
+```
+
+
+
+## 安装nfs
+
+### 安装配置nfs服务器
+
+```shell
+# 安装nfs-kernel-server
+$ sudo apt update
+$ sudo apt install -y nfs-kernel-server nfs-common 
+
+# 创建导出目录
+# 导出目录是用于与nfs客户端共享的目录，这个目录可以是linux上的任意目录。这里我们使用一个创建的新目录。
+$ sudo mkdir -p /mnt/basic-service-delete/
+$ sudo mkdir -p /mnt/basic-service-reserve/
+$ sudo mkdir -p /mnt/business-service-delete/
+$ sudo mkdir -p /mnt/data/
+
+# 后边两步非常关键，如果没有这两步，可能导致其它客户端连接后出现访问禁止的错误
+sudo chown nobody:nogroup /mnt/basic-service-reserve/
+sudo chmod 777 /mnt/basic-service-reserve/
+
+sudo chown nobody:nogroup /mnt/basic-service-delete/
+sudo chmod 777 /mnt/basic-service-delete/
+
+
+sudo chown nobody:nogroup /mnt/business-service-delete/
+sudo chmod 777 /mnt/business-service-delete/
+
+sudo chown nobody:nogroup /mnt/data/
+sudo chmod 777 /mnt/data/
+
+# 执行以下就可以
+sudo chmod 777 /mnt/basic-service-reserve/
+sudo chmod 777 /mnt/basic-service-delete/
+sudo chmod 777 /mnt/business-service-delete/
+sudo chmod 777 /mnt/data/
+
+# 通过nfs输出文件为客户端分配服务器访问权限
+# 在master 执行以下命令
+echo "/mnt/basic-service-delete/ *(insecure,rw,sync,no_root_squash,no_subtree_check)
+/mnt/basic-service-reserve/ *(insecure,rw,sync,no_root_squash,no_subtree_check)
+/mnt/business-service-delete/ *(insecure,rw,sync,no_root_squash,no_subtree_check)
+/mnt/data/ *(insecure,rw,sync,no_root_squash,no_subtree_check)" > /etc/exports
+
+$ sudo systemctl enable rpcbind
+$ sudo systemctl enable nfs-server
+$ sudo systemctl start rpcbind
+$ sudo systemctl start nfs-server
+
+# 输出共享目录
+$ sudo exportfs -r
+
+# 检查配置是否生效
+$ sudo exportfs
+
+# 防火墙放行
+# NFS服务使用的111和2049端口是固定的，mountd端口是动态的，需要固定，然后在防火墙放行。
+$ sudo vim /etc/sysconfig/nfs
+#追加端口配置
+MOUNTD_PORT=4001　　
+STATD_PORT=4002
+LOCKD_TCPPORT=4003
+LOCKD_UDPPORT=4003
+RQUOTAD_PORT=4004
+
+sudo iptables -A INPUT -p tcp --dport 2049 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 2049 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport  111 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 111 -j ACCEPT
+#重载配置
+sudo exportfs -ra
+
+# 从节点安装nfs 客户端
+# 安装NFS客户端软件包
+sudo apt install nfs-common
+
+# 所有从节点执行
+sudo showmount -e 192.168.31.101
+sudo mkdir -p /mnt/basic-service-delete/
+sudo mkdir -p /mnt/basic-service-reserve/
+sudo mkdir -p /mnt/business-service-delete/
+sudo mkdir -p /mnt/data/
+
+sudo mount -t nfs 192.168.31.101:/mnt/basic-service-delete/ /mnt/basic-service-delete/
+sudo mount -t nfs 192.168.31.101:/mnt/basic-service-reserve/ /mnt/basic-service-reserve/
+sudo mount -t nfs 192.168.31.101:/mnt/business-service-delete/ /mnt/business-service-delete/
+sudo mount -t nfs 192.168.31.101:/mnt/data/ /mnt/data/
+
+# NFS动态供给
+# 直接通过命令下载：
+$ sudo wget https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner/archive/refs/tags/nfs-subdir-external-provisioner-4.0.18.tar.gz
+# 直接解压它
+sudo tar -zxvf nfs-subdir-external-provisioner-4.0.18.tar.gz
+# 来到这个文件夹下的deploy目录
+cd nfs-subdir-external-provisioner-nfs-subdir-external-provisioner-4.0.18/deploy/
+
+# 需要修改 deployment.yaml
+$ sudo vim deployment.yaml
+#我已经通过一些方法将它拉取下来并且上传到了国内的阿里云镜像仓库，我们可以直接用下面这个镜像来替换：
+# 这个镜像是在谷歌上的，国内拉取不到
+# image: registry.k8s.io/sig-storage/nfs-subdir-external-provisioner:v4.0.2
+# 使用这个我先在谷歌上拉取下来再上传到阿里云上的镜像
+# image: registry.cn-hangzhou.aliyuncs.com/lfy_k8s_images/nfs-subdir-external-provisioner:v4.0.2
+
+yamls=$(grep -rl 'namespace: default' ./)
+for yaml in ${yamls}; do
+  echo ${yaml}
+  cat ${yaml} | grep 'namespace: default'
+done
+
+#我们可以新创建一个命名空间专门装这个驱动，也方便以后管理，所以我决定创建一个名为 nfs-provisioner 命名空间，为了方便就不用yaml文件了，直接通过命令创建：
+sudo kubectl create namespace nfs-provisioner
+
+#涉及命名空间这个配置的文件还挺多的，所以我们干脆通过一行脚本更改所有：
+sed -i 's/namespace: default/namespace: base-cluster/g' `grep -rl 'namespace: default' ./`
+
+yamls=$(grep -rl 'namespace:' ./)
+for yaml in ${yamls}; do
+  echo ${yaml}
+  cat ${yaml} | grep 'namespace:'
+done
+
+#直接执行安装
+kubectl apply -k .
+kubectl delete -k .
+
+kubectl get pod -n base-cluster
 ```
 
