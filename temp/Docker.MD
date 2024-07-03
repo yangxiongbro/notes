@@ -907,6 +907,8 @@ $ sudo apt-mark hold kubelet kubeadm kubectl
 
 # (可选）在运行 kubeadm 之前启用 kubelet 服务
 $ sudo systemctl enable --now kubelet
+
+/var/lib/kubelet/config.yaml
 ```
 
 
