@@ -720,6 +720,373 @@ sudo docker exec -it fa52730455e2 /bin/bash
 
 # Kubernetes
 
+
+
+
+
+
+
+## K8s 集群搭建
+
+[Kubernetes 深入学习（一） —— 入门和集群安装部署 - bojiangzhou - 博客园 (cnblogs.com)](https://www.cnblogs.com/chiangchou/p/k8s-1.html)
+
+[etcd错误总结 - 杨灏 - 博客园 (cnblogs.com)](https://www.cnblogs.com/HByang/p/13340857.html)
+
+### 操作系统初始化
+
+```shell
+# 1、关闭防火墙
+$ sudo systemctl stop firewalld
+$ sudo systemctl disable firewalld
+
+# 2、关闭 selinux
+# # 临时生效
+$ setenforce 0
+
+# # 永久生效
+$ sed -i 's/enforcing/disabled/' /etc/selinux/config
+
+# 3、关闭 swap
+# # 临时关闭
+$ sudo swapoff -a
+
+# # 永久生效
+$ vim /etc/fstab
+# #将 [UUID=5b59fd54-eaad-41d6-90b2-ce28ac65dd81 swap                    swap    defaults        0 0] 这一行注释掉
+
+# 4、添加 hosts
+$ vim /etc/hosts
+192.168.31.24 k8s-master-1
+192.168.31.26 k8s-master-2
+192.168.31.35 k8s-node-1
+192.168.31.71 k8s-node-2
+192.168.31.178 k8s-lb-master
+192.168.31.224 k8s-lb-backup
+
+# 5、同步系统时间
+# 各个节点之间需保持时间一致，因为自签证书是根据时间校验证书有效性，如果时间不一致，将校验不通过。
+# # 联网情况可使用如下命令
+$ ntpdate time.windows.com
+
+# # 如果不能联外网可使用 date 命令设置时间
+```
+
+
+
+### 部署 Etcd 集群
+
+#### 生成证书
+
+##### 准备 cfssl 工具
+
+```shell
+# 准备 cfssl 工具
+$ sudo curl -L https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 -o /usr/local/bin/cfssl
+$ sudo curl -L https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64 -o /usr/local/bin/cfssljson
+$ sudo curl -L https://pkg.cfssl.org/R1.2/cfssl-certinfo_linux-amd64 -o /usr/local/bin/cfssl-certinfo
+
+$ sudo chmod +x /usr/local/bin/cfssl*
+
+# 创建目录
+$ sudo mkdir -p /opt/apps/k8s/etcd/{ssl,cfg,bin}
+$ cd /opt/apps/k8s/etcd/ssl
+```
+
+
+
+##### 生成 CA 证书和私钥
+
+```shell
+# 创建 CA 配置文件：ca-config.json
+$ sudo vim ca-config.json
+{
+  "signing": {
+    "default": {
+      "expiry": "87600h"
+    },
+    "profiles": {
+      "etcd": {
+        "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+        ],
+        "expiry": "87600h"
+      }
+    }
+  }
+}
+
+# signing：表示该证书可用于签名其它证书；生成的 ca.pem 证书中 CA=TRUE；
+# profiles：可以定义多个 profiles，分别指定不同的过期时间、使用场景等参数；后续在签名证书时使用某个 profile；
+# expiry：证书过期时间
+# server auth：表示client可以用该 CA 对server提供的证书进行验证；
+# client auth：表示server可以用该CA对client提供的证书进行验证；
+
+# 创建 CA 证书签名请求文件：ca-csr.json
+$ sudo vim ca-csr.json
+{
+  "CN": "etcd",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "Shanghai",
+      "L": "Shanghai",
+      "O": "etcd",
+      "OU": "System"
+    }
+  ],
+    "ca": {
+       "expiry": "87600h"
+    }
+}
+
+# CN：Common Name，kube-apiserver 从证书中提取该字段作为请求的用户名 (User Name)；浏览器使用该字段验证网站是否合法；
+# key：加密算法
+# C：国家
+# ST：地区
+# L：城市
+# O：组织，kube-apiserver 从证书中提取该字段作为请求用户所属的组 (Group)；
+# OU：组织单位
+
+# 生成 CA 证书和私钥
+sudo bash -c "cfssl gencert -initca ca-csr.json | cfssljson -bare ca"
+# ca-key.pem：CA 私钥
+# ca.pem：CA 数字证书
+```
+
+
+
+##### 生成 etcd 证书和私钥
+
+```shell
+# 创建证书签名请求文件：etcd-csr.json
+$ sudo vim etcd-csr.json
+{
+  "CN": "etcd",
+  "hosts": [
+    "192.168.31.101",
+    "192.168.31.102",
+    "192.168.31.103"
+  ],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "Shanghai",
+      "L": "Shanghai",
+      "O": "etcd",
+      "OU": "System"
+    }
+  ]
+}
+
+# 为 etcd 生成证书和私钥
+sudo bash -c "cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=etcd etcd-csr.json | cfssljson -bare etcd"
+# -ca：指定 CA 数字证书
+# -ca-key：指定 CA 私钥
+# -config：CA 配置文件
+# -profile：指定环境
+# -bare：指定证书名前缀
+
+# etcd-key.pem：etcd 私钥
+# etcd.pem：etcd 数字证书
+```
+
+
+
+证书生成完成，后面部署 Etcd 时主要会用到如下几个证书：ca-key.pem、ca.pem、etcd-key.pem、etcd.pem
+
+
+
+#### Etcd 数据库集群部署
+
+etcd 集群采用主从架构模式（一主多从）部署，集群通过选举产生 leader，因此需要部署奇数个节点（3/5/7）才能正常工作。etcd使用raft一致性算法保证每个节点的一致性。
+
+
+
+##### 下载 etcd
+
+```shell
+# 从 github 上下载合适版本的 etcd
+$ wget https://github.com/etcd-io/etcd/releases/download/v3.5.14/etcd-v3.5.14-linux-amd64.tar.gz
+$ tar zxf etcd-v3.5.14-linux-amd64.tar.gz
+$ sudo cp etcd-v3.5.14-linux-amd64/{etcd,etcdctl} /opt/apps/k8s/etcd/bin
+$ rm -rf etcd-v3.5.14-linux-amd64
+```
+
+
+
+##### 配置 etcd 
+
+创建 etcd 配置文件：**etcd.conf**
+
+`/opt/apps/k8s/etcd/cfg/etcd.conf`
+
+```conf
+# [member]
+ETCD_NAME=etcd-1
+ETCD_DATA_DIR=/opt/data/k8s/default.etcd
+ETCD_LISTEN_PEER_URLS=https://192.168.31.101:2380
+ETCD_LISTEN_CLIENT_URLS=https://192.168.31.101:2379
+
+# [cluster]
+ETCD_INITIAL_ADVERTISE_PEER_URLS=https://192.168.31.101:2380
+ETCD_ADVERTISE_CLIENT_URLS=https://192.168.31.101:2379
+ETCD_INITIAL_CLUSTER=etcd-1=https://192.168.31.101:2380,etcd-2=https://192.168.31.102:2380,etcd-3=https://192.168.31.103:2380
+ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster
+ETCD_INITIAL_CLUSTER_STATE=new
+
+# [security]
+ETCD_CERT_FILE=/opt/apps/k8s/etcd/ssl/etcd.pem
+ETCD_KEY_FILE=/opt/apps/k8s/etcd/ssl/etcd-key.pem
+ETCD_TRUSTED_CA_FILE=/opt/apps/k8s/etcd/ssl/ca.pem
+ETCD_PEER_CERT_FILE=/opt/apps/k8s/etcd/ssl/etcd.pem
+ETCD_PEER_KEY_FILE=/opt/apps/k8s/etcd/ssl/etcd-key.pem
+ETCD_PEER_TRUSTED_CA_FILE=/opt/apps/k8s/etcd/ssl/ca.pem
+```
+
+
+
+**说明：**
+
+- ETCD_NAME：etcd在集群中的唯一名称
+- ETCD_DATA_DIR：etcd数据存放目录
+- ETCD_LISTEN_PEER_URLS：etcd集群间通讯的地址，设置为本机IP
+- ETCD_LISTEN_CLIENT_URLS：客户端访问的地址，设置为本机IP
+- 
+- ETCD_INITIAL_ADVERTISE_PEER_URLS：初始集群通告地址，集群内部通讯地址，设置为本机IP
+- ETCD_ADVERTISE_CLIENT_URLS：客户端通告地址，设置为本机IP
+- ETCD_INITIAL_CLUSTER：集群节点地址，以 key=value 的形式添加各个 etcd 的地址
+- ETCD_INITIAL_CLUSTER_TOKEN：集群令牌，用于集群间做简单的认证
+- ETCD_INITIAL_CLUSTER_STATE：集群状态
+- 
+- ETCD_CERT_FILE：客户端 etcd 数字证书路径
+- ETCD_KEY_FILE：客户端 etcd 私钥路径
+- ETCD_TRUSTED_CA_FILE：客户端 CA 证书路径
+- ETCD_PEER_CERT_FILE：集群间通讯etcd数字证书路径
+- ETCD_PEER_KEY_FILE：集群间通讯etcd私钥路径
+- ETCD_PEER_TRUSTED_CA_FILE：集群间通讯CA证书路径
+
+
+
+##### 创建 etcd 服务
+
+通过EnvironmentFile指定 **etcd.conf** 作为环境配置文件
+
+`/opt/apps/k8s/etcd/etcd.service`
+
+```conf
+[Unit]
+Description=Etcd Server
+After=network.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+EnvironmentFile=/opt/apps/k8s/etcd/cfg/etcd.conf
+WorkingDirectory=/opt/data/k8s/default.etcd
+
+ExecStart=/opt/apps/k8s/etcd/bin/etcd \
+# ETCD3.4版本会自动读取环境变量的参数，所以EnvironmentFile文件中有的参数，不需要再次在ExecStart启动参数中添加，二选一，如同时配置，会触发以下类似报错
+# etcd: conflicting environment variable "ETCD_NAME" is shadowed by corresponding command-line flag (either unset environment variable or disable flag)
+  --name=${ETCD_NAME} \
+  --data-dir=${ETCD_DATA_DIR} \
+  --listen-peer-urls=${ETCD_LISTEN_PEER_URLS} \
+  --listen-client-urls=${ETCD_LISTEN_CLIENT_URLS},http://127.0.0.1:2379 \
+  --initial-advertise-peer-urls=${ETCD_INITIAL_ADVERTISE_PEER_URLS} \
+  --advertise-client-urls=${ETCD_ADVERTISE_CLIENT_URLS} \
+  --initial-cluster=${ETCD_INITIAL_CLUSTER} \
+  --initial-cluster-token=${ETCD_INITIAL_CLUSTER_TOKEN} \
+  --initial-cluster-state=${ETCD_INITIAL_CLUSTER_STATE} \
+  --cert-file=${ETCD_CERT_FILE} \
+  --key-file=${ETCD_KEY_FILE} \
+  --trusted-ca-file=${ETCD_TRUSTED_CA_FILE} \
+  --peer-cert-file=${ETCD_PEER_CERT_FILE} \
+  --peer-key-file=${ETCD_PEER_KEY_FILE} \
+  --peer-trusted-ca-file=${ETCD_PEER_TRUSTED_CA_FILE}
+
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+
+etcd.service 更多的配置以及说明可以通过如下命令查看：`/opt/apps/k8s/etcd/bin/etcd --help`
+
+
+
+##### 其它节点配置 etcd
+
+```shell
+# 将 etcd 目录拷贝到另外两个节点
+$ sudo scp -r /opt/apps/k8s young@192.168.31.102:/home/young/k8s
+$ sudo scp -r /opt/apps/k8s young@192.168.31.103:/home/young/k8s
+$ sudo mv /home/young/k8s /opt/apps/
+
+# 修改两个节点配置文件
+$ sudo vim /opt/apps/k8s/etcd/cfg/etcd.conf
+# [member]
+ETCD_NAME=etcd-2
+ETCD_LISTEN_PEER_URLS=https://192.168.31.102:2380
+ETCD_LISTEN_CLIENT_URLS=https://192.168.31.102:2379
+
+# [cluster]
+ETCD_INITIAL_ADVERTISE_PEER_URLS=https://192.168.31.102:2380
+ETCD_ADVERTISE_CLIENT_URLS=https://192.168.31.102:2379
+```
+
+
+
+##### 启动 etcd 服务
+
+```shell
+# 首先在三个节点将 etcd.service 拷贝到 /usr/lib/systemd/system/
+$ sudo cp /opt/apps/k8s/etcd/etcd.service /usr/lib/systemd/system/
+# 创建 WorkingDirectory 目录
+$ sudo mkdir /opt/data/k8s/default.etcd
+
+$ sudo systemctl daemon-reload
+
+# 在三个节点启动 etcd 服务
+$ sudo systemctl start etcd
+
+# 设置开机启动
+$ sudo systemctl enable etcd
+
+# 查看 etcd 的日志
+$ sudo tail -f /var/log/messages
+$ journalctl -xe
+$ sudo journalctl -u etcd.service
+
+```
+
+
+
+##### 查看 etcd 集群状态
+
+```shell
+/opt/apps/k8s/etcd/bin/etcdctl \
+    --ca-file=/opt/apps/k8s/etcd/ssl/ca.pem \
+    --cert-file=/opt/apps/k8s/etcd/ssl/etcd.pem \
+    --key-file=/opt/apps/k8s/etcd/ssl/etcd-key.pem \
+    --endpoints=https://192.168.31.101:2379,https://192.168.31.102:2379,https://192.168.31.103:2379 cluster-health
+```
+
+
+
 [手把手教你部署一个最小化的 Kubernetes 集群 (qq.com)](https://mp.weixin.qq.com/s/MEopULKBhvejRiEfLXW3jw)
 
 [Debian11安装k8s - scmie - 博客园 (cnblogs.com)](https://www.cnblogs.com/scmie/articles/18222941)
