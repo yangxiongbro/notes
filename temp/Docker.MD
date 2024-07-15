@@ -1087,6 +1087,232 @@ $ sudo journalctl -u etcd.service
 
 
 
+### 部署 Master 组件
+
+K8S 集群中所有资源的访问和变更都是通过 kube-apiserver 的 REST API 来实现的，首先在 master 节点上部署 kube-apiserver 组件。
+
+#### 自签 ApiServer SSL 证书
+
+过程与 etcd 自签SSL证书类似
+
+```shell
+# 创建目录
+$ sudo mkdir -p /opt/apps/k8s/kubernetes/{ssl,cfg,bin,logs}
+$ cd /opt/apps/k8s/kubernetes/ssl
+```
+
+
+
+##### 生成 CA 证书和私钥
+
+```shell
+# 创建 CA 配置文件：ca-config.json
+$ sudo vim ca-config.json
+{
+  "signing": {
+    "default": {
+      "expiry": "87600h"
+    },
+    "profiles": {
+      "kubernetes": {
+        "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+        ],
+        "expiry": "87600h"
+      }
+    }
+  }
+}
+
+# 创建 CA 证书签名请求文件：ca-csr.json
+$ sudo vim ca-csr.json
+{
+  "CN": "kubernetes",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "Shanghai",
+      "L": "Shanghai",
+      "O": "etcd",
+      "OU": "System"
+    }
+  ],
+    "ca": {
+       "expiry": "87600h"
+    }
+}
+
+# 生成 CA 证书和私钥
+sudo bash -c "cfssl gencert -initca ca-csr.json | cfssljson -bare ca"
+```
+
+
+
+##### 生成 kubernetes 证书和私钥
+
+```shell
+# 创建证书签名请求文件：kubernetes-csr.json
+$ sudo vim kubernetes-csr.json
+{
+  "CN": "kubernetes",
+  "hosts": [
+  	"127.0.0.1",
+	"10.0.0.1",
+    "192.168.31.101",
+    "192.168.31.102",
+    "192.168.31.103",
+    "kubernetes",
+    "kubernetes.default",
+    "kubernetes.default.svc",
+    "kubernetes.default.svc.cluster",
+    "kubernetes.default.svc.cluster.local"
+  ],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "Shanghai",
+      "L": "Shanghai",
+      "O": "etcd",
+      "OU": "System"
+    }
+  ]
+}
+
+# hosts：指定会直接访问 apiserver 的IP列表，一般需指定 etcd 集群、kubernetes master 集群的主机 IP 和 kubernetes 服务的服务 IP，Node 的IP一般不需要加入。
+
+# 为 kubernetes 生成证书和私钥
+sudo bash -c "cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json | cfssljson -bare kubernetes"
+```
+
+
+
+#### 部署 kube-apiserver 组件
+
+##### 下载
+
+```shell
+# server 二进制包已经包含了 master、node 上的各个组件，下载 server 二进制包即可
+$ wget https://dl.k8s.io/v1.30.2/kubernetes-server-linux-amd64.tar.gz
+$ tar zxf kubernetes-server-linux-amd64.tar.gz
+$ sudo cp -p kubernetes/server/bin/{kube-apiserver,kube-controller-manager,kube-scheduler} /opt/apps/k8s/kubernetes/bin/
+$ sudo cp -p kubernetes/server/bin/kubectl /usr/local/bin/
+$ rm -rf kubernetes
+$ sudo mkdir /var/log/k8s/kubernetes
+```
+
+
+
+##### 配置
+
+###### 创建 Node 令牌文件
+
+Master apiserver 启用 TLS 认证后，Node节点 kubelet 组件想要加入集群，必须使用CA签发的有效证书才能与apiserver通信，当Node节点很多时，签署证书是一件很繁琐的事情，因此有了 TLS Bootstrap 机制，kubelet 会以一个低权限用户自动向 apiserver 申请证书，kubelet 的证书由 apiserver 动态签署。因此先为 apiserver 生成一个令牌文件，令牌之后会在 Node 中用到。
+
+apiserver 配置的 token 必须与 Node 节点 bootstrap.kubeconfig 配置保持一致。
+
+```shell
+# 生成 token，一个随机字符串，可使用如下命令生成 token
+$ head -c 16 /dev/urandom | od -An -t x | tr -d ' '
+# 创建 token.csv，格式：token，用户，UID，用户组
+sudo vim /opt/apps/k8s/kubernetes/cfg/token.csv
+dd8dcf475a5f0568d99aaf939e525727,kubelet-bootstrap,10001,"system:node-bootstrapper"
+```
+
+
+
+###### 配置 kube-apiserver
+
+kube-apiserver 有很多配置项，可以参考官方文档查看每个配置项的用途：[kube-apiserver](https://kubernetes.io/zh/docs/reference/command-line-tools-reference/kube-apiserver/)
+
+/opt/apps/k8s/kubernetes/cfg/kube-apiserver.conf
+
+> “\” 后面不要有空格，不要有多余的换行，否则启动失败。
+
+```conf
+KUBE_APISERVER_OPTS="--etcd-servers=https://192.168.31.101:2379,https://192.168.31.102:2379,https://192.168.31.103:2379 \
+  --bind-address=192.168.31.101 \
+  --secure-port=6443 \
+  --advertise-address=192.168.31.101 \
+  --allow-privileged=true \
+  --service-cluster-ip-range=10.0.0.0/24 \
+  --service-node-port-range=30000-32767 \
+  --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota,NodeRestriction \
+  --authorization-mode=RBAC,Node \
+  --enable-bootstrap-token-auth=true \
+  --token-auth-file=/opt/apps/k8s/kubernetes/cfg/token.csv \
+  --kubelet-client-certificate=/opt/apps/k8s/kubernetes/ssl/kubernetes.pem \
+  --kubelet-client-key=/opt/apps/k8s/kubernetes/ssl/kubernetes-key.pem \
+  --tls-cert-file=/opt/apps/k8s/kubernetes/ssl/kubernetes.pem \
+  --tls-private-key-file=/opt/apps/k8s/kubernetes/ssl/kubernetes-key.pem \
+  --client-ca-file=/opt/apps/k8s/kubernetes/ssl/ca.pem \
+  --service-account-key-file=/opt/apps/k8s/kubernetes/ssl/ca-key.pem \
+  --etcd-cafile=/opt/apps/k8s/etcd/ssl/ca.pem \
+  --etcd-certfile=/opt/apps/k8s/etcd/ssl/etcd.pem \
+  --etcd-keyfile=/opt/apps/k8s/etcd/ssl/etcd-key.pem \
+  --v=2 \
+  --logtostderr=false \
+  --log-dir=/k8s/kubernetes/logs \
+  --audit-log-maxage=30 \
+  --audit-log-maxbackup=3 \
+  --audit-log-maxsize=100 \
+  --audit-log-path=/var/log/k8s/kubernetes/k8s-audit.log"
+```
+
+
+
+##### 创建 apiserver 服务
+
+`/usr/lib/systemd/system/kube-apiserver.service`
+
+```
+[Unit]
+Description=Kubernetes API Server
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+After=network.target
+
+[Service]
+EnvironmentFile=-/opt/apps/k8s/kubernetes/cfg/kube-apiserver.conf
+ExecStart=/opt/apps/k8s/kubernetes/bin/kube-apiserver $KUBE_APISERVER_OPTS
+
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+
+##### 启动 kube-apiserver 组件
+
+```shell
+$ sudo systemctl daemon-reload
+$ sudo systemctl start kube-apiserver
+$ sudo systemctl enable kube-apiserver
+
+# 检查启动状态
+$ sudo systemctl status kube-apiserver
+
+# 查看启动日志
+$ sudo less /var/log/k8s/kubernetes/kube-apiserver.INFO
+$ sudo tail -f /var/log/messages
+$ journalctl -xe
+sudo journalctl -u kube-apiservercd.service
+```
+
+
+
 [手把手教你部署一个最小化的 Kubernetes 集群 (qq.com)](https://mp.weixin.qq.com/s/MEopULKBhvejRiEfLXW3jw)
 
 [Debian11安装k8s - scmie - 博客园 (cnblogs.com)](https://www.cnblogs.com/scmie/articles/18222941)
