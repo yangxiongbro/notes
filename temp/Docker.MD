@@ -732,6 +732,8 @@ sudo docker exec -it fa52730455e2 /bin/bash
 
 [etcd错误总结 - 杨灏 - 博客园 (cnblogs.com)](https://www.cnblogs.com/HByang/p/13340857.html)
 
+[【错误解决】kubernetes 1.21.10 apiserver报错 Error: [service-account-issuer is a required flag_error: [service-account-issuer is a required flag,-CSDN博客](https://blog.csdn.net/weixin_42072280/article/details/123428647)
+
 ### 操作系统初始化
 
 ```shell
@@ -855,7 +857,7 @@ $ sudo vim ca-csr.json
 # OU：组织单位
 
 # 生成 CA 证书和私钥
-sudo bash -c "cfssl gencert -initca ca-csr.json | cfssljson -bare ca"
+$ sudo bash -c "cfssl gencert -initca ca-csr.json | cfssljson -bare ca"
 # ca-key.pem：CA 私钥
 # ca.pem：CA 数字证书
 ```
@@ -890,7 +892,7 @@ $ sudo vim etcd-csr.json
 }
 
 # 为 etcd 生成证书和私钥
-sudo bash -c "cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=etcd etcd-csr.json | cfssljson -bare etcd"
+$ sudo bash -c "cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=etcd etcd-csr.json | cfssljson -bare etcd"
 # -ca：指定 CA 数字证书
 # -ca-key：指定 CA 私钥
 # -config：CA 配置文件
@@ -1067,9 +1069,7 @@ $ sudo systemctl start etcd
 $ sudo systemctl enable etcd
 
 # 查看 etcd 的日志
-$ sudo tail -f /var/log/messages
-$ journalctl -xe
-$ sudo journalctl -u etcd.service
+$ sudo journalctl -u etcd.service -e
 
 ```
 
@@ -1140,17 +1140,17 @@ $ sudo vim ca-csr.json
       "C": "CN",
       "ST": "Shanghai",
       "L": "Shanghai",
-      "O": "etcd",
+      "O": "kubernetes",
       "OU": "System"
     }
   ],
-    "ca": {
-       "expiry": "87600h"
-    }
+  "ca": {
+    "expiry": "87600h"
+  }
 }
 
 # 生成 CA 证书和私钥
-sudo bash -c "cfssl gencert -initca ca-csr.json | cfssljson -bare ca"
+$sudo bash -c "cfssl gencert -initca ca-csr.json | cfssljson -bare ca"
 ```
 
 
@@ -1183,7 +1183,7 @@ $ sudo vim kubernetes-csr.json
       "C": "CN",
       "ST": "Shanghai",
       "L": "Shanghai",
-      "O": "etcd",
+      "O": "kubernetes",
       "OU": "System"
     }
   ]
@@ -1192,7 +1192,40 @@ $ sudo vim kubernetes-csr.json
 # hosts：指定会直接访问 apiserver 的IP列表，一般需指定 etcd 集群、kubernetes master 集群的主机 IP 和 kubernetes 服务的服务 IP，Node 的IP一般不需要加入。
 
 # 为 kubernetes 生成证书和私钥
-sudo bash -c "cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json | cfssljson -bare kubernetes"
+$ sudo bash -c "cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json | cfssljson -bare kubernetes"
+```
+
+
+
+##### 生成 service account 证书和私钥
+
+```shell
+# 创建证书签名请求文件：sa-csr.json
+$ sudo vim sa-csr.json
+{
+  "CN": "sa",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "Shanghai",
+      "L": "Shanghai",
+      "O": "kubernetes",
+      "OU": "System"
+    }
+  ],
+  "ca": {
+    "expiry": "87600h"
+  }
+}
+
+$ sudo bash -c "cfssl gencert -initca sa-csr.json | cfssljson -bare sa"
+
+#$sudo bash -c "cfssl gencert -initca /root/k8s/certs/sa-csr.json  | cfssljson -bare /root/k8s/certs/sa -openssl x509 -in /opt/apps/k8s/kubernetes/ssl/sa.pem -pubkey -noout > /opt/apps/k8s/kubernetes/ssl/sa-key.pem"
+
 ```
 
 
@@ -1266,7 +1299,10 @@ KUBE_APISERVER_OPTS="--etcd-servers=https://192.168.31.101:2379,https://192.168.
   --audit-log-maxage=30 \
   --audit-log-maxbackup=3 \
   --audit-log-maxsize=100 \
-  --audit-log-path=/var/log/k8s/kubernetes/k8s-audit.log"
+  --audit-log-path=/var/log/k8s/kubernetes/k8s-audit.log \
+  --service-account-key-file=/opt/apps/k8s/kubernetes/ssl/sa.pem \
+  --service-account-signing-key-file=/opt/apps/k8s/kubernetes/ssl/sa-key.pem \
+  --service-account-issuer=api"
 ```
 
 
@@ -1299,17 +1335,40 @@ WantedBy=multi-user.target
 ```shell
 $ sudo systemctl daemon-reload
 $ sudo systemctl start kube-apiserver
+# 设置开机启动
 $ sudo systemctl enable kube-apiserver
 
 # 检查启动状态
 $ sudo systemctl status kube-apiserver
 
 # 查看启动日志
-$ sudo less /var/log/k8s/kubernetes/kube-apiserver.INFO
-$ sudo tail -f /var/log/messages
-$ journalctl -xe
-sudo journalctl -u kube-apiservercd.service
+$ sudo journalctl -u kube-apiserver.service -e
+
+Failed to ensure lease exists, will retry" err="namespaces \"kube-system\" not found" interval="200ms"
+poststarthook/rbac/bootstrap-roles,poststarthook/scheduling/bootstrap-system-priority-classes,poststarthook/priority-and-fairness-config-producer check failed: readyz
+poststarthook/rbac/bootstrap-roles failed: not finished
+poststarthook/scheduling/bootstrap-system-priority-classes failed: not finished
+poststarthook/priority-and-fairness-config-producer failed: not finished
+poststarthook/rbac/bootstrap-roles,poststarthook/scheduling/bootstrap-system-priority-classes check failed: readyz
+poststarthook/rbac/bootstrap-roles failed: not finished
+poststarthook/scheduling/bootstrap-system-priority-classes failed: not finished
+poststarthook/rbac/bootstrap-roles check failed: readyz
+poststarthook/rbac/bootstrap-roles failed: not finished
+
+# 检查端口，6443和8080端口应该监听成功，代表apiserver安装成功
+$ ss -pl | grep 6443
+$ ss -pl | grep 8080
 ```
+
+
+
+```shell
+$ kubectl create clusterrolebinding kubelet-bootstrap \
+  --clusterrole=system:node-bootstrapper \
+  --user=kubelet-bootstrap
+```
+
+
 
 
 
