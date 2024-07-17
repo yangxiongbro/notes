@@ -1197,39 +1197,6 @@ $ sudo bash -c "cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.js
 
 
 
-##### 生成 service account 证书和私钥
-
-```shell
-# 创建证书签名请求文件：sa-csr.json
-$ sudo vim sa-csr.json
-{
-  "CN": "sa",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "CN",
-      "ST": "Shanghai",
-      "L": "Shanghai",
-      "O": "kubernetes",
-      "OU": "System"
-    }
-  ],
-  "ca": {
-    "expiry": "87600h"
-  }
-}
-
-$ sudo bash -c "cfssl gencert -initca sa-csr.json | cfssljson -bare sa"
-
-#$sudo bash -c "cfssl gencert -initca /root/k8s/certs/sa-csr.json  | cfssljson -bare /root/k8s/certs/sa -openssl x509 -in /opt/apps/k8s/kubernetes/ssl/sa.pem -pubkey -noout > /opt/apps/k8s/kubernetes/ssl/sa-key.pem"
-
-```
-
-
-
 #### 部署 kube-apiserver 组件
 
 ##### 下载
@@ -1240,7 +1207,7 @@ $ wget https://dl.k8s.io/v1.30.2/kubernetes-server-linux-amd64.tar.gz
 $ tar zxf kubernetes-server-linux-amd64.tar.gz
 $ sudo cp -p kubernetes/server/bin/{kube-apiserver,kube-controller-manager,kube-scheduler} /opt/apps/k8s/kubernetes/bin/
 $ sudo cp -p kubernetes/server/bin/kubectl /usr/local/bin/
-$ rm -rf kubernetes
+$ sudo mv kubernetes /usr/local/src/
 $ sudo mkdir /var/log/k8s/kubernetes
 ```
 
@@ -1268,7 +1235,7 @@ dd8dcf475a5f0568d99aaf939e525727,kubelet-bootstrap,10001,"system:node-bootstrapp
 
 kube-apiserver 有很多配置项，可以参考官方文档查看每个配置项的用途：[kube-apiserver](https://kubernetes.io/zh/docs/reference/command-line-tools-reference/kube-apiserver/)
 
-/opt/apps/k8s/kubernetes/cfg/kube-apiserver.conf
+`/opt/apps/k8s/kubernetes/cfg/kube-apiserver.conf`
 
 > “\” 后面不要有空格，不要有多余的换行，否则启动失败。
 
@@ -1289,20 +1256,17 @@ KUBE_APISERVER_OPTS="--etcd-servers=https://192.168.31.101:2379,https://192.168.
   --tls-cert-file=/opt/apps/k8s/kubernetes/ssl/kubernetes.pem \
   --tls-private-key-file=/opt/apps/k8s/kubernetes/ssl/kubernetes-key.pem \
   --client-ca-file=/opt/apps/k8s/kubernetes/ssl/ca.pem \
-  --service-account-key-file=/opt/apps/k8s/kubernetes/ssl/ca-key.pem \
+  --service-account-key-file=/opt/apps/k8s/kubernetes/ssl/ca.pem \
+  --service-account-signing-key-file=/opt/apps/k8s/kubernetes/ssl/ca-key.pem \
+  --service-account-issuer=api \
   --etcd-cafile=/opt/apps/k8s/etcd/ssl/ca.pem \
   --etcd-certfile=/opt/apps/k8s/etcd/ssl/etcd.pem \
   --etcd-keyfile=/opt/apps/k8s/etcd/ssl/etcd-key.pem \
   --v=2 \
-  --logtostderr=false \
-  --log-dir=/k8s/kubernetes/logs \
   --audit-log-maxage=30 \
   --audit-log-maxbackup=3 \
   --audit-log-maxsize=100 \
-  --audit-log-path=/var/log/k8s/kubernetes/k8s-audit.log \
-  --service-account-key-file=/opt/apps/k8s/kubernetes/ssl/sa.pem \
-  --service-account-signing-key-file=/opt/apps/k8s/kubernetes/ssl/sa-key.pem \
-  --service-account-issuer=api"
+  --audit-log-path=/var/log/k8s/kubernetes/k8s-audit.log"
 ```
 
 
@@ -1318,7 +1282,7 @@ Documentation=https://github.com/GoogleCloudPlatform/kubernetes
 After=network.target
 
 [Service]
-EnvironmentFile=-/opt/apps/k8s/kubernetes/cfg/kube-apiserver.conf
+EnvironmentFile=/opt/apps/k8s/kubernetes/cfg/kube-apiserver.conf
 ExecStart=/opt/apps/k8s/kubernetes/bin/kube-apiserver $KUBE_APISERVER_OPTS
 
 Restart=on-failure
@@ -1334,9 +1298,11 @@ WantedBy=multi-user.target
 
 ```shell
 $ sudo systemctl daemon-reload
-$ sudo systemctl start kube-apiserver
 # 设置开机启动
 $ sudo systemctl enable kube-apiserver
+
+# 启动服务
+$ sudo systemctl start kube-apiserver
 
 # 检查启动状态
 $ sudo systemctl status kube-apiserver
@@ -1366,9 +1332,527 @@ $ ss -pl | grep 8080
 $ kubectl create clusterrolebinding kubelet-bootstrap \
   --clusterrole=system:node-bootstrapper \
   --user=kubelet-bootstrap
+  
+$ kubectl create clusterrolebinding prometheus-admin --clusterrole cluster-admin --user system:anonymous
+
 ```
 
 
+
+#### 部署 kube-controller-manager 组件
+
+##### 配置
+
+详细的配置可参考官方文档：[kube-controller-manager](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/)
+
+`/opt/apps/k8s/kubernetes/cfg/kube-controller-manager.conf`
+
+```conf
+KUBE_CONTROLLER_MANAGER_OPTS="--leader-elect=true \
+  --master=127.0.0.1:8080 \
+  --allocate-node-cidrs=true \
+  --cluster-cidr=10.244.0.0/16 \
+  --service-cluster-ip-range=10.0.0.0/24 \
+  --cluster-signing-cert-file=/opt/apps/k8s/kubernetes/ssl/ca.pem \
+  --cluster-signing-key-file=/opt/apps/k8s/kubernetes/ssl/ca-key.pem \
+  --root-ca-file=/opt/apps/k8s/kubernetes/ssl/ca.pem \
+  --service-account-private-key-file=/opt/apps/k8s/kubernetes/ssl/ca-key.pem \
+  --v=2"
+```
+
+
+
+##### 创建 kube-controller-manager 服务
+
+`/usr/lib/systemd/system/kube-controller-manager.service`
+
+```
+[Unit]
+Description=Kubernetes Controller Manager
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+After=network.target
+
+[Service]
+EnvironmentFile=/opt/apps/k8s/kubernetes/cfg/kube-controller-manager.conf
+ExecStart=/opt/apps/k8s/kubernetes/bin/kube-controller-manager $KUBE_CONTROLLER_MANAGER_OPTS
+
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+
+##### 启动 kube-controller-manager 组件
+
+```shell
+$ sudo systemctl daemon-reload
+# 设置开机启动
+$ sudo systemctl enable kube-controller-manager
+
+# 启动服务
+$ sudo systemctl start kube-controller-manager
+
+# 检查启动状态
+$ sudo systemctl status kube-controller-manager
+
+# 查看启动日志
+$ sudo journalctl -u kube-controller-manager.service -e
+```
+
+
+
+#### 部署 kube-scheduler 组件
+
+##### 配置
+
+详细的配置可参考官方文档：[kube-scheduler](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-scheduler/)
+
+`/opt/apps/k8s/kubernetes/cfg/kube-scheduler.conf`
+
+```conf
+KUBE_SCHEDULER_OPTS="--leader-elect=true \
+  --master=127.0.0.1:8080 \
+  --v=2"
+```
+
+
+
+#####  创建 kube-scheduler 服务
+
+`/usr/lib/systemd/system/kube-scheduler.service`
+
+```
+[Unit]
+Description=Kubernetes Scheduler
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+After=network.target
+
+[Service]
+EnvironmentFile=/opt/apps/k8s/kubernetes/cfg/kube-scheduler.conf
+ExecStart=/opt/apps/k8s/kubernetes/bin/kube-scheduler $KUBE_SCHEDULER_OPTS
+
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+
+##### 启动 kube-scheduler 组件
+
+```shell
+$ sudo systemctl daemon-reload
+# 设置开机启动
+$ sudo systemctl enable kube-scheduler
+
+# 启动服务
+$ sudo systemctl start kube-scheduler
+
+# 检查启动状态
+$ sudo systemctl status kube-scheduler
+
+# 查看启动日志
+$ sudo journalctl -u kube-scheduler.service -e
+```
+
+
+
+#### kubectl
+
+```shell
+# 查看组件状态
+$ kubectl get cs
+```
+
+
+
+### 部署 Node 组件
+
+#### 安装 Docker
+
+##### 配置安装源
+
+`/etc/apt/sources.list`
+
+```
+# 阿里源 
+deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker-archive-keyring.gpg] https://mirrors.aliyun.com/docker-ce/linux/debian bullseye stable
+# 官方源
+# deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker-archive-keyring.gpg] https://download.docker.com/linux/debian bullseye stable
+```
+
+
+
+##### 安装
+
+```shell
+$ sudo apt update
+$ sudo apt install docker-ce
+# 设置开机启动
+$ sudo systemctl enable docker
+
+# 启动 Docker
+$ sudo systemctl start docker
+
+# 检查启动状态
+$ sudo systemctl status docker
+
+# 验证安装是否成功
+$ docker -v
+$ docker info
+
+# 建立 docker 组
+$ sudo groupadd docker
+# 将当前用户加入 docker 组
+$ sudo usermod -aG docker $USER
+```
+
+
+
+##### 镜像加速
+
+```shell
+$ sudo mkdir -p /etc/docker
+$ sudo vim /etc/docker/daemon.json
+$ sudo systemctl daemon-reload
+$ sudo systemctl restart docker
+```
+
+`/etc/docker/daemon.json`
+
+```json
+{
+  "registry-mirrors": ["https://82m9ar63.mirror.aliyuncs.com"],
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2"
+}
+```
+
+
+
+#### Node 节点证书
+
+##### 生成 kube-proxy 证书和私钥
+
+首先在 master 节点上，通过颁发的 CA 证书先创建好 Node 节点要使用的证书，先创建证书签名请求文件。
+
+`/opt/apps/k8s/kubernetes/ssl/kube-proxy-csr.json`
+
+```json
+{
+    "CN": "system:kube-proxy",
+    "hosts": [],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+          "C": "CN",
+          "ST": "Shanghai",
+          "L": "Shanghai",
+          "O": "kubernetes",
+          "OU": "System"
+        }
+    ]
+}
+```
+
+```shell
+$ cd /opt/apps/k8s/kubernetes/ssl
+$ sudo bash -c "cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kube-proxy-csr.json | cfssljson -bare kube-proxy"
+$ ls kube-proxy*
+```
+
+
+
+#### 创建相关文件和目录
+
+```shell
+$ mkdir -p /opt/apps/k8s/kubernetes/{bin,cfg,logs,ssl}
+
+# 将 kubelet、kube-proxy 拷贝到 node 节点上
+$ scp -r /usr/local/src/kubernetes/server/bin/{kubelet,kube-proxy} root@192.168.31.102:/opt/apps/k8s/kubernetes/bin/
+
+# 将证书拷贝到 node 节点上
+$ scp -r  /opt/apps/k8s/kubernetes/ssl/{ca.pem,kube-proxy.pem,kube-proxy-key.pem} root@192.168.31.102:/opt/apps/k8s/kubernetes/ssl/
+```
+
+
+
+#### 安装 kubelet
+
+##### 配置
+
+###### bootstrap.kubeconfig
+
+bootstrap.kubeconfig 将用于向 apiserver 请求证书，apiserver 会验证 token、证书 是否有效，验证通过则自动颁发证书。
+
+`/opt/apps/k8s/kubernetes/cfg/bootstrap.kubeconfig`
+
+```json
+apiVersion: v1
+clusters:
+- cluster: 
+    certificate-authority: /opt/apps/k8s/kubernetes/ssl/ca.pem
+    server: https://192.168.31.101:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: kubelet-bootstrap
+  name: default
+current-context: default
+kind: Config
+preferences: {}
+users:
+- name: kubelet-bootstrap
+  user:
+    token: dd8dcf475a5f0568d99aaf939e525727
+```
+
+
+
+###### kubelet-config.yml
+
+为了安全性，kubelet 禁止匿名访问，必须授权才可以，通过 kubelet-config.yml 授权 apiserver 访问 kubelet。
+
+`/opt/apps/k8s/kubernetes/cfg/kubelet-config.yml`
+
+```yml
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+address: 0.0.0.0
+port: 10250
+readOnlyPort: 10255
+cgroupDriver: cgroupfs
+clusterDNS:
+- 10.0.0.2 
+clusterDomain: cluster.local
+failSwapOn: false
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    cacheTTL: 2m0s
+    enabled: true
+  x509: 
+    clientCAFile: /opt/apps/k8s/kubernetes/ssl/ca.pem
+authorization:
+  mode: Webhook
+  webhook:
+    cacheAuthroizedTTL: 5m0s
+    cacheUnauthorizedTTL: 30s
+evictionHard:
+  imagefs.available: 15%
+  memory.available: 100Mi
+  nodefs.available: 10%
+  nodefs.inodesFree: 5%
+maxOpenFiles: 100000
+maxPods: 110
+```
+
+
+
+###### kubelet.conf
+
+详细的配置可参考官方文档：[kubelet ](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/)
+
+`/opt/apps/k8s/kubernetes/cfg/kubelet.conf`
+
+```conf
+KUBELET_OPTS="--hostname-override=server02 \
+  --cgroups-per-qos=false \
+  --enforce-node-allocatable="" \
+  --kubeconfig=/opt/apps/k8s/kubernetes/cfg/kubelet.kubeconfig \
+  --bootstrap-kubeconfig=/opt/apps/k8s/kubernetes/cfg/bootstrap.kubeconfig \
+  --config=/opt/apps/k8s/kubernetes/cfg/kubelet-config.yml \
+  --cert-dir=/opt/apps/k8s/kubernetes/ssl \
+  --pod-infra-container-image=kubernetes/pause:latest \
+  --v=2"
+```
+
+
+
+##### 创建 kubelet 服务
+
+`/usr/lib/systemd/system/kubelet.service`
+
+```
+[Unit]
+Description=Kubernetes Kubelet
+After=docker.service
+Before=docker.service
+
+[Service]
+EnvironmentFile=/opt/apps/k8s/kubernetes/cfg/kubelet.conf
+ExecStart=/opt/apps/k8s/kubernetes/bin/kubelet $KUBELET_OPTS
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+
+##### 启动 kubelet
+
+```shell
+$ sudo systemctl daemon-reload
+# 设置开机启动
+$ sudo systemctl enable kubelet
+
+# 启动服务
+$ sudo systemctl start kubelet
+
+# 检查启动状态
+$ sudo systemctl status kubelet
+
+# 查看启动日志
+$ sudo journalctl -u kubelet.service -e
+```
+
+
+
+#### Master 给 Node 授权
+
+kubelet 启动后，还没加入到集群中，会向 apiserver 请求证书，需手动在 master 上对 node 授权。
+
+```shell
+# 查看是否有新的客户端请求颁发证书
+$ kubectl get csr
+
+# 给客户端颁发证书，允许客户端加入集群
+$ kubectl certificate approve node-csr-FoPLmv3Sr2XcYvNAineE6RpdARf2eKQzJsQyfhk-xf8
+
+# 查看 node 是否加入集群(此时的 node 还处于未就绪的状态，因为还没有安装 CNI 组件)
+$ kubectl get node
+
+# 颁发证书后，可以在 /opt/apps/k8s/kubernetes/ssl 下看到 master 为 kubelet 颁发的证书
+$ ls /opt/apps/k8s/kubernetes/ssl/kubelet*
+# kubelet-client-current.pem kublet.crt kubelet.key
+# 在 /opt/apps/k8s/kubernetes/cfg 下可以看到自动生成的 kubelet.kubeconfig 配置文件
+
+```
+
+
+
+#### 安装 kube-proxy
+
+##### 配置
+
+###### kube-proxy.kubeconfig
+
+`/opt/apps/k8s/kubernetes/cfg/kube-proxy.kubeconfig`
+
+```conf
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority: /opt/apps/k8s/kubernetes/ssl/ca.pem
+    server: https://192.168.31.101:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: kube-proxy
+  name: default
+current-context: default
+kind: Config
+preferences: {}
+users:
+- name: kube-proxy
+  user:
+    client-certificate: /opt/apps/k8s/kubernetes/ssl/kube-proxy.pem
+    client-key: /opt/apps/k8s/kubernetes/ssl/kube-proxy-key.pem
+```
+
+
+
+###### kube-proxy-config.yml
+
+`/opt/apps/k8s/kubernetes/cfg/kube-proxy-config.yml`
+
+```yml
+kind: KubeProxyConfiguration
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+address: 0.0.0.0
+metrisBindAddress: 0.0.0.0:10249
+clientConnection:
+  kubeconfig: /opt/apps/k8s/kubernetes/cfg/kube-proxy.kubeconfig
+hostnameOverride: server02
+clusterCIDR: 10.0.0.0/24
+mode: ipvs
+ipvs:
+  scheduler: "rr"
+iptables:
+  masqueradeAll: true
+```
+
+
+
+###### kube-proxy.conf
+
+详细的配置可参考官方文档：[kube-proxy](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-proxy/)
+
+`/opt/apps/k8s/kubernetes/cfg/kube-proxy.conf`
+
+```conf
+KUBE_PROXY_OPTS="--config=/opt/apps/k8s/kubernetes/cfg/kube-proxy-config.yml \
+  --v=2 \
+  --logtostderr=false \
+  --log_dir=/k8s/kubernetes/logs"
+```
+
+
+
+##### 创建 kube-proxy 服务
+
+`/usr/lib/systemd/system/kube-proxy.service`
+
+```
+[Unit]
+Description=Kubernetes Proxy
+After=network.target
+
+[Service]
+EnvironmentFile=/opt/apps/k8s/kubernetes/cfg/kube-proxy.conf
+ExecStart=/opt/apps/k8s/kubernetes/bin/kube-proxy $KUBE_PROXY_OPTS
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+
+##### 启动 kube-proxy
+
+```shell
+$ sudo systemctl daemon-reload
+# 设置开机启动
+$ sudo systemctl enable kube-proxy
+
+# 启动服务
+$ sudo systemctl start kube-proxy
+
+# 检查启动状态
+$ sudo systemctl status kube-proxy
+
+# 查看启动日志
+$ sudo journalctl -u kube-proxy.service -e
+```
 
 
 
