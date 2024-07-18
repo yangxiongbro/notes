@@ -1227,6 +1227,7 @@ $ head -c 16 /dev/urandom | od -An -t x | tr -d ' '
 # 创建 token.csv，格式：token，用户，UID，用户组
 sudo vim /opt/apps/k8s/kubernetes/cfg/token.csv
 dd8dcf475a5f0568d99aaf939e525727,kubelet-bootstrap,10001,"system:node-bootstrapper"
+8eb02c7f1df2683c73275d389692d353,young,10002,"system:cluster-admin"
 ```
 
 
@@ -1267,6 +1268,16 @@ KUBE_APISERVER_OPTS="--etcd-servers=https://192.168.31.101:2379,https://192.168.
   --audit-log-maxbackup=3 \
   --audit-log-maxsize=100 \
   --audit-log-path=/var/log/k8s/kubernetes/k8s-audit.log"
+```
+
+
+
+###### 配置 kubectl
+
+`$HOME/.kube/config`
+
+```conf
+
 ```
 
 
@@ -1326,14 +1337,30 @@ $ ss -pl | grep 6443
 $ ss -pl | grep 8080
 ```
 
-
+[云原生|kubernetes部署和运行维护中的错误汇总（不定时更新）_etcd恢复后pod服务没生效-CSDN博客](https://blog.csdn.net/alwaysbefine/article/details/126531104)
 
 ```shell
 $ kubectl create clusterrolebinding kubelet-bootstrap \
+  --server=https://192.168.31.101:6443 \
+  --token=dd8dcf475a5f0568d99aaf939e525727 \
+  --certificate-authority=/opt/apps/k8s/kubernetes/ssl/ca.pem \
   --clusterrole=system:node-bootstrapper \
   --user=kubelet-bootstrap
   
-$ kubectl create clusterrolebinding prometheus-admin --clusterrole cluster-admin --user system:anonymous
+$ kubectl get clusterrolebinding kubelet-bootstrap \
+  --server=https://192.168.31.101:6443 \
+  --token=dd8dcf475a5f0568d99aaf939e525727 \
+  --certificate-authority=/opt/apps/k8s/kubernetes/ssl/ca.pem
+  
+$ kubectl get cs \
+  --server=https://192.168.31.101:6443 \
+  --token=8eb02c7f1df2683c73275d389692d353 \
+  --certificate-authority=/opt/apps/k8s/kubernetes/ssl/ca.pem
+  
+$ kubectl create clusterrolebinding prometheus-admin \
+  --server=https://192.168.31.101:6443 \
+  --clusterrole cluster-admin \
+  --user=system:anonymous
 
 ```
 
