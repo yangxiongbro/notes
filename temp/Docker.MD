@@ -1272,16 +1272,6 @@ KUBE_APISERVER_OPTS="--etcd-servers=https://192.168.31.101:2379,https://192.168.
 
 
 
-###### 配置 kubectl
-
-`$HOME/.kube/config`
-
-```conf
-
-```
-
-
-
 ##### 创建 apiserver 服务
 
 `/usr/lib/systemd/system/kube-apiserver.service`
@@ -1340,6 +1330,13 @@ $ ss -pl | grep 8080
 [云原生|kubernetes部署和运行维护中的错误汇总（不定时更新）_etcd恢复后pod服务没生效-CSDN博客](https://blog.csdn.net/alwaysbefine/article/details/126531104)
 
 ```shell
+$ sudo bash -c "kubectl create clusterrolebinding kubelet-bootstrap \
+  --kubeconfig=$HOME/.kube/config \
+  --cluster=kubernetes \
+  --context=kubelet-bootstrap@kubernetes \
+  --clusterrole=system:node-bootstrapper \
+  --user=kubelet-bootstrap"
+
 $ kubectl create clusterrolebinding kubelet-bootstrap \
   --server=https://192.168.31.101:6443 \
   --token=dd8dcf475a5f0568d99aaf939e525727 \
@@ -1362,6 +1359,34 @@ $ kubectl create clusterrolebinding prometheus-admin \
   --clusterrole cluster-admin \
   --user=system:anonymous
 
+```
+
+
+
+##### 配置 kubectl
+
+[k8s kubeconfig配置文件 - 小吉猫 - 博客园 (cnblogs.com)](https://www.cnblogs.com/wangguishe/p/17600637.html)
+
+[kubectl学习_kubectl 配置文件-CSDN博客](https://blog.csdn.net/mmxhappy/article/details/136020685)
+
+`$HOME/.kube/config`
+
+```shell
+$ kubectl config view
+
+# kubectl config set-cluster <cluster-name> --server=<master-url> 设置集群信息
+$ kubectl config set-cluster kubernetes --embed-certs=true --certificate-authority=/opt/apps/k8s/kubernetes/ssl/ca.pem --server="https://192.168.31.101:6443" --kubeconfig=$HOME/.kube/config
+
+# kubectl config set-credentials <user-name> 设置用户认证信息
+$ sudo bash -c "kubectl config set-credentials kubelet-bootstrap --embed-certs=true --client-certificate=/opt/apps/k8s/kubernetes/ssl/ca.pem --client-key=/opt/apps/k8s/kubernetes/ssl/ca-key.pem --kubeconfig=$HOME/.kube/config"
+
+# kubectl config set-context <context-name> --cluster=<cluster-name> --user=<user-name> 设置上下文信息
+$ kubectl config set-context kubelet-bootstrap@kubernetes --cluster=kubernetes --namespace=default --user=kubelet-bootstrap --kubeconfig=$HOME/.kube/config
+
+$ kubectl config set-credentials young --embed-certs=true --client-certificate=/opt/apps/k8s/kubernetes/ssl/ca.pem --client-key=/opt/apps/k8s/kubernetes/ssl/ca-key.pem --kubeconfig=$HOME/.kube/config
+$ kubectl config set-context young@kubernetes --cluster=kubernetes --namespace=default --user=young --kubeconfig=$HOME/.kube/config
+
+# kubectl get ns/default --kubeconfig=$HOME/.kube/config
 ```
 
 
