@@ -771,6 +771,12 @@ $ vim /etc/hosts
 $ ntpdate time.windows.com
 
 # # 如果不能联外网可使用 date 命令设置时间
+
+# 创建用户用户组
+$ sudo groupadd kubernetes
+$ sudo useradd -g kubernetes -s /bin/bash -m k8s
+$ sudo passwd k8s
+$ sudo usermod -aG sudoers k8s
 ```
 
 
@@ -1197,6 +1203,38 @@ $ sudo bash -c "cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.js
 
 
 
+##### 生成 admin 证书和私钥
+
+```shell
+# 创建证书签名请求文件：admin-csr.json
+$ sudo vim admin-csr.json
+{
+  "CN": "admin",
+  "hosts": [],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "Shanghai",
+      "L": "Shanghai",
+      "O": "system:masters",
+      "OU": "System"
+    }
+  ]
+}
+
+# 注意：重点在于上面的"O":“system:masters”,
+# kube-apiserver 预定义了一些 RBAC 使用的 RoleBindings，如 cluster-admin 将 Group system:masters 与 Role cluster-admin 绑定，该 Role 授予了调用kube-apiserver 的所有 API的权限； O 指定该证书的 Group 为 system:masters，kubelet 使用该证书访问 kube-apiserver 时 ，由于证书被 CA 签名，所以认证通过，同时由于证书用户组为经过预授权的 system:masters，所以被授予访问所有 API 的权限
+
+# 生成证书和私钥
+$ sudo bash -c "cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes admin-csr.json | cfssljson -bare admin"
+```
+
+
+
 #### 部署 kube-apiserver 组件
 
 ##### 下载
@@ -1227,7 +1265,7 @@ $ head -c 16 /dev/urandom | od -An -t x | tr -d ' '
 # 创建 token.csv，格式：token，用户，UID，用户组
 sudo vim /opt/apps/k8s/kubernetes/cfg/token.csv
 dd8dcf475a5f0568d99aaf939e525727,kubelet-bootstrap,10001,"system:node-bootstrapper"
-8eb02c7f1df2683c73275d389692d353,young,10002,"system:cluster-admin"
+09581b712dad24fcca9717cce19ae8f7,k8s,10002,"system:admin"
 ```
 
 
@@ -1297,6 +1335,8 @@ WantedBy=multi-user.target
 
 ##### 启动 kube-apiserver 组件
 
+[云原生|kubernetes部署和运行维护中的错误汇总（不定时更新）_etcd恢复后pod服务没生效-CSDN博客](https://blog.csdn.net/alwaysbefine/article/details/126531104)
+
 ```shell
 $ sudo systemctl daemon-reload
 # 设置开机启动
@@ -1311,54 +1351,8 @@ $ sudo systemctl status kube-apiserver
 # 查看启动日志
 $ sudo journalctl -u kube-apiserver.service -e
 
-Failed to ensure lease exists, will retry" err="namespaces \"kube-system\" not found" interval="200ms"
-poststarthook/rbac/bootstrap-roles,poststarthook/scheduling/bootstrap-system-priority-classes,poststarthook/priority-and-fairness-config-producer check failed: readyz
-poststarthook/rbac/bootstrap-roles failed: not finished
-poststarthook/scheduling/bootstrap-system-priority-classes failed: not finished
-poststarthook/priority-and-fairness-config-producer failed: not finished
-poststarthook/rbac/bootstrap-roles,poststarthook/scheduling/bootstrap-system-priority-classes check failed: readyz
-poststarthook/rbac/bootstrap-roles failed: not finished
-poststarthook/scheduling/bootstrap-system-priority-classes failed: not finished
-poststarthook/rbac/bootstrap-roles check failed: readyz
-poststarthook/rbac/bootstrap-roles failed: not finished
-
-# 检查端口，6443和8080端口应该监听成功，代表apiserver安装成功
+# 检查端口，6443端口应该监听成功，代表apiserver安装成功
 $ ss -pl | grep 6443
-$ ss -pl | grep 8080
-```
-
-[云原生|kubernetes部署和运行维护中的错误汇总（不定时更新）_etcd恢复后pod服务没生效-CSDN博客](https://blog.csdn.net/alwaysbefine/article/details/126531104)
-
-```shell
-$ sudo bash -c "kubectl create clusterrolebinding kubelet-bootstrap \
-  --kubeconfig=$HOME/.kube/config \
-  --cluster=kubernetes \
-  --context=kubelet-bootstrap@kubernetes \
-  --clusterrole=system:node-bootstrapper \
-  --user=kubelet-bootstrap"
-
-$ kubectl create clusterrolebinding kubelet-bootstrap \
-  --server=https://192.168.31.101:6443 \
-  --token=dd8dcf475a5f0568d99aaf939e525727 \
-  --certificate-authority=/opt/apps/k8s/kubernetes/ssl/ca.pem \
-  --clusterrole=system:node-bootstrapper \
-  --user=kubelet-bootstrap
-  
-$ kubectl get clusterrolebinding kubelet-bootstrap \
-  --server=https://192.168.31.101:6443 \
-  --token=dd8dcf475a5f0568d99aaf939e525727 \
-  --certificate-authority=/opt/apps/k8s/kubernetes/ssl/ca.pem
-  
-$ kubectl get cs \
-  --server=https://192.168.31.101:6443 \
-  --token=8eb02c7f1df2683c73275d389692d353 \
-  --certificate-authority=/opt/apps/k8s/kubernetes/ssl/ca.pem
-  
-$ kubectl create clusterrolebinding prometheus-admin \
-  --server=https://192.168.31.101:6443 \
-  --clusterrole cluster-admin \
-  --user=system:anonymous
-
 ```
 
 
@@ -1369,24 +1363,37 @@ $ kubectl create clusterrolebinding prometheus-admin \
 
 [kubectl学习_kubectl 配置文件-CSDN博客](https://blog.csdn.net/mmxhappy/article/details/136020685)
 
+[【错误解决】kubectl权限不够，报错：User “kubernetes“ cannot create resource “clusterrolebindings“ in API group “rb_error: failed to create clusterrolebinding: cluste-CSDN博客](https://blog.csdn.net/weixin_42072280/article/details/123431653)
+
 `$HOME/.kube/config`
 
 ```shell
-$ kubectl config view
+$ sudo kubectl config view
 
 # kubectl config set-cluster <cluster-name> --server=<master-url> 设置集群信息
-$ kubectl config set-cluster kubernetes --embed-certs=true --certificate-authority=/opt/apps/k8s/kubernetes/ssl/ca.pem --server="https://192.168.31.101:6443" --kubeconfig=$HOME/.kube/config
+$ sudo kubectl config set-cluster kubernetes --embed-certs=true --certificate-authority=/opt/apps/k8s/kubernetes/ssl/kubernetes.pem --server="https://192.168.31.101:6443" --kubeconfig=$HOME/.kube/config
 
 # kubectl config set-credentials <user-name> 设置用户认证信息
-$ sudo bash -c "kubectl config set-credentials kubelet-bootstrap --embed-certs=true --client-certificate=/opt/apps/k8s/kubernetes/ssl/ca.pem --client-key=/opt/apps/k8s/kubernetes/ssl/ca-key.pem --kubeconfig=$HOME/.kube/config"
-
+$ sudo kubectl config set-credentials kubelet-bootstrap --embed-certs=true --client-certificate=/opt/apps/k8s/kubernetes/ssl/admin.pem --client-key=/opt/apps/k8s/kubernetes/ssl/admin-key.pem --kubeconfig=$HOME/.kube/config
 # kubectl config set-context <context-name> --cluster=<cluster-name> --user=<user-name> 设置上下文信息
-$ kubectl config set-context kubelet-bootstrap@kubernetes --cluster=kubernetes --namespace=default --user=kubelet-bootstrap --kubeconfig=$HOME/.kube/config
+$ sudo kubectl config set-context kubelet-bootstrap@kubernetes --cluster=kubernetes --namespace=default --user=kubelet-bootstrap --kubeconfig=$HOME/.kube/config
 
-$ kubectl config set-credentials young --embed-certs=true --client-certificate=/opt/apps/k8s/kubernetes/ssl/ca.pem --client-key=/opt/apps/k8s/kubernetes/ssl/ca-key.pem --kubeconfig=$HOME/.kube/config
-$ kubectl config set-context young@kubernetes --cluster=kubernetes --namespace=default --user=young --kubeconfig=$HOME/.kube/config
+$ sudo kubectl config set-credentials k8s --embed-certs=true --client-certificate=/opt/apps/k8s/kubernetes/ssl/admin.pem --client-key=/opt/apps/k8s/kubernetes/ssl/admin-key.pem --kubeconfig=$HOME/.kube/config
+$ sudo kubectl config set-context k8s@kubernetes --cluster=kubernetes --namespace=default --user=k8s --kubeconfig=$HOME/.kube/config
+```
 
-# kubectl get ns/default --kubeconfig=$HOME/.kube/config
+
+
+##### kubelet-bootstrap 用户绑定系统集群角色
+
+ 将 kubelet-bootstrap 用户绑定到系统集群角色，之后便于 Node 使用token请求证书
+
+```shell
+$ sudo kubectl create clusterrolebinding kubelet-bootstrap \
+  --kubeconfig=$HOME/.kube/config \
+  --context=kubelet-bootstrap@kubernetes \
+  --clusterrole=system:node-bootstrapper \
+  --user=kubelet-bootstrap
 ```
 
 
@@ -1401,7 +1408,7 @@ $ kubectl config set-context young@kubernetes --cluster=kubernetes --namespace=d
 
 ```conf
 KUBE_CONTROLLER_MANAGER_OPTS="--leader-elect=true \
-  --master=127.0.0.1:8080 \
+  --master=127.0.0.1:6443 \
   --allocate-node-cidrs=true \
   --cluster-cidr=10.244.0.0/16 \
   --service-cluster-ip-range=10.0.0.0/24 \
@@ -1466,7 +1473,7 @@ $ sudo journalctl -u kube-controller-manager.service -e
 
 ```conf
 KUBE_SCHEDULER_OPTS="--leader-elect=true \
-  --master=127.0.0.1:8080 \
+  --master=127.0.0.1:6443 \
   --v=2"
 ```
 
@@ -1514,11 +1521,11 @@ $ sudo journalctl -u kube-scheduler.service -e
 
 
 
-#### kubectl
+#### 查看组件状态
 
 ```shell
 # 查看组件状态
-$ kubectl get cs
+$ sudo kubectl get cs
 ```
 
 
@@ -1782,13 +1789,13 @@ kubelet 启动后，还没加入到集群中，会向 apiserver 请求证书，�
 
 ```shell
 # 查看是否有新的客户端请求颁发证书
-$ kubectl get csr
+$ sudo kubectl get csr
 
 # 给客户端颁发证书，允许客户端加入集群
-$ kubectl certificate approve node-csr-FoPLmv3Sr2XcYvNAineE6RpdARf2eKQzJsQyfhk-xf8
+$ sudo kubectl certificate approve node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY
 
 # 查看 node 是否加入集群(此时的 node 还处于未就绪的状态，因为还没有安装 CNI 组件)
-$ kubectl get node
+$ sudo kubectl get node
 
 # 颁发证书后，可以在 /opt/apps/k8s/kubernetes/ssl 下看到 master 为 kubelet 颁发的证书
 $ ls /opt/apps/k8s/kubernetes/ssl/kubelet*
@@ -1861,9 +1868,7 @@ iptables:
 
 ```conf
 KUBE_PROXY_OPTS="--config=/opt/apps/k8s/kubernetes/cfg/kube-proxy-config.yml \
-  --v=2 \
-  --logtostderr=false \
-  --log_dir=/k8s/kubernetes/logs"
+  --v=2"
 ```
 
 
@@ -1905,6 +1910,12 @@ $ sudo systemctl status kube-proxy
 # 查看启动日志
 $ sudo journalctl -u kube-proxy.service -e
 ```
+
+
+
+### 部署K8S容器集群网络(Flannel)
+
+
 
 
 
