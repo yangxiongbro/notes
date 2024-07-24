@@ -11,6 +11,406 @@ java -jar ./test.jar -Dspring.config.additional-location=../config/application-m
 
 
 
+## 集合
+
+
+
+### List
+
+
+
+#### List 转 Map
+
+```java
+public Map<Long, String> getIdNameMap(List<User> users) {
+    return accounts.stream().collect(Collectors.toMap(User::getId, User::getUserName));
+}
+//第二种：将id和实体Bean做为K,V account -> account是一个返回本身的lambda表达式，后面的使用Function接口中的一个默认方法代替，使整个方法更简洁优雅。
+public Map<Long, Account> getIdAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(Collectors.toMap(Account::getId, account -> account));
+}
+public Map<Long, Account> getIdAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(Collectors.toMap(Account::getId, Function.identity()));
+}
+//第三种： key存在重复记录时处理,如果使用第一种方法会出错，所以这里只是简单的使用后者覆盖前者来解决key重复问题
+public Map<String, Account> getNameAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(Collectors.toMap(Account::getUsername, Function.identity(), (key1, key2) -> key2));
+}
+//第四种： 使用某个具体的Map类来保存，如保存时使用LinkedHashMap
+public Map<String, Account> getNameAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(Collectors.toMap(Account::getUsername, Function.identity(), (key1, key2) -> key2, LinkedHashMap::new));
+}
+```
+
+
+
+#### List 转 Map 当value值为空时会报空指针异常解决方案
+
+```java
+//解决方案一，使用Optional类处理null
+public Map<String, String> getNameAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(Collectors.toMap(s -> Optional.ofNullable(s.getUsername()).orElse(null), s -> Optional.ofNullable(s.getPassword()).orElse("unknown"), (key1, key2) -> key2, HashMap::new));
+}
+
+//解决方案二，直接使用collect()方法进行规约操作
+public Map<String, String> getNameAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(HashMap::new, (map, item) -> map.put(item.getUsername(), item.getPassword()), HashMap::putAll);
+}
+```
+
+
+
+#### 取对象 List 中的某个属性为属性 List
+
+```java
+List<String> names=list.stream().map(PersonData::getName).collect(Collectors.toList());
+```
+
+
+
+#### List 按某个字段分组
+
+```java
+Map<String, List<DataVO>> map = list.stream().collect(Collectors.groupingBy(item -> item.getName()));
+// 或
+Map<String, List<DataVO>> map = list.stream().collect(Collectors.groupingBy(DataVO::getName));
+```
+
+
+
+#### 字符串集合合并为一个字符串
+
+```java
+String str = list.stream().collect(Collectors.joining(","));
+String str = String.join(",", list);
+```
+
+
+
+#### 遍历过程中对集合进行增删
+
+
+
+#### 二维数组转一维数组
+
+```java
+// 数组
+public static int[] convertToArray(int[][] matrix) {
+    return Arrays.stream(matrix)
+            .flatMapToInt(Arrays::stream)
+            .toArray();
+}
+
+// list
+public static List<DataVO> convertToArray(List<List<DataVO>> dataList) {
+    return dataList.stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+}
+
+public static List<ChildDataVO> convertToArray(List<ParentDataVO> parentList) {
+    return parentList.stream()
+        .map(ParentDataVO::getChildList)
+        .flatMap(Collection::stream)
+        .collect(Collectors.toList());
+}
+```
+
+
+
+### Map
+
+#### 键值对
+
+```java
+Map.Entry<String, String> entry = new AbstractMap.SimpleEntry<>("key", "value")
+```
+
+
+
+## 时间
+
+#### 时间格式
+
+```java
+// yyyy-MM-dd HH:mm:ss
+```
+
+
+
+#### Date
+
+##### 字符串转 Date
+
+```java
+SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+Date date = sdf.parse("2022-09-01 12:00:00");
+```
+
+
+
+##### Date 格式化为字符串
+
+```java
+Date date = new Date();
+SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+String dateStr = sdf.format(date);
+```
+
+
+
+#### LocalDate
+
+
+
+##### 比较日期大小
+
+```java
+LocalDate startDateOfMonth = month.with(TemporalAdjusters.firstDayOfMonth());
+LocalDate endDateOfMonth = month.with(TemporalAdjusters.lastDayOfMonth());
+// startDateOfMonth > endDateOfMonth 结果大于 0
+// startDateOfMonth = endDateOfMonth 结果等于 0
+// startDateOfMonth < endDateOfMonth 结果小于 0
+startDateOfMonth.compareTo(endDateOfMonth)
+```
+
+
+
+##### 获取当前一周的开始、结束日期
+
+```java
+LocalDate nowDate = LocalDate.now();
+LocalDate startDateOfWeek = nowDate.minusDays(nowDate.getDayOfWeek().getValue() - 1);
+LocalDate endDateOfWeek = nowDate.plusDays(7 - nowDate.getDayOfWeek().getValue());
+```
+
+
+
+##### 获取一个月的所有周的开始、结束日期
+
+```java
+public static List<PairValueVO<LocalDate, LocalDate>> weeksBoundOfMonth(LocalDate month){
+    if(null == month){
+        return Collections.emptyList();
+    }
+    List<PairValueVO<LocalDate, LocalDate>> weeksOfMonthList = new ArrayList<>(6);
+    LocalDate startDateOfMonth = month.with(TemporalAdjusters.firstDayOfMonth());
+    LocalDate endDateOfMonth = month.with(TemporalAdjusters.lastDayOfMonth());
+    LocalDate startDateOfWeek = startDateOfMonth;
+    int endDateOfWeekOffset = 7 - startDateOfMonth.getDayOfWeek().getValue();
+    while (startDateOfWeek.compareTo(endDateOfMonth) <= 0){
+        LocalDate endDateOfWeek = startDateOfWeek.plusDays(endDateOfWeekOffset);
+        if(endDateOfWeek.compareTo(endDateOfMonth) > 0){
+            endDateOfWeek = endDateOfMonth;
+        }
+        weeksOfMonthList.add(new PairValueVO(startDateOfWeek, endDateOfWeek));
+        startDateOfWeek = endDateOfWeek.plusDays(1);
+        endDateOfWeekOffset = 6;
+    }
+    return weeksOfMonthList;
+}
+```
+
+
+
+##### 获取一个月间隔为7天的开始、结束日期
+
+```java
+public static List<PairValueVO<LocalDate, LocalDate>> weeksBoundOfMonth(LocalDate month){
+    if(null == month){
+        return Collections.emptyList();
+    }
+    List<PairValueVO<LocalDate, LocalDate>> weeksOfMonthList = new ArrayList<>(6);
+    LocalDate startDateOfMonth = month.with(TemporalAdjusters.firstDayOfMonth());
+    LocalDate endDateOfMonth = month.with(TemporalAdjusters.lastDayOfMonth());
+    LocalDate startDate = startDateOfMonth;
+    while (startDate.compareTo(endDateOfMonth) <= 0){
+        LocalDate endDate = startDate.plusDays(6);
+        if(endDate.compareTo(endDateOfMonth) > 0){
+            endDate = endDateOfMonth;
+        }
+        weeksOfMonthList.add(new PairValueVO(startDate, endDate));
+        startDate = endDate.plusDays(1);
+    }
+    return weeksOfMonthList;
+}
+```
+
+
+
+##### 获取日期范围内的每天日期
+
+```java
+public static List<LocalDate> dates(LocalDate startDate, LocalDate endDate){
+    if(null == startDate || null == endDate){
+        return Collections.emptyList();
+    }
+    List<LocalDate> dateList = new ArrayList<>();
+    LocalDate date = startDate;
+    while (date.compareTo(endDate) <= 0){
+        dateList.add(date);
+        date = date.plusDays(1);
+    }
+    return dateList;
+}
+```
+
+
+
+#### LocalDateTime
+
+
+
+##### 比较时间大小
+
+```java
+LocalDateTime startTime = LocalDateTime.now().with(LocalTime.MIN);
+LocalDateTime endTime = LocalDateTime.now().with(LocalTime.MAX);
+// startTime > endTime 结果大于 0
+// startTime = endTime 结果等于 0
+// startTime < endTime 结果小于 0
+startTime.compareTo(endTime)
+```
+
+
+
+##### 获取两个时间间隔数
+
+```java
+LocalDateTime start = LocalDateTime.of(2022, 5, 7, 1, 1);
+LocalDateTime end = LocalDateTime.of(2022, 5, 8, 1, 1);
+System.out.println("相差的天数: " + Duration.between(start, end).toDays() + "天");
+System.out.println("相差的小时数: " + Duration.between(start, end).toHours() + "小时");
+System.out.println("相差的分钟数: " + Duration.between(start, end).toMinutes() + "分钟");
+System.out.println("相差的毫秒数: " + Duration.between(start, end).toMillis() + "毫秒");
+
+```
+
+
+##### 字符串转 LocalDateTime
+
+```java
+// 包含日期+时间
+DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+LocalDateTime ldt = LocalDateTime.parse("2022-09-01 12:00:00", dtf);
+
+//只包含日期
+DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+LocalDateTime ldt = LocalDate.parse("2022-09-01", dtf).atStartOfDay();
+```
+
+
+
+##### LocalDateTime 格式化为字符串
+
+```java
+LocalDateTime ldt = LocalDateTime.now();
+DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+String dateTimeStr = dtf.format(ldt);
+```
+
+
+
+##### 获取一天的开始、结束时间
+
+```java
+LocalDateTime now = LocalDateTime.now();
+LocalDateTime startTime = now.with(LocalTime.MIN);
+LocalDateTime endTime = now.with(LocalTime.MAX);
+```
+
+
+
+##### 获取一个月的开始、结束时间
+
+```java
+LocalDateTime now = LocalDateTime.now();
+
+LocalDateTime startTime = now.with(TemporalAdjusters.firstDayOfMonth()).with(LocalTime.MIN);
+
+LocalDateTime endTime = now.with(TemporalAdjusters.lastDayOfMonth()).with(LocalTime.MAX);
+
+System.out.println("一个月的开始时间："+ startTime + "， 一个月的结束时间："+endTime);
+```
+
+
+
+##### 设置日期/时间
+
+```java
+LocalDateTime now = LocalDateTime.now();
+// 指定日期的年
+System.out.println(now.withYear(2023));
+// 指定日期的月 范围：1-12
+System.out.println(now.withMonth(1));
+// 指定日期是月中的第几天 范围：1 - 28/31
+System.out.println(now.withDayOfMonth(1));
+// 指定日期是年中的第几天 范围：1 - 365/366
+System.out.println(now.withDayOfYear(1));
+// 指定日期的小时 范围：0 - 23
+System.out.println(now.withHour(0));
+// 指定日期的分钟 范围：0 - 59
+System.out.println(now.withMinute(0));
+// 指定日期的秒 范围：0 - 59
+System.out.println(now.withSecond(0));
+// 指定日期中纳秒
+System.out.println(now.withNano(0));
+```
+
+
+
+##### 获取时间戳
+
+```java
+LocalDateTime now = LocalDateTime.now();
+// 秒-second(s)
+System.out.println(now.atOffset(ZoneOffset.ofHours(8)).toEpochSecond());
+// 毫秒-millisecond(ms)
+System.out.println(now.toInstant(ZoneOffset.ofHours(8)).toEpochMilli());
+// 微秒-microsecond(μs)
+System.out.println(Long.valueOf(now.atOffset(ZoneOffset.ofHours(8)).toEpochSecond() + String.valueOf(now.getNano()).substring(0,6)));
+// 纳秒-nanosecond(ns)
+System.out.println(Long.valueOf(now.atOffset(ZoneOffset.ofHours(8)).toEpochSecond() + String.valueOf(now.getNano())));
+```
+
+
+
+
+
+#### Date、LocalDateTime 互转
+
+```java
+// Date 转 LocalDateTime
+// 方法一
+Date date = new Date();
+LocalDateTime ldt = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+//方法二
+ Date date = new Date();
+LocalDateTime localDateTime = LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
+
+// LocalDateTime 转 Date
+LocalDateTime ldt = LocalDateTime.now();
+Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+```
+
+
+
+#### LocalDateTime、LocalDate 互转
+
+```java
+// LocalDateTime 转 LocalDate
+LocalDate nowDate = LocalDateTime.now().toLocalDate();
+
+// LocalDate 转 LocalDateTime
+LocalDate nowDate = LocalDate.now();
+LocalDateTime ldt1 = LocalDateTime.of(nowDate, LocalTime.now());
+LocalDateTime ldt2 = LocalDateTime.of(nowDate, LocalTime.MIN);
+LocalDateTime ldt3 = LocalDateTime.of(nowDate, LocalTime.MAX);
+LocalDateTime ldt4 = LocalDateTime.of(nowDate, LocalTime.of(8,20,33));
+```
+
+
+
 ## 工具/组件
 
 ### 异常处理
@@ -544,6 +944,298 @@ public class GlobalExceptionHandler {
 
 
 
+### @FieldMark
+
+#### FieldMark 注解
+
+```java
+/**
+ * <b><code>FieldMark</code></b>
+ * <p/>
+ * 字段标记注解
+ * <p/>
+ * <b>Creation Time:</b> 2022/8/23 下午2:42.
+ *
+ * @author yang xiong
+ * @since 
+ */
+@Target(ElementType.FIELD)
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+public @interface FieldMark {
+
+    String[] types() default {};
+
+    String alias() default "";
+}
+
+```
+
+
+
+#### FieldMarkUtils
+
+```java
+/**
+ * <b><code>FieldMarkUtils</code></b>
+ * <p/>
+ * 字段标记注解工具
+ * <p/>
+ * <b>Creation Time:</b> 2022/8/23 下午3:02.
+ *
+ * @author yang xiong
+ * @since 
+ */
+@Slf4j
+public class FieldMarkUtils {
+
+    /**
+     * @description: 获取注解FieldRemark上的types属性作为key,字段名Set作为value的map
+     * @param clazz
+     * @return {@link Map< String, Set< String>>}
+     * @throws
+     * @author yang xiong
+     * @date 2022/9/21 上午9:05
+     */
+    public static Map<String, Set<String>> getMarkTypeFieldNameSetMap(Class<?> clazz){
+        Map<String, Set<String>> columnMap = new HashMap<>();
+        Field[] declaredFields = clazz.getDeclaredFields();
+        for (Field declaredField : declaredFields) {
+            if(declaredField.isAnnotationPresent(FieldMark.class)) {
+                FieldMark annotation = declaredField.getAnnotation(FieldMark.class);
+                String[] types = annotation.types();
+                if (null != types) {
+                    String fieldName = declaredField.getName();
+                    for (String dimension : types) {
+                        columnMap.computeIfAbsent(dimension, k -> new HashSet<>()).add(fieldName);
+                    }
+                }
+            }
+        }
+        return columnMap;
+    }
+
+    /**
+     * @description: 获取注解FieldMark上的types属性作为key,字段作为value的map
+     * @param clazz
+     * @return {@link Map<String, Field>}
+     * @throws
+     * @author yang xiong
+     * @date 2022/6/8 下午3:42
+     */
+    public static Map<String, Field> getTypeFieldMap(Class<?> clazz){
+        Map<String, Field> fieldListMap = new HashMap<>();
+        Field[] declaredFields = clazz.getDeclaredFields();
+        for (Field declaredField : declaredFields) {
+            if(declaredField.isAnnotationPresent(FieldMark.class)) {
+                FieldMark annotation = declaredField.getAnnotation(FieldMark.class);
+                String[] types = annotation.types();
+                if (null != types) {
+                    for (String type: types) {
+                        if(StringUtils.hasText(type)){
+                            ReflectionUtils.makeAccessible(declaredField);
+                            fieldListMap.put(type, declaredField);
+                        }
+                    }
+                }
+            }
+        }
+        return fieldListMap;
+    }
+
+    /**
+     * @description: 获取注解FieldMark上的types属性作为key,字段List作为value的map
+     * @param clazz
+     * @return {@link Map<String, List<Field>>}
+     * @throws
+     * @author yang xiong
+     * @date 2022/6/8 下午3:42
+     */
+    public static Map<String, List<Field>> getTypeFieldListMap(Class<?> clazz){
+        Map<String, List<Field>> fieldListMap = new HashMap<>();
+        Field[] declaredFields = clazz.getDeclaredFields();
+        for (Field declaredField : declaredFields) {
+            if(declaredField.isAnnotationPresent(FieldMark.class)) {
+                FieldMark annotation = declaredField.getAnnotation(FieldMark.class);
+                String[] types = annotation.types();
+                if (null != types) {
+                    for (String type: types) {
+                        if(StringUtils.hasText(type)){
+                            ReflectionUtils.makeAccessible(declaredField);
+                            fieldListMap.computeIfAbsent(type, k -> new ArrayList<>()).add(declaredField);
+                        }
+                    }
+                }
+            }
+        }
+        return fieldListMap;
+    }
+}
+
+```
+
+
+
+#### 使用
+
+```java
+public class Vo implements Serializable {
+    @FieldMark(types = {"GAME", "WEB", "VR"})
+    private String timeId;
+}
+
+
+private Map<String, Set<String>> typeFieldNameSetMap = FieldMarkUtils.getMarkTypeFieldNameSetMap(Vo.class);
+```
+
+
+
+### PageInfoUtils
+
+```java
+import com.github.pagehelper.PageInfo;
+
+/**
+ * <b><code>PageInfoUtils</code></b>
+ * <p/>
+ * 分页组件
+ * <p/>
+ * <b>Creation Time:</b> 2021/2/24 上午11:17.
+ *
+ * @author yang xiong
+ * @version 1.0.0
+ */
+@Slf4j
+public final class PageInfoUtils {
+    private PageInfoUtils(){}
+
+    /**
+     * @description: 复制分页对象的属性
+     * @param oldPage
+     * @param list
+     * @return {@link PageInfo<T>}
+     * @throws
+     * @author yang xiong
+     * @date 2022/9/20 下午4:39
+     */
+    public static <T> PageInfo<T> clonePage(PageInfo oldPage,List<T> list){
+        PageInfo<T> newPage = PageInfo.of(list);
+        // 数据总数
+        newPage.setTotal(oldPage.getTotal());
+        // 当前页数
+        newPage.setPageNum(oldPage.getPageNum());
+        // 每页大小
+        newPage.setPageSize(oldPage.getPageSize());
+        // 当前页数据数
+        newPage.setSize(oldPage.getSize());
+        // 页总数
+        newPage.setPages(oldPage.getPages());
+        newPage.setPrePage(oldPage.getPrePage());
+        newPage.setNextPage(oldPage.getNextPage());
+        return newPage;
+    }
+    
+    public static <T> PageInfo<T> emptyPage(PageInfo<T> page, int current, int size) {
+        page.setList(Collections.emptyList());
+        page.setTotal(0);
+        page.setPageNum(current);
+        page.setPageSize(size);
+        page.setSize(0);
+        page.setPages(0);
+        return page;
+    }
+}
+```
+
+
+
+### FileUtils
+
+```java
+import org.apache.commons.io.file.SimplePathVisitor;
+
+public final class FileUtils {
+    /**
+     * @description: 获取目录下符合条件的文件
+     * @param path
+     * @param filter
+     * @return {@link File[]}
+     * @throws
+     * @author yang xiong
+     * @date 2022/11/10 下午2:39
+     */
+    public static File[] listFiles(final String dir, final String filter){
+        if(null == dir || null == filter){
+            return null;
+        }
+        return new File(dir).listFiles((d, s) -> s.contains(filter));
+    }
+    
+        /**
+     * @description: 获取目录及子目录下所有文件和目录
+     * @param dir
+     * @return
+     * @throws
+     * @author yang xiong
+     * @date 2022/11/10 下午2:46
+     */
+    public static void listFiles(String dir) throws IOException {
+        Path path = Paths.get(dir);
+        if(Files.exists(path)){
+            Files.walkFileTree(path, new SimplePathVisitor() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+//                    Files.delete(file);
+                    System.out.println("file: " + file.getParent().toString() + File.separator + file.getFileName().toString());
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+//                    Files.delete(dir);
+                    System.out.println("dir: " + dir.getParent().toString() + File.separator + dir.getFileName().toString());
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
+    }
+}
+```
+
+
+
+
+
+### DateTimeUtils
+
+```java
+    /**
+     * @description: 从开始时间到结束时间一个小时执行一次 func
+     * @param: startDateTime
+     * @param: endDateTime
+     * @param: func
+     * @return: void
+     * @throws
+     * @author yang xiong
+     * @date 2023/10/11 18:35
+     **/
+    private void traverseHour(LocalDateTime startDateTime, LocalDateTime endDateTime, Consumer<BigDecimal> func){
+        LocalDateTime targetDateTime = startDateTime;
+        while(targetDateTime.compareTo(endDateTime) <= 0){
+            func.accept(DateUtils.getBigDecimalDate(targetDateTime, TimeGranularityEnum.H));
+            targetDateTime = targetDateTime.plusHours(1);
+        }
+        // 如果小时相等要再执行一次
+        if(targetDateTime.getHour() == endDateTime.getHour()){
+            func.accept(DateUtils.getBigDecimalDate(targetDateTime, TimeGranularityEnum.H));
+        }
+    }
+```
+
+
+
+
+
 ## 日志
 
 [java日志组件介绍(common-logging,log4j,slf4j,logback)](../files/HTML/Java/SpringBoot/java日志组件介绍(common-logging,log4j,slf4j,logback).pdf)
@@ -695,6 +1387,85 @@ public class LogTest {
     }
 }
 ```
+
+
+
+## 反射
+
+
+
+### 获取父类类型
+
+```java
+// 获取带泛型的父类
+Object.class.getGenericSuperclass();
+// 获取不带泛型的父类
+Object.class.getSuperclass();
+```
+
+
+
+### 获取父类泛型
+
+```java
+Type[] types = ((ParameterizedType)Object.class.getGenericSuperclass()).getActualTypeArguments();
+Class<?> poClazz = (Class)types[1];
+```
+
+
+
+## JDBC 数据类型与 Java 数据类型映射关系
+
+例：`<result property="a" column="a" jdbcType="DATE"/>`
+
+
+
+| Java Type                  | JDBC Type                   | 说明 |
+| -------------------------- | --------------------------- | ---- |
+| LocalDate                  | DATE                        |      |
+| LocalTime                  | TIME                        |      |
+| LocalDateTime              | TIMESTAMP                   |      |
+| Date                       | DATE 或 TIME DATE TIMESTAMP |      |
+| Array                      | ARRAY                       |      |
+| boolean                    | BIT                         |      |
+| byte                       | TINYINT                     |      |
+| short                      | SMALLINT                    |      |
+| Integer                    | INTEGER                     |      |
+| long                       | BIGINT                      |      |
+| double                     | FLOAT                       |      |
+| float                      | REAL                        |      |
+| double                     | DOUBLE                      |      |
+| BigDecimal                 | NUMERIC                     |      |
+| BigDecimal                 | DECIMAL                     |      |
+| String                     | CHAR                        |      |
+| String                     | VARCHAR                     |      |
+| String                     | LONGVARCHAR                 |      |
+| byte[]                     | BINARY                      |      |
+| byte[]                     | VARBINARY                   |      |
+| byte[]                     | LONGVARBINARY               |      |
+|                            | NULL                        |      |
+|                            | OTHER                       |      |
+| Blob                       | BLOB                        |      |
+| Clob                       | CLOB                        |      |
+| boolean                    | BOOLEAN                     |      |
+|                            | CURSOR                      |      |
+|                            | UNDEFINED                   |      |
+|                            | NVARCHAR                    |      |
+|                            | NCHAR                       |      |
+|                            | NCLOB                       |      |
+| Struct                     | STRUCT                      |      |
+|                            | JAVA_OBJECT                 |      |
+| mapping of underlying type | DISTINCT                    |      |
+| Ref                        | REF                         |      |
+| URL                        | DATALINK                    |      |
+|                            | ROWID                       |      |
+|                            | LONGNVARCHAR                |      |
+|                            | SQLXML                      |      |
+|                            | DATETIMEOFFSET              |      |
+|                            | TIME_WITH_TIMEZONE          |      |
+|                            | TIMESTAMP_WITH_TIMEZONE     |      |
+
+
 
 
 
