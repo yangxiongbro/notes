@@ -734,6 +734,8 @@ sudo docker exec -it fa52730455e2 /bin/bash
 
 [【错误解决】kubernetes 1.21.10 apiserver报错 Error: [service-account-issuer is a required flag_error: [service-account-issuer is a required flag,-CSDN博客](https://blog.csdn.net/weixin_42072280/article/details/123428647)
 
+[kubernetes 概念&部署_master节点需要部署kubelet 吗-CSDN博客](https://blog.csdn.net/wjs7740/article/details/74452055)
+
 ### 操作系统初始化
 
 ```shell
@@ -1677,6 +1679,27 @@ users:
 - name: kubelet-bootstrap
   user:
     token: dd8dcf475a5f0568d99aaf939e525727
+
+
+apiVersion: v1
+clusters:
+- cluster: 
+    certificate-authority: /opt/apps/k8s/kubernetes/ssl/ca.pem
+    server: https://192.168.31.101:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    namespace: default
+    user: kubelet-bootstrap
+  name: kubelet-bootstrap@kubernetes
+current-context: kubelet-bootstrap@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: kubelet-bootstrap
+  user:
+    token: dd8dcf475a5f0568d99aaf939e525727
 ```
 
 
@@ -1785,14 +1808,48 @@ $ sudo journalctl -u kubelet.service -e
 
 #### Master 给 Node 授权
 
+[管理集群中的 TLS 认证 | Kubernetes](https://kubernetes.io/zh-cn/docs/tasks/tls/managing-tls-in-a-cluster/)
+
 kubelet 启动后，还没加入到集群中，会向 apiserver 请求证书，需手动在 master 上对 node 授权。
 
 ```shell
 # 查看是否有新的客户端请求颁发证书
 $ sudo kubectl get csr
 
-# 给客户端颁发证书，允许客户端加入集群
+# 批准证书签名请求
 $ sudo kubectl certificate approve node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY
+
+# 颁发证书
+$ cd /opt/apps/k8s/kubernetes/ssl
+$ sudo vim server-signing-config.json
+{
+    "signing": {
+        "default": {
+            "usages": [
+                "digital signature",
+                "key encipherment",
+                "server auth"
+            ],
+            "expiry": "876000h",
+            "ca_constraint": {
+                "is_ca": false
+            }
+        }
+    }
+}
+
+$ sudo bash -c "kubectl get csr node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY -o jsonpath='{.spec.request}' | \
+  base64 --decode | \
+  cfssl sign -ca=ca.pem -ca-key=ca-key.pem -config=server-signing-config.json - | \
+  cfssljson -bare ca-signed-server"
+# 2024/07/24 23:20:08 [INFO] signed certificate with serial number 431187033489866991912280955242051011460961436566
+# 这会生成一个签名的服务证书文件，ca-signed-server.pem
+
+# 上传签名证书
+# 最后，在 API 对象的状态中填充签名证书：
+kubectl get csr node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY -o json | \
+  jq '.status.certificate = "'$(base64 ca-signed-server.pem | tr -d '\n')'"' | \
+  kubectl replace --raw /apis/certificates.k8s.io/v1/certificatesigningrequests/my-svc.my-namespace/status -f -
 
 # 查看 node 是否加入集群(此时的 node 还处于未就绪的状态，因为还没有安装 CNI 组件)
 $ sudo kubectl get node
