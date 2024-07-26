@@ -1810,6 +1810,8 @@ $ sudo journalctl -u kubelet.service -e
 
 [管理集群中的 TLS 认证 | Kubernetes](https://kubernetes.io/zh-cn/docs/tasks/tls/managing-tls-in-a-cluster/)
 
+[K8s二进制部署单节点 master组件 node组件 ——头悬梁 - 隐姓埋名4869 - 博客园 (cnblogs.com)](https://www.cnblogs.com/lvrui/p/15477149.html)
+
 kubelet 启动后，还没加入到集群中，会向 apiserver 请求证书，需手动在 master 上对 node 授权。
 
 ```shell
@@ -1847,9 +1849,24 @@ $ sudo bash -c "kubectl get csr node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1
 
 # 上传签名证书
 # 最后，在 API 对象的状态中填充签名证书：
-kubectl get csr node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY -o json | \
+$ sudo kubectl get csr node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY -o json | \
   jq '.status.certificate = "'$(base64 ca-signed-server.pem | tr -d '\n')'"' | \
-  kubectl replace --raw /apis/certificates.k8s.io/v1/certificatesigningrequests/my-svc.my-namespace/status -f -
+  kubectl replace --raw /apis/certificates.k8s.io/v1/certificatesigningrequests/node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY/status -f -
+# 这使用命令行工具 jq 在 .status.certificate 字段中填充 base64 编码的内容。 如果你没有 jq 工具，你还可以将 JSON 输出保存到文件中，手动填充此字段，然后上传结果文件。
+
+# 批准 CSR 并上传签名证书后，运行：
+$ sudo kubectl get csr
+# 输入类似于：
+#NAME                                                   AGE   SIGNERNAME                                    REQUESTOR           REQUESTEDDURATION   CONDITION
+#node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY   47h   kubernetes.io/kube-apiserver-client-kubelet   kubelet-bootstrap   <none>              Approved,Issued
+
+$ sudo bash -c "kubectl get csr node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY \
+    -o jsonpath='{.status.certificate}' \
+    | base64 --decode > server.crt"
+    
+# 现在你可以将 server.crt 和 server-key.pem 填充到 Secret 中， 稍后你可以将其挂载到 Pod 中（例如，用于提供 HTTPS 的网络服务器）。
+$ sudo kubectl create secret tls server \
+  --cert server.crt --key kubernetes-key.pem
 
 # 查看 node 是否加入集群(此时的 node 还处于未就绪的状态，因为还没有安装 CNI 组件)
 $ sudo kubectl get node
