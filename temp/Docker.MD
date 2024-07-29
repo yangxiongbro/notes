@@ -1812,6 +1812,8 @@ $ sudo journalctl -u kubelet.service -e
 
 [K8s二进制部署单节点 master组件 node组件 ——头悬梁 - 隐姓埋名4869 - 博客园 (cnblogs.com)](https://www.cnblogs.com/lvrui/p/15477149.html)
 
+[自签证书 · k8s基础搭建 · 看云 (kancloud.cn)](https://www.kancloud.cn/linux_qfc/k8s_/754593)
+
 kubelet 启动后，还没加入到集群中，会向 apiserver 请求证书，需手动在 master 上对 node 授权。
 
 ```shell
