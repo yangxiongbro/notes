@@ -1373,15 +1373,84 @@ $ ss -pl | grep 6443
 $ sudo kubectl config view
 
 # kubectl config set-cluster <cluster-name> --server=<master-url> 设置集群信息
-$ sudo kubectl config set-cluster kubernetes --embed-certs=true --certificate-authority=/opt/apps/k8s/kubernetes/ssl/kubernetes.pem --server="https://192.168.31.101:6443" --kubeconfig=$HOME/.kube/config
+$ sudo kubectl config set-cluster kubernetes \
+--server="https://192.168.31.101:6443" \
+--certificate-authority=/opt/apps/k8s/kubernetes/ssl/ca.pem \
+--embed-certs=true \
+--kubeconfig=$HOME/.kube/config
 
 # kubectl config set-credentials <user-name> 设置用户认证信息
-$ sudo kubectl config set-credentials kubelet-bootstrap --embed-certs=true --client-certificate=/opt/apps/k8s/kubernetes/ssl/admin.pem --client-key=/opt/apps/k8s/kubernetes/ssl/admin-key.pem --kubeconfig=$HOME/.kube/config
+$ sudo kubectl config set-credentials kubelet-bootstrap \
+--client-certificate=/opt/apps/k8s/kubernetes/ssl/admin.pem \
+--client-key=/opt/apps/k8s/kubernetes/ssl/admin-key.pem \
+--embed-certs=true \
+--kubeconfig=$HOME/.kube/config
+
 # kubectl config set-context <context-name> --cluster=<cluster-name> --user=<user-name> 设置上下文信息
-$ sudo kubectl config set-context kubelet-bootstrap@kubernetes --cluster=kubernetes --namespace=default --user=kubelet-bootstrap --kubeconfig=$HOME/.kube/config
+$ sudo kubectl config set-context kubelet-bootstrap@kubernetes \
+--cluster=kubernetes \
+--namespace=default \
+--user=kubelet-bootstrap \
+--kubeconfig=$HOME/.kube/config
 
 $ sudo kubectl config set-credentials k8s --embed-certs=true --client-certificate=/opt/apps/k8s/kubernetes/ssl/admin.pem --client-key=/opt/apps/k8s/kubernetes/ssl/admin-key.pem --kubeconfig=$HOME/.kube/config
 $ sudo kubectl config set-context k8s@kubernetes --cluster=kubernetes --namespace=default --user=k8s --kubeconfig=$HOME/.kube/config
+```
+
+
+
+###### 创建 kubelet bootstrapping kubeconfig 文件
+
+```shell
+$ export KUBE_APISERVER="https://192.168.31.101:6443"
+# 设置集群参数
+$ sudo kubectl config set-cluster kubernetes \
+--certificate-authority=/opt/apps/k8s/kubernetes/ssl/ca.pem \
+--embed-certs=true \
+--server=${KUBE_APISERVER} \
+--kubeconfig=bootstrap.kubeconfig
+# 设置客户端认证参数
+$ sudo kubectl config set-credentials kubelet-bootstrap \
+--token=dd8dcf475a5f0568d99aaf939e525727 \
+--kubeconfig=bootstrap.kubeconfig
+# 设置上下文参数
+$ sudo kubectl config set-context default \
+--cluster=kubernetes \
+--user=kubelet-bootstrap \
+--kubeconfig=bootstrap.kubeconfig
+# 设置默认上下文
+$ sudo kubectl config use-context default --kubeconfig=bootstrap.kubeconfig
+
+sudo kubectl create clusterrolebinding kubelet-bootstrap --clusterrole=system:node-bootstrapper --user=kubelet-bootstrap --kubeconfig=bootstrap.kubeconfig
+```
+
+
+
+###### 创建 kube-proxy kubeconfig 文件
+
+```shell
+# 设置集群参数
+$ sudo kubectl config set-cluster kubernetes \
+--certificate-authority=/opt/apps/k8s/kubernetes/ssl/ca.pem \
+--embed-certs=true \
+--server=${KUBE_APISERVER} \
+--kubeconfig=kube-proxy.kubeconfig
+
+# 设置客户端认证参数
+$ sudo kubectl config set-credentials kube-proxy \
+--client-certificate=/opt/apps/k8s/kubernetes/ssl/kube-proxy.pem \
+--client-key=/opt/apps/k8s/kubernetes/ssl/kube-proxy-key.pem \
+--embed-certs=true \
+--kubeconfig=kube-proxy.kubeconfig
+
+# 设置上下文参数
+$ sudo kubectl config set-context default \
+--cluster=kubernetes \
+--user=kube-proxy \
+--kubeconfig=kube-proxy.kubeconfig
+
+# 设置默认上下文
+$ sudo kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
 ```
 
 
@@ -1553,7 +1622,7 @@ deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker-archive-keyring.gpg] htt
 
 ```shell
 $ sudo apt update
-$ sudo apt install docker-ce
+$ sudo apt install docker-ce containerd.io
 # 设置开机启动
 $ sudo systemctl enable docker
 
@@ -1732,7 +1801,7 @@ authentication:
 authorization:
   mode: Webhook
   webhook:
-    cacheAuthroizedTTL: 5m0s
+    cacheAuthorizedTTL: 5m0s
     cacheUnauthorizedTTL: 30s
 evictionHard:
   imagefs.available: 15%
@@ -1802,6 +1871,12 @@ $ sudo systemctl status kubelet
 
 # 查看启动日志
 $ sudo journalctl -u kubelet.service -e
+
+
+# 报错
+"command failed" err="failed to run Kubelet: validate service connection: validate CRI v1 runtime API for endpoint \"unix:///run/containerd/containerd.sock\": rpc error: code = Unimplemented desc = unknown service runtime.v1.RuntimeService"
+# 解决方法：删除 /etc/containerd/config.toml 后 sudo systemctl restart containerd
+
 ```
 
 
