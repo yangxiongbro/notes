@@ -1889,6 +1889,8 @@ $ sudo journalctl -u kubelet.service -e
 
 [自签证书 · k8s基础搭建 · 看云 (kancloud.cn)](https://www.kancloud.cn/linux_qfc/k8s_/754593)
 
+[IT苦工指南 | Kubernetes v1.8.x全手动安装 - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/37181324?utm_id=0)
+
 kubelet 启动后，还没加入到集群中，会向 apiserver 请求证书，需手动在 master 上对 node 授权。
 
 ```shell
@@ -1900,29 +1902,138 @@ $ sudo kubectl certificate approve node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEO
 
 # 颁发证书
 $ cd /opt/apps/k8s/kubernetes/ssl
+$ sudo bash -c 'cat <<EOF | cfssl genkey - | cfssljson -bare server
+{
+  "hosts": [
+  	"127.0.0.1",
+	"10.0.0.1",
+    "192.168.31.101",
+    "192.168.31.102",
+    "192.168.31.103",
+    "kubernetes",
+    "kubernetes.default",
+    "kubernetes.default.svc",
+    "kubernetes.default.svc.cluster",
+    "kubernetes.default.svc.cluster.local"
+  ],
+  "CN": "kubernetes",
+  "key": {
+    "algo": "ecdsa",
+    "size": 256
+  }
+}
+EOF'
+
+$ sudo bash -c "cat <<EOF | kubectl apply \
+--kubeconfig=$HOME/.kube/config \
+--context=kubelet-bootstrap@kubernetes \
+-f -
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  name: node-csr-omYpHO_QHRs8DvIm_EqbAAm8_if-Y2vl9KZz5lTYB0g
+spec:
+  request: $(cat server.csr | base64 | tr -d '\n')
+  signerName: kubernetes.io/kube-apiserver-client-kubelet
+  usages:
+  - digital signature
+  - key encipherment
+  - server auth
+EOF"
+
+$ sudo kubectl certificate approve node-csr-omYpHO_QHRs8DvIm_EqbAAm8_if-Y2vl9KZz5lTYB0g \
+  --kubeconfig=$HOME/.kube/config \
+  --context=kubelet-bootstrap@kubernetes
+
+$ sudo kubectl get csr \
+  --kubeconfig=$HOME/.kube/config \
+  --context=kubelet-bootstrap@kubernetes
+
 $ sudo vim server-signing-config.json
 {
-    "signing": {
-        "default": {
-            "usages": [
-                "digital signature",
-                "key encipherment",
-                "server auth"
-            ],
-            "expiry": "876000h",
-            "ca_constraint": {
-                "is_ca": false
-            }
-        }
+  "signing": {
+    "default": {
+      "usages": [
+        "digital signature",
+        "key encipherment",
+        "server auth"
+      ],
+      "expiry": "876000h",
+      "ca_constraint": {
+        "is_ca": false
+      }
     }
+  }
 }
 
-$ sudo bash -c "kubectl get csr node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY -o jsonpath='{.spec.request}' | \
+$ sudo bash -c "kubectl get csr node-csr-omYpHO_QHRs8DvIm_EqbAAm8_if-Y2vl9KZz5lTYB0g \
+  --kubeconfig=$HOME/.kube/config \
+  --context=kubelet-bootstrap@kubernetes \
+  -o jsonpath='{.spec.request}' | \
   base64 --decode | \
-  cfssl sign -ca=ca.pem -ca-key=ca-key.pem -config=server-signing-config.json - | \
+  cfssl sign -ca ca.pem -ca-key ca-key.pem -config server-signing-config.json - | \
   cfssljson -bare ca-signed-server"
+  
+$ sudo bash -c "kubectl get csr node-csr-omYpHO_QHRs8DvIm_EqbAAm8_if-Y2vl9KZz5lTYB0g \
+  --kubeconfig=$HOME/.kube/config \
+  --context=kubelet-bootstrap@kubernetes \
+  -o json | \
+  jq '.status.certificate = "'$(base64 ca-signed-server.pem | tr -d '\n')'"' | \
+  kubectl replace --raw /apis/certificates.k8s.io/v1/certificatesigningrequests/node-csr-omYpHO_QHRs8DvIm_EqbAAm8_if-Y2vl9KZz5lTYB0g/status -f -"
+
+# 这使用命令行工具 jq 在 .status.certificate 字段中填充 base64 编码的内容。 如果你没有 jq 工具，你还可以将 JSON 输出保存到文件中，手动填充此字段，然后上传结果文件
+# sudo bash -c "kubectl get csr node-csr-omYpHO_QHRs8DvIm_EqbAAm8_if-Y2vl9KZz5lTYB0g  \
+  --kubeconfig=$HOME/.kube/config \
+  --context=kubelet-bootstrap@kubernetes \
+  -o json > csr.status.certificate.json"
+# sudo echo $(base64 ca-signed-server.pem | tr -d '\n')
+# sudo bash -c "cat csr.status.certificate.json | kubectl replace --raw /apis/certificates.k8s.io/v1/certificatesigningrequests/node-csr-omYpHO_QHRs8DvIm_EqbAAm8_if-Y2vl9KZz5lTYB0g/status \
+  --kubeconfig=$HOME/.kube/config \
+  --context=kubelet-bootstrap@kubernetes \
+  -f -"
+  
+$ sudo bash -c "kubectl get csr node-csr-omYpHO_QHRs8DvIm_EqbAAm8_if-Y2vl9KZz5lTYB0g \
+  --kubeconfig=$HOME/.kube/config \
+  --context=kubelet-bootstrap@kubernetes \
+  -o jsonpath='{.status.certificate}' \
+    | base64 --decode > server.crt"
+
+$ sudo kubectl create secret tls server \
+  --kubeconfig=$HOME/.kube/config \
+  --context=kubelet-bootstrap@kubernetes \
+  --cert server.crt --key server-key.pem
+kubernetes-key.pem
+
+$ sudo vim server-signing-csr.json
+{
+  "CN": "kubernetes",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "Shanghai",
+      "L": "Shanghai",
+      "O": "kubernetes",
+      "OU": "System"
+    }
+  ],
+  "hosts": [],
+  "ca": {
+    "expiry": "87600h"
+  }
+}
+
+$ sudo bash -c "kubectl get csr node-csr-omYpHO_QHRs8DvIm_EqbAAm8_if-Y2vl9KZz5lTYB0g -o jsonpath='{.spec.request}' | \
+  base64 --decode | \
+  cfssl sign -ca=ca.pem -ca-key=ca-key.pem -config=server-signing-config.json -profile=server-signing server-signing-csr.json | \
+  cfssljson -bare server-signing"
 # 2024/07/24 23:20:08 [INFO] signed certificate with serial number 431187033489866991912280955242051011460961436566
 # 这会生成一个签名的服务证书文件，ca-signed-server.pem
+
+$ sudo bash -c "cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=server-signing server-signing-csr.json | cfssljson -bare server-signing"
 
 # 上传签名证书
 # 最后，在 API 对象的状态中填充签名证书：
@@ -1930,6 +2041,7 @@ $ sudo kubectl get csr node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY -o j
   jq '.status.certificate = "'$(base64 ca-signed-server.pem | tr -d '\n')'"' | \
   kubectl replace --raw /apis/certificates.k8s.io/v1/certificatesigningrequests/node-csr-1f1_mtv3fG_L-oYVsEZ0jMj4KZY21pqmTyEOkI1DAEY/status -f -
 # 这使用命令行工具 jq 在 .status.certificate 字段中填充 base64 编码的内容。 如果你没有 jq 工具，你还可以将 JSON 输出保存到文件中，手动填充此字段，然后上传结果文件。
+
 
 # 批准 CSR 并上传签名证书后，运行：
 $ sudo kubectl get csr
@@ -1953,6 +2065,9 @@ $ ls /opt/apps/k8s/kubernetes/ssl/kubelet*
 # kubelet-client-current.pem kublet.crt kubelet.key
 # 在 /opt/apps/k8s/kubernetes/cfg 下可以看到自动生成的 kubelet.kubeconfig 配置文件
 
+
+$ sudo kubectl delete csr node-csr-omYpHO_QHRs8DvIm_EqbAAm8_if-Y2vl9KZz5lTYB0g \
+  --kubeconfig=$HOME/.kube/config
 ```
 
 
