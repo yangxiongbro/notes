@@ -159,6 +159,18 @@ String dateStr = sdf.format(date);
 
 
 
+##### 时间戳互转
+
+```java
+// 获取13位毫秒时间戳
+Date date = new Date();
+long timestamp = date.getTime();
+// 13位毫秒时间戳转 Date
+Date date = new Date(timestamp);
+```
+
+
+
 #### LocalDate
 
 
@@ -359,7 +371,7 @@ System.out.println(now.withNano(0));
 
 
 
-##### 获取时间戳
+##### 时间戳互转
 
 ```java
 LocalDateTime now = LocalDateTime.now();
@@ -371,6 +383,11 @@ System.out.println(now.toInstant(ZoneOffset.ofHours(8)).toEpochMilli());
 System.out.println(Long.valueOf(now.atOffset(ZoneOffset.ofHours(8)).toEpochSecond() + String.valueOf(now.getNano()).substring(0,6)));
 // 纳秒-nanosecond(ns)
 System.out.println(Long.valueOf(now.atOffset(ZoneOffset.ofHours(8)).toEpochSecond() + String.valueOf(now.getNano())));
+
+// 13位毫秒时间戳转 LocalDateTime
+Instant instant = Instant.ofEpochMilli(timestamp);
+System.out.println(LocalDateTime.ofInstant(instant, ZoneId.systemDefault()));
+System.out.println(LocalDateTime.ofInstant(instant, ZoneId.of("Asia/Shanghai")));
 ```
 
 
