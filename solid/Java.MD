@@ -22,37 +22,32 @@ java -jar ./test.jar -Dspring.config.additional-location=../config/application-m
 #### List 转 Map
 
 ```java
+// 第一种：实体Bean的某一属性作为K,V
 public Map<Long, String> getIdNameMap(List<User> users) {
     return accounts.stream().collect(Collectors.toMap(User::getId, User::getUserName));
 }
-//第二种：将id和实体Bean做为K,V account -> account是一个返回本身的lambda表达式，后面的使用Function接口中的一个默认方法代替，使整个方法更简洁优雅。
+// 第二种：将某一属性和实体Bean做为K,V account -> account是一个返回本身的lambda表达式，后面的使用Function接口中的一个默认方法代替，使整个方法更简洁优雅。
 public Map<Long, Account> getIdAccountMap(List<Account> accounts) {
     return accounts.stream().collect(Collectors.toMap(Account::getId, account -> account));
 }
 public Map<Long, Account> getIdAccountMap(List<Account> accounts) {
     return accounts.stream().collect(Collectors.toMap(Account::getId, Function.identity()));
 }
-//第三种： key存在重复记录时处理,如果使用第一种方法会出错，所以这里只是简单的使用后者覆盖前者来解决key重复问题
+// 第三种： key存在重复记录时处理,如果使用第一种方法会出错，所以这里只是简单的使用后者覆盖前者来解决key重复问题
 public Map<String, Account> getNameAccountMap(List<Account> accounts) {
     return accounts.stream().collect(Collectors.toMap(Account::getUsername, Function.identity(), (key1, key2) -> key2));
 }
-//第四种： 使用某个具体的Map类来保存，如保存时使用LinkedHashMap
+// 第四种： 使用某个具体的 Map 类来保存，如保存时使用 LinkedHashMap
 public Map<String, Account> getNameAccountMap(List<Account> accounts) {
     return accounts.stream().collect(Collectors.toMap(Account::getUsername, Function.identity(), (key1, key2) -> key2, LinkedHashMap::new));
 }
-```
 
-
-
-#### List 转 Map 当value值为空时会报空指针异常解决方案
-
-```java
-//解决方案一，使用Optional类处理null
-public Map<String, String> getNameAccountMap(List<Account> accounts) {
-    return accounts.stream().collect(Collectors.toMap(s -> Optional.ofNullable(s.getUsername()).orElse(null), s -> Optional.ofNullable(s.getPassword()).orElse("unknown"), (key1, key2) -> key2, HashMap::new));
+// 处理当value值为空时会报空指针异常
+// 解决方案一，使用Optional类处理null
+public Map<String, Account> getNameAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(Collectors.toMap(item -> Optional.ofNullable(item.getId()).orElse(null), item -> Optional.ofNullable(item.getUserName()).orElse("unknown"), (key1, key2) -> key2));
 }
-
-//解决方案二，直接使用collect()方法进行规约操作
+// 解决方案二，直接使用collect()方法进行规约操作
 public Map<String, String> getNameAccountMap(List<Account> accounts) {
     return accounts.stream().collect(HashMap::new, (map, item) -> map.put(item.getUsername(), item.getPassword()), HashMap::putAll);
 }
@@ -60,7 +55,7 @@ public Map<String, String> getNameAccountMap(List<Account> accounts) {
 
 
 
-#### 取对象 List 中的某个属性为属性 List
+#### List对象 转 List属性
 
 ```java
 List<String> names=list.stream().map(PersonData::getName).collect(Collectors.toList());
@@ -68,7 +63,7 @@ List<String> names=list.stream().map(PersonData::getName).collect(Collectors.toL
 
 
 
-#### List 按某个字段分组
+#### List 分组
 
 ```java
 Map<String, List<DataVO>> map = list.stream().collect(Collectors.groupingBy(item -> item.getName()));
@@ -78,7 +73,7 @@ Map<String, List<DataVO>> map = list.stream().collect(Collectors.groupingBy(Data
 
 
 
-#### 字符串集合合并为一个字符串
+#### 字符串 List 拼接
 
 ```java
 String str = list.stream().collect(Collectors.joining(","));
@@ -134,6 +129,7 @@ Map.Entry<String, String> entry = new AbstractMap.SimpleEntry<>("key", "value")
 
 ```java
 // yyyy-MM-dd HH:mm:ss
+// yyyy-MM-dd HH:mm:ss.SSS
 ```
 
 
