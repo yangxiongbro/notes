@@ -1,0 +1,43 @@
+#!/bin/sh
+do_start()
+{
+	sudo -u zookeeper /opt/apps/zookeeper/bin/zkServer.sh start
+}
+
+do_stop()
+{
+	sudo -u zookeeper /opt/apps/zookeeper/bin/zkServer.sh stop
+}
+
+do_restart()
+{
+	sudo -u zookeeper /opt/apps/zookeeper/bin/zkServer.sh restart
+}
+
+do_status()
+{
+	sudo -u zookeeper /opt/apps/zookeeper/bin/zkServer.sh status
+}
+case "$1" in
+	start)
+		do_start
+		;;
+	stop)
+		do_stop
+		;;
+	status)
+		do_status
+		;;
+	reload)
+		echo "reload"
+		;;
+	restart)
+		do_restart
+		;;
+	*)
+		echo "Usage: {start|stop|restart|reload}" >&2
+		exit 3
+		;;
+esac
+
+exit 0
