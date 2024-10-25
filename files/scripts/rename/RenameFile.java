@@ -66,14 +66,21 @@ public class RenameFile {
         try (BufferedReader br = Files.newBufferedReader(Paths.get("./config"), Charset.forName(CHARSET_NAME))) {
             String line;
             while(paramsNum < 3 && null != (line = br.readLine())){
-                params[paramsNum++] = line.trim();
+                params[paramsNum] = trim(removeComment(line));
+                if(null != params[paramsNum]){
+                    paramsNum++;
+                }
             }
             while(null != (line = br.readLine())){
-                String lines[] = line.trim().split("-->", 2);
-                if(lines.length>=2){
-                    patternMap.put(lines[0].trim(), Optional.ofNullable(lines[1]).orElse("").trim());
-                } else if(lines.length>=1){
-                    patternMap.put(lines[0].trim(), "");
+                line = removeComment(line);
+                String lines[] = line.split("-->", 2);
+                lines[0] = trim(lines[0]);
+                if(null == lines[0]) {
+                    continue;
+                } else if(lines.length>=2) {
+                    patternMap.put(lines[0], Optional.ofNullable(trim(lines[1])).orElse("").trim());
+                } else {
+                    patternMap.put(lines[0], "");
                 }
             }
         } catch (Exception e) {
@@ -88,30 +95,31 @@ public class RenameFile {
             return;
         }
 
-        String dirPath = params[0];
+        String dataDir = params[0];
+        File dir = new File(dataDir);
         // 匹配模式 --r：正则匹配，--s：字符串匹配
         String matchMod = params[1];
+        Function<String[],String> replaceProcessFunction = REPLACE_PROCESS_FUNCTION_MAP.get(matchMod);
         // 模式 --d：删除匹配部分，--r：替换匹配部分
         String renameMod = params[2];
-        File dir = new File(dirPath);
-        if(!dir.exists()){
-            System.err.println("目录 " + params[0] +" 不存在");
-            return;
-        }
-        if(dir.isFile()){
-            System.err.println(params[0] +" 不是目录");
-            return;
-        }
+        Function<String,String> replacementFunction = REPLACEMENT_FUNCTION_MAP.get(renameMod);
 
-        Function<String[],String> replaceProcessFunction = REPLACE_PROCESS_FUNCTION_MAP.get(matchMod);
-        if(null == replaceProcessFunction){
+        if(!dir.exists()){
+            System.err.println("目录 " + dataDir +" 不存在");
+            return;
+        } else if(dir.isFile()){
+            System.err.println(dataDir +" 不是目录");
+            return;
+        } else if(null == replaceProcessFunction){
             System.err.println("匹配模式: " + matchMod + " 不存在");
             return;
-        }
-        Function<String,String> replacementFunction = REPLACEMENT_FUNCTION_MAP.get(renameMod);
-        if(null == replacementFunction){
+        } else if(null == replacementFunction){
             System.err.println("重命名模式: " + renameMod + " 不存在");
             return;
+        } else {
+            System.out.println("目录 " + dataDir);
+            System.out.println("匹配模式: " + matchMod);
+            System.out.println("重命名模式: " + renameMod);
         }
         rename(replaceProcessFunction, replacementFunction, dir, patternMap);
     }
@@ -143,5 +151,36 @@ public class RenameFile {
         } catch (Exception e) {
             System.err.println("writeAllLinesUseNioWriter:" + e);
         }
+    }
+
+    /**
+     * @description: 去掉字符串注释符号‘//’之后的内容
+     * @param:
+     * @return: String
+     * @throws
+     * @author yang xiong
+     * @date 2024/10/25 17:38
+     **/
+    private static String removeComment(String line){
+        if(null != line && line.indexOf("//") >= 0){
+            return line.substring(0, line.indexOf("//"));
+        }
+        return line;
+    }
+
+    /**
+     * @description: 去除首尾空字符串，如果去除首尾空字符串之后的字符串是个空字符串则返回 null
+     * @param: str
+     * @return: java.lang.String
+     * @throws
+     * @author yang xiong
+     * @date 2024/10/25 17:51
+     **/
+    private static String trim(String str){
+        if(null != str){
+            String trimStr = str.trim();
+            return trimStr.isEmpty() ? null : trimStr;
+        }
+        return str;
     }
 }

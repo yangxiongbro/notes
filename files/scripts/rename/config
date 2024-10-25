@@ -1,4 +1,7 @@
-E:\temp\pictures\A7R5\20241019\RAW
+C:\Workspaces\Temp\data
+// 匹配模式 --r：正则匹配，--s：字符串匹配
 --s
---r
+// 模式 --d：删除匹配部分，--r：替换匹配部分
+--d
+// 匹配模式 --> 替换字符串
 _DSC --> A7R5_DSC00
