@@ -123,6 +123,48 @@ Map.Entry<String, String> entry = new AbstractMap.SimpleEntry<>("key", "value")
 
 
 
+#### 固定大小，删除旧数据 Map
+
+```java
+import java.util.LinkedHashMap;
+import java.util.Map;
+ 
+public class FixedSizeOrderMap<K, V> extends LinkedHashMap<K, V> {
+    private int maxSize;
+
+    public FixedSizeOrderMap(int maxSize) {
+        super(16, 0.75f, true); // 初始容量16，加载因子0.75，访问顺序
+        this.maxSize = maxSize;
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+        return size() > maxSize;
+    }
+}
+
+public class FixedSizeMapExample {
+    public static void main(String[] args) {
+        FixedSizeOrderMap<Integer, Integer> fixedSizeMap = new FixedSizeOrderMap<>(5);
+ 
+        // 添加数据
+        fixedSizeMap.put(1, 1);
+        fixedSizeMap.put(2, 2);
+        fixedSizeMap.put(3, 3);
+        fixedSizeMap.put(4, 4);
+        fixedSizeMap.put(5, 5);
+        fixedSizeMap.put(6, 6); // 这时会删除键为1的数据
+ 
+        // 输出当前Map内容
+        for (Map.Entry<Integer, Integer> entry : fixedSizeMap.entrySet()) {
+            System.out.println(entry.getKey() + " = " + entry.getValue());
+        }
+    }
+}
+```
+
+
+
 ## 时间
 
 #### 时间格式
