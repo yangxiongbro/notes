@@ -165,6 +165,60 @@ public class FixedSizeMapExample {
 
 
 
+### 深层次的集合类型取值
+
+```java
+/**
+ * @description: 根据keyList获取多层集合的指定值
+ * @param: map
+ * @param: keyList
+ * @param: deep
+ * @return: java.lang.Object
+ * @throws
+ * @author yang xiong
+ * @date 2024/11/26 15:06
+ **/
+public static Object getValue(Map map, List<Object> keyList, int deep){
+    if(null != map && map.size() > 0 && deep < keyList.size() && keyList.get(deep) instanceof String){
+        Object nextLevelCollection = map.get(keyList.get(deep));
+        if(nextLevelCollection instanceof List){
+            return getValue((List) nextLevelCollection, keyList, deep+1);
+        } else if(nextLevelCollection instanceof Map){
+            return getValue((Map) nextLevelCollection, keyList, deep+1);
+        } else {
+            return nextLevelCollection;
+        }
+    }
+    return null;
+}
+
+/**
+ * @description: 根据keyList获取多层集合的指定值
+ * @param: list
+ * @param: keyList
+ * @param: deep
+ * @return: java.lang.Object
+ * @throws
+ * @author yang xiong
+ * @date 2024/11/26 15:07
+ **/
+public static Object getValue(List list, List<Object> keyList, int deep){
+    if(null != list && list.size() > 0 && deep < keyList.size() && keyList.get(deep) instanceof Integer){
+        Object nextLevelCollection = list.get((Integer) keyList.get(deep));
+        if(nextLevelCollection instanceof Collection){
+            return getValue((List) nextLevelCollection, keyList, deep+1);
+        } else if(nextLevelCollection instanceof Map){
+            return getValue((Map) nextLevelCollection, keyList, deep+1);
+        } else {
+            return nextLevelCollection;
+        }
+    }
+    return null;
+}
+```
+
+
+
 ## 时间
 
 #### 时间格式
