@@ -1621,6 +1621,110 @@ Class<?> poClazz = (Class)types[1];
 
 
 
+## 数据库
+
+### 连接数据库
+
+```java
+package com.richstonedt.cmgde2eas.commons.util;
+
+import java.sql.*;
+
+/**
+ * <b><code>JDBCUtils</code></b>
+ * <p/>
+ * <p>
+ * <p/>
+ * <b>Creation Time:</b> 2024/11/29 17:15
+ *
+ * @author yang xiong
+ * @since cmgde2eas-sr-be 0.1.0
+ */
+public class JDBCUtils {
+
+    private static final String url = "jdbc:oracle:thin:@192.168.108.57:1523:XE";
+    private static final String user = "CMGDE2EAS";
+    private static final String password = "CMGDE2EAS123!@#";
+    private static final String driverClass = "oracle.jdbc.OracleDriver";
+
+    public static Connection getConnection() throws ClassNotFoundException, SQLException {
+        Class.forName(driverClass);
+        return DriverManager.getConnection(url, user, password);
+    }
+
+    public static void closeResource(Connection con, Statement sta, ResultSet rs){
+        try {
+            if(null != con){
+                con.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        try {
+            if(null != sta){
+                sta.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        try {
+            if(null != rs){
+                rs.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+
+
+```java
+    public String execSql(String sql) throws Exception {
+        String result = "";
+        Exception ex = null;
+//            con = JDBCUtils.getConnection();
+//            ps = con.prepareStatement(sql);
+//            rs = ps.executeQuery();
+        try(
+                Connection con = dataSource.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql);
+                ResultSet rs = ps.executeQuery()
+                ){
+            log.info("exec sql: {}", sql);
+            result = printRs(rs);
+        } catch (Exception e){
+            ex = e;
+        } finally {
+//            JDBCUtils.closeResource(con, ps, rs);
+        }
+        if(null != ex){
+            throw ex;
+        }
+        return result;
+    }
+
+    private String printRs(ResultSet rs) throws SQLException {
+        StringBuilder sb = new StringBuilder();
+        // 获取列的数量
+        int columns = rs.getMetaData().getColumnCount();
+        // 打印列名
+        for (int i = 1; i <= columns; i++) {
+            sb.append(rs.getMetaData().getColumnName(i) + "\t");
+        }
+        System.out.println();
+        // 打印数据
+        while (rs.next()) {
+            for (int i = 1; i <= columns; i++) {
+                sb.append(rs.getObject(i) + "\t");
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+```
+
 
 
 # Spring
