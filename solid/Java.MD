@@ -168,52 +168,97 @@ public class FixedSizeMapExample {
 ### 深层次的集合类型取值
 
 ```java
-/**
- * @description: 根据keyList获取多层集合的指定值
- * @param: map
- * @param: keyList
- * @param: deep
- * @return: java.lang.Object
- * @throws
- * @author yang xiong
- * @date 2024/11/26 15:06
- **/
-public static Object getValue(Map map, List<Object> keyList, int deep){
-    if(null != map && map.size() > 0 && deep < keyList.size() && keyList.get(deep) instanceof String){
-        Object nextLevelCollection = map.get(keyList.get(deep));
-        if(nextLevelCollection instanceof List){
-            return getValue((List) nextLevelCollection, keyList, deep+1);
-        } else if(nextLevelCollection instanceof Map){
-            return getValue((Map) nextLevelCollection, keyList, deep+1);
-        } else {
-            return nextLevelCollection;
+    /**
+     * @description: 深层次的集合类型取值,根据keyList获取多层集合的指定值
+     * @param: listOrMap
+     * @param: keys
+     * @return: java.lang.Object
+     * @throws 
+     * @author yang xiong
+     * @date 2024/11/28 14:26
+     **/
+    public static Object getValue(Object listOrMap, Object ...keys){
+        if(null == listOrMap || null == keys || keys.length <= 0){
+            return null;
+        } else{
+            return getValue(listOrMap, 0, keys);
         }
     }
-    return null;
-}
 
-/**
- * @description: 根据keyList获取多层集合的指定值
- * @param: list
- * @param: keyList
- * @param: deep
- * @return: java.lang.Object
- * @throws
- * @author yang xiong
- * @date 2024/11/26 15:07
- **/
-public static Object getValue(List list, List<Object> keyList, int deep){
-    if(null != list && list.size() > 0 && deep < keyList.size() && keyList.get(deep) instanceof Integer){
-        Object nextLevelCollection = list.get((Integer) keyList.get(deep));
-        if(nextLevelCollection instanceof Collection){
-            return getValue((List) nextLevelCollection, keyList, deep+1);
-        } else if(nextLevelCollection instanceof Map){
-            return getValue((Map) nextLevelCollection, keyList, deep+1);
-        } else {
-            return nextLevelCollection;
+    /**
+     * @description: 深层次的集合类型取值,根据keyList获取多层集合的指定值
+     * @param: listOrMap
+     * @param: keyIndex
+     * @param: keys
+     * @return: java.lang.Object
+     * @throws
+     * @author yang xiong
+     * @date 2024/11/26 15:07
+     **/
+    private static Object getValue(Object listOrMap, int keyIndex, Object ...keys){
+        if(null == listOrMap || keyIndex > keys.length){
+            return null;
+        } else if(keyIndex == keys.length){
+            return listOrMap;
         }
+        Object nextLevelCollection;
+        if(listOrMap instanceof List && keys[keyIndex] instanceof Integer){
+            int index = (Integer) keys[keyIndex];
+            List list = (List)listOrMap;
+            if(0 <= index && index < list.size()){
+                nextLevelCollection = list.get(index);
+            } else {
+                nextLevelCollection = null;
+            }
+        } else if(listOrMap instanceof Map && keys[keyIndex] instanceof String){
+            nextLevelCollection = ((Map)listOrMap).get(keys[keyIndex]);
+        } else {
+            nextLevelCollection = null;
+        }
+        return getValue(nextLevelCollection, keyIndex+1, keys);
     }
-    return null;
+```
+
+
+
+```java
+public class JavaTest {
+    public static void main(String[] args)  {
+        Map<String, List<Map<String, List<Map<String, String>>>>> map = CollectionUtils.mapBuilder(10)
+                        .put("level_1", CollectionUtils.listBuilder(10)
+                                .add(CollectionUtils.mapBuilder(10)
+                                        .put("level_3", CollectionUtils.listBuilder(10)
+                                                .add((CollectionUtils.mapBuilder(10)
+                                                        .put("level_5", "level_5_value")
+                                                        .build())
+                                                ).build()
+                                        ).build()
+                                ).build()
+                        ).build();
+        Object obj;
+        obj = CollectionUtils.getValue(null, null); // null
+        System.out.println(obj);
+        obj = CollectionUtils.getValue(null, "level_1"); // null
+        System.out.println(obj);
+        obj = CollectionUtils.getValue(new HashSet<>(), "level_1"); // null
+        System.out.println(obj);
+        obj = CollectionUtils.getValue(map, null); // null
+        System.out.println(obj);
+        obj = CollectionUtils.getValue(map, new BigDecimal(0)); // null
+        System.out.println(obj);
+        obj = CollectionUtils.getValue(map); // null
+        System.out.println(obj);
+        obj = CollectionUtils.getValue(map,  0); // null
+        System.out.println(obj);
+        obj = CollectionUtils.getValue(map, "level_1"); // [{level_3=[{level_5=level_5_value}]}]
+        System.out.println(obj);
+        obj = CollectionUtils.getValue(map,  "level_1", 0, "level_3", 0, "level_5"); // level_5_value
+        System.out.println(obj);
+        obj = CollectionUtils.getValue(map,  "level_1", 0, "level_3", 0, "level_5", 0); // null
+        System.out.println(obj);
+        obj = CollectionUtils.getValue(map,  "level_1", 0, "level_3", 0, "level_5", "level_6"); // null
+        System.out.println(obj);
+    }
 }
 ```
 
