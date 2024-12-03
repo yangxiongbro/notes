@@ -1,4 +1,4 @@
-package com.richstonedt.cmgde2eas.cs;
+// package com.richstonedt.cmgde2eas.cs;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -29,7 +29,7 @@ public class StatsExif {
     }
 
     public void start(){
-        String pathName = "C:\\MyWorkspaces\\Documents\\notes\\files\\scripts\\adjust_exposure";
+        String pathName = "E:\\temp\\pictures\\A7R5\\20241201\\RAW";
         File path = new File(pathName);
         List<String> fileNameList = Arrays.stream(
                 path.list((dir, name) -> name.endsWith(".xmp"))

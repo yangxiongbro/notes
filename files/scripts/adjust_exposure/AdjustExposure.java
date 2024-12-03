@@ -35,7 +35,7 @@ public class AdjustExposure {
     }
 
     public void start(){
-        String pathName = "E:\\temp\\pictures\\A7R5\\20241201\\RAW3";
+        String pathName = "E:\\temp\\pictures\\A7R5\\20241201\\XMP";
         double min = -0.40;
         double max= 0.00;
         File path = new File(pathName);
@@ -49,14 +49,15 @@ public class AdjustExposure {
         if(size < 2){
             return;
         }
+        int listSize = list.size();
         double step = (Math.abs(max - min)) / (size - 1);
-        for(int i = 0;i < list.size(); i++){
+        for(int i = 0;i < listSize; i++){
             String fileName = list.get(i);
             String filePath = pathName + File.separator + fileName;
             double exposureValue = max - step * i;
             String exposureValueStr = String.format(exposureValue > 0 ? "+%.2f" : "%.2f", exposureValue);
-            System.out.println(fileName + " " + exposureValueStr);
-//            adjust(filePath, fileName, exposureValueStr);
+//            System.out.println(fileName + " " + exposureValueStr);
+            adjust(filePath, fileName, exposureValueStr);
         }
     }
 
