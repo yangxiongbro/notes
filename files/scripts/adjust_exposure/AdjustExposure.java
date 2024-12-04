@@ -36,8 +36,8 @@ public class AdjustExposure {
 
     public void start(){
         String pathName = "E:\\temp\\pictures\\A7R5\\20241201\\XMP";
-        double min = -0.40;
-        double max= 0.00;
+        double min = -2.40;
+        double max= -1.00;
         File path = new File(pathName);
         List<String> list = Arrays.stream(path.list(new FilenameFilter() {
             @Override
