@@ -39,9 +39,9 @@ public class AdjustXmpItem {
     }
 
     public void start(){
-        String pathName = "C:\\MyWorkspaces\\Pictures\\A7C2";
-        double min = 2750.0;
-        double max= 3200.0;
+        String pathName = "E:\\temp\\pictures\\A7R5\\20241201\\XMP";
+        double min = -11;
+        double max= -10;
         File path = new File(pathName);
         List<String> list = Arrays.stream(path.list(new FilenameFilter() {
             @Override
@@ -59,14 +59,13 @@ public class AdjustXmpItem {
             String fileName = list.get(i);
             String filePath = pathName + File.separator + fileName;
 
-//            double exposureValue = max - step * i;
-//            String exposureValueStr = String.format(exposureValue > 0 ? "+%.2f" : "%.2f", exposureValue);
+//            double exposureValue = max - step * i; // 越来越小
+            double exposureValue = min + step * i;   // 越来越大
 
-            double exposureValue = min + step * i;
-            String exposureValueStr = String.format("%d", Math.round(exposureValue));
-//            String exposureValueStr = String.format(exposureValue > 0 ? "+%d" : "%d", Math.round(exposureValue));
-
-//            String exposureValueStr = "Custom";
+//            String exposureValueStr = String.format(exposureValue > 0 ? "+%.2f" : "%.2f", exposureValue); // 曝光
+//            String exposureValueStr = String.format("%d", Math.round(exposureValue)); // 色温
+            String exposureValueStr = String.format(exposureValue > 0 ? "+%d" : "%d", Math.round(exposureValue)); // 色调、高光、阴影、白色
+//            String exposureValueStr = "Custom"; // 常量
 
 //            System.out.println(fileName + " " + exposureValueStr);
             adjust(filePath, fileName, exposureValueStr);
@@ -81,10 +80,13 @@ public class AdjustXmpItem {
         try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath), StandardCharsets.UTF_8)) {
             String line;
             while(null != (line = br.readLine())){
-//                if(line.contains("crs:Exposure2012=")){
-                if(line.contains("crs:Temperature=")){
-//                if(line.contains("crs:Tint=")){
-//                if(line.contains("crs:WhiteBalance=")){
+//                if(line.contains("crs:Exposure2012=")){ // 曝光
+//                if(line.contains("crs:Temperature=")){ // 色温
+                if(line.contains("crs:Tint=")){ // 色调
+//                if(line.contains("crs:WhiteBalance=")){ // 白平衡
+//                if(line.startsWith("   crs:Highlights2012=")){ // 高光
+//                if(line.startsWith("   crs:Shadows2012=")){ // 阴影
+//                if(line.contains("crs:Whites2012=")){ // 白色
                     origin = line;
                     edit = line.replaceFirst("(?<=\\\").*?(?=\\\")", exposureValue);
                     sb.append(edit);
