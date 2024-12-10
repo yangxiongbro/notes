@@ -72,3 +72,16 @@ func main() {
 
 ```
 
+
+
+
+
+# 问题记录
+
+```shell
+# 跨包使用的函数和变量要首字母大写
+
+stats_acr_xmp\stats_acr_xmp.go:4:2: missing go.sum entry for module providing package common (imported by stats_acr_xmp);
+# 在stats_acr_xmp引入间接引入的包，后执行 go mod tidy
+```
+
