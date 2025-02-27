@@ -470,6 +470,25 @@ LocalDateTime endTime = now.with(LocalTime.MAX);
 
 
 
+##### 获取一周的开始、结束时间
+
+```java
+LocalDateTime now = LocalDateTime.now();
+LocalDateTime startTime = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).with(LocalTime.MIN);
+LocalDateTime endTime = now.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)).with(LocalTime.MAX);
+```
+
+
+
+##### 获取指定日期是第几周
+
+```java
+LocalDateTime now = LocalDateTime.now();
+int week = now.get(WeekFields.ISO.weekOfYear());
+```
+
+
+
 ##### 获取一个月的开始、结束时间
 
 ```java
