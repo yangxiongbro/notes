@@ -1,6 +1,6 @@
 // javac -encoding UTF-8 RenameFile.java
 // java -Xmx128m -Xms128m -Dfile.encoding=UTF-8 RenameFile
-E:\temp\pictures\A7R5\20250302\RAW
+E:\temp\pictures\A7R5\20250309\RAW
 // 匹配模式 --r：正则匹配，--s：字符串匹配
 --s
 // 模式 --d：删除匹配部分，--r：替换匹配部分
