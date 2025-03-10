@@ -483,8 +483,14 @@ LocalDateTime endTime = now.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
 ##### 获取指定日期是第几周
 
 ```java
-LocalDateTime now = LocalDateTime.now();
+LocalDateTime now = LocalDateTime.parse("2024-12-31 00:00:00", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+// 2024-12-31 00:00:00 输出53，跨年的周按上一年算
 int week = now.get(WeekFields.ISO.weekOfYear());
+// 2024-12-31 00:00:00 输出1，跨年的周按下一年算
+int week = now.get(WeekFields.ISO.weekOfWeekBasedYear());
+// 自定义周的周期，一个周的周期是从周五开始,一个周的最小天数是1
+int week = now.get(WeekFields.of(DayOfWeek.FRIDAY,1));
 ```
 
 
