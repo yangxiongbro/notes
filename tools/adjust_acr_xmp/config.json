@@ -1,0 +1,107 @@
+// 这是注释
+/**
+
+{
+  "path": "E:\\temp\\pictures\\A7R5\\20241201",   // 必填, 需要修改的文件所在文件夹路径
+  "sort": "ASC",     // 必填, 排序, ASC: 文件名正序排序, DESC: 文件名倒序排序
+  "matchers": [
+    {
+      "start": "",                // 非必填, 匹配 start 之后开始执行匹配, 默认从第一行开始
+      "matchMode": "s",           // 必填, 关键字匹配模式,  s: 字符串匹配, r: 正则匹配
+      "matcher": "crs:CropTop",   // 必填, 匹配关键字/正则表达式
+      "valueLocation": "QUOTE",         // 必填, 设置匹配行需要设置生成的值的位置, QUOTE: 生成的值设置在""内, XML: 生成的值设置在><\内
+      "valueSetting": {
+        "valueFunc": "LINEAR",         // 必填, 新值生成方式, CONSTANT: 常量, LINEAR: 线性, QUADRATIC: 二次方程
+        "constantValue": "abc",        // valueFunc 为 CONSTANT 时必填
+        "exampleValues": [             // valueFunc 为 LINEAR/QUADRATIC 时必填, 一次函数需要 2 组值求方程, 二次方程需要 3 组值求方程
+          {"x": 1, "y": 0.169395},     // 函数在坐标轴上的点
+          {"x": 1157, "y": 0.000000}
+        ],
+        "limitMin": 0.000000,     // valueFunc 不为 CONSTANT 时必填, 限制数值最小值
+        "limitMax": 1.000000,     // valueFunc 不为 CONSTANT 时必填, 不为 CONSTANT 模式时限制数值最大值
+        "valueType": "FLOAT",     // valueFunc 不为 CONSTANT 时必填, 生成数值的数据类型, INT: 整数, FLOAT: 小数
+        "scale": 6,             // valueFunc 不为 CONSTANT 且 valueType 为 FLOAT 时必填, 小数位数
+        "plusSign": false       // valueFunc 不为 CONSTANT 时必填, 正数是否带有正号
+      }
+    }
+  ]
+}
+
+*/
+
+{
+  "path": "E:\\temp\\pictures\\A7R5\\20241201",
+  "sort": "ASC",
+  "matchers": [
+    {
+      "matchMode": "s",
+      "matcher": "crs:CropTop",
+      "valueLocation": "QUOTE",
+      "valueSetting": {
+        "valueFunc": "LINEAR",
+        "constantValue": "abc",
+        "exampleValues": [
+          {"x": 1, "y": 0.169395},
+          {"x": 1157, "y": 0.000000}
+        ],
+        "limitMin": 0.000000,
+        "limitMax": 1.000000,
+        "valueType": "FLOAT",
+        "scale": 6,
+        "plusSign": false
+      }
+    },
+    {
+      "matchMode": "s",
+      "matcher": "crs:CropLeft",
+      "valueLocation": "QUOTE",
+      "valueSetting": {
+        "valueFunc": "LINEAR",
+        "exampleValues": [
+          {"x": 1, "y": 0.397519},
+          {"x": 1157, "y": 0.000000}
+        ],
+        "limitMin": 0.000000,
+        "limitMax": 1.000000,
+        "valueType": "FLOAT",
+        "scale": 6,
+        "plusSign": false
+      }
+    },
+    {
+      "matchMode": "s",
+      "matcher": "crs:CropBottom",
+      "valueLocation": "QUOTE",
+      "valueSetting": {
+        "valueFunc": "LINEAR",
+        "exampleValues": [
+          {"x": 1, "y": 0.642054},
+          {"x": 1157, "y": 1.000000}
+        ],
+        "limitMin": 0.000000,
+        "limitMax": 1.000000,
+        "valueType": "FLOAT",
+        "scale": 6,
+        "plusSign": false
+      }
+    },
+    {
+      "matchMode": "s",
+      "matcher": "crs:CropRight",
+      "valueLocation": "QUOTE",
+      "valueSetting": {
+        "valueFunc": "LINEAR",
+        "exampleValues": [
+          {"x": 1, "y": 0.870177},
+          {"x": 1157, "y": 1.000000}
+        ],
+        "limitMin": 0.000000,
+        "limitMax": 1.000000,
+        "valueType": "FLOAT",
+        "scale": 6,
+        "plusSign": false
+      }
+    }
+  ]
+  // ,"logPath": "E:\\VirtualBoxVMs\\shared\\windows"  // 日志输出目录, 默认输出到 path
+}

@@ -1,0 +1,4 @@
+{
+  "scanPath": "E:\\temp\\Videos\\bilibili\\origin-test",   // 读取目录
+  "outputPath": "E:\\temp\\Videos\\bilibili\\output-test"  // 结果输出目录
+}

@@ -1,0 +1,45 @@
+// 这是注释
+/**
+
+{
+  "path": "E:\\temp\\pictures\\A7R5\\新建文件夹",   // 必填, 需要统计的文件所在文件夹路径
+  "sort": "ASC",     // 必填, 排序, ASC: 文件名正序排序, DESC: 文件名倒序排序
+  "fields": [
+    {
+      // "start": "",             // 非必填, 匹配 start 之后开始执行匹配, 默认从第一行开始
+      "matchMode": "s",           // 必填, 关键字匹配模式,  s: 字符串匹配, r: 正则匹配
+      "matcher": "exif:ExposureTime=",   // 必填, 匹配关键字/正则表达式
+      "extract": "QUOTE",         // 必填, 提取内容识别，QUOTE: 提取""内的内容，XML: 提取><\内的内容
+      "name": "ExposureTime"      // 非必填, 输出的名称, 为空输出 matcher
+    }
+  ]
+  // ,"output": "E:\\VirtualBoxVMs\\shared\\windows"  // 结果输出目录，默认输出到 path
+}
+
+*/
+{
+  "path": "E:\\temp\\pictures\\A7R5\\20241201",
+  "sort": "ASC",
+  "fields": [
+    {
+      "matchMode": "s",
+      "matcher": "exif:ExposureTime=",
+      "extract": "QUOTE",
+      "name": "ExposureTime"
+    },
+    {
+      "matchMode": "s",
+      "matcher": "exif:FNumber=",
+      "extract": "QUOTE",
+      "name": "FNumber"
+    },
+    {
+      "start": "<exif:ISOSpeedRatings>",
+      "matchMode": "s",
+      "matcher": "<rdf:li>",
+      "extract": "XML",
+      "name": "ISO"
+    }
+  ]
+  // ,"output": "E:\\VirtualBoxVMs\\shared\\windows"  // 结果输出目录，默认输出到 path
+}
