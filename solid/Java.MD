@@ -11149,6 +11149,253 @@ refresh_token:eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX25hbWUiOiJhZG1pbiIsI
 
 
 
+# EasyExcel
+
+## Converter
+
+### Converter
+
+```java
+public class ExcelLocalDateTimeConverter implements Converter<LocalDateTime> {
+
+    private String defaultFormat = DateConstants.FORMAT;
+
+    @Override
+    public Class supportJavaTypeKey() {
+        return LocalDateTime.class;
+    }
+
+    @Override
+    public CellDataTypeEnum supportExcelTypeKey() {
+        return CellDataTypeEnum.STRING;
+    }
+
+    @Override
+    public LocalDateTime convertToJavaData(CellData cellData, ExcelContentProperty excelContentProperty, GlobalConfiguration globalConfiguration) {
+        DateTimeFormat annotation = excelContentProperty.getField().getAnnotation(DateTimeFormat.class);
+        String pattern = null == annotation ? defaultFormat : annotation.pattern();
+        return LocalDateTime.parse(cellData.getStringValue(), DateTimeFormatter.ofPattern(StringUtils.hasText(pattern) ? pattern : defaultFormat));
+    }
+
+    @Override
+    public CellData convertToExcelData(LocalDateTime localDateTime, ExcelContentProperty excelContentProperty, GlobalConfiguration globalConfiguration) {
+        JsonFormat annotation = excelContentProperty.getField().getAnnotation(JsonFormat.class);
+        String pattern = null == annotation ? defaultFormat : annotation.pattern();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(StringUtils.hasText(pattern) ? pattern : defaultFormat);
+        String format = formatter.format(localDateTime);
+        return new CellData<LocalDateTime>(format);
+    }
+}
+```
+
+
+
+### 用法一
+
+```java
+public class ReserveExcelVO {
+
+    @ExcelProperty(value = {"日期"}, converter = ExcelLocalDateTimeConverter.class)
+    private LocalDateTime createTime;
+ 
+}
+```
+
+
+
+### 用法二
+
+```java
+ExcelWriter writer = EasyExcel.write(response.getOutputStream()).needHead(true).excelType(ExcelTypeEnum.XLSX)
+          .registerConverter(new ExcelLocalDateTimeConverter())
+          .build();
+```
+
+
+
+## 导入Excel文件并校验
+
+### 依赖
+
+```xml
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>easyexcel</artifactId>
+    <version>${easyexcel.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.hibernate</groupId>
+    <artifactId>hibernate-validator</artifactId>
+    <version>${hibernate-validator.version}</version>
+</dependency>
+```
+
+
+
+### ValidExcelListener
+
+```java
+@Slf4j
+@Data
+public abstract class ValidExcelListener<T> extends AnalysisEventListener<T> {
+
+    private List<T> dataList = new ArrayList<>();
+
+    private StringBuilder errorMsgs = new StringBuilder();
+
+    private boolean error = false;
+
+    private ObjectMapper objectMapper = new ObjectMapper();
+
+
+    /**
+     * 这个每一条数据解析都会来调用
+     *
+     * @param data    one row value. Is is same as {@link AnalysisContext#readRowHolder()}
+     * @param context
+     */
+    @Override
+    public void invoke(T data, AnalysisContext context) {
+        log.info("invoke data={}",data);
+        validation(data,context);
+        this.dataList.add(data);
+    }
+
+    /**
+     * 所有数据解析完成了 都会来调用
+     *
+     * @param context
+     */
+    @Override
+    public void doAfterAllAnalysed(AnalysisContext context) {
+        log.info("Excel数据解析完成！");
+    }
+
+    @Override
+    public void onException(Exception exception, AnalysisContext context) {
+        // 如果是某一个单元格的转换异常 能获取到具体行号
+        // 如果要获取头的信息 配合invokeHeadMap使用
+        if (exception instanceof ExcelDataConvertException) {
+            ExcelDataConvertException excelDataConvertException = (ExcelDataConvertException)exception;
+            String tempErrorMsg=String.format("第%s行，第%s列解析异常，数据为:%s",excelDataConvertException.getRowIndex()+1,
+                    excelDataConvertException.getColumnIndex()+1, excelDataConvertException.getCellData());
+            this.errorMsgs.append(tempErrorMsg);
+            log.error(tempErrorMsg);
+            this.error = true;
+        }
+    }
+
+    private void validation(T data, AnalysisContext context){
+        ValidationUtil.ValidResult validResult = ValidationUtil.allCheckValidate(data);
+        if(null!=validResult && !validResult.isSuccess()){
+            this.error = true;
+            this.errorMsgs.append("行:").append(context.readRowHolder().getRowIndex()).append(",").append(validResult.getMessages());
+            try {
+                log.error("excel valid result={}",objectMapper.writeValueAsString(validResult));
+            } catch (JsonProcessingException e) {
+                log.error("{}", e);
+            }
+        }
+    }
+
+}
+```
+
+
+
+### ValidationUtil
+
+```java
+public class ValidationUtil {
+
+    @Data
+    public static class ValidResult {
+        private boolean success;
+        private List<String> messages;
+
+        public static ValidResult fail(List<String> messages){
+            ValidResult result=new ValidResult();
+            result.setSuccess(false);
+            result.setMessages(messages);
+            return result;
+        }
+
+        public static ValidResult success(){
+            ValidResult result=new ValidResult();
+            result.setSuccess(true);
+            result.setMessages(Collections.emptyList());
+            return result;
+        }
+    }
+
+    /**
+     * 全部校验
+     */
+    private static Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+
+    private ValidationUtil() {
+    }
+
+    /**
+     * 注解验证参数(全部校验)
+     *
+     * @param obj
+     */
+    public static <T> ValidResult allCheckValidate(T obj) {
+        Set<ConstraintViolation<T>> constraintViolations = validator.validate(obj);
+        //返回异常result
+        if (!constraintViolations.isEmpty()) {
+            List<String> errorMessages = new LinkedList<>();
+            Iterator<ConstraintViolation<T>> iterator = constraintViolations.iterator();
+            while (iterator.hasNext()) {
+                ConstraintViolation<T> violation = iterator.next();
+                errorMessages.add(String.format("%s:%s", violation.getPropertyPath().toString(), violation.getMessage()));
+            }
+            return ValidResult.fail(errorMessages);
+        }
+        return ValidResult.success();
+    }
+}
+```
+
+
+
+### ExcelListener
+
+```java
+public class ExcelListener extends ValidExcelListener<LsuaTaskNumEO> {
+}
+
+import org.hibernate.validator.constraints.Length;
+@Data
+public class LsuaTaskNumEO {
+
+    @ExcelProperty(index = 0)
+    @Length(min = 1, max = 255)
+    private String tag;
+
+    @ExcelProperty(index = 1)
+    @Length(min = 1, max = 255)
+    private String numId;
+}
+```
+
+
+
+### 使用
+
+```java
+ExcelListener excelListener = new ExcelListener();
+EasyExcelFactory.read(filePath, LsuaTaskNumEO.class, excelListener).sheet().doRead();
+if(excelListener.isError()){
+    String msg = String.format("文件内容校验失败：%s", excelListener.getErrorMsgs().toString());
+    log.error("{}", msg);
+}
+
+List<LsuaTaskNumEO> recordsEOList = excelListener.getDataList();
+```
+
 
 
 # Nginx
