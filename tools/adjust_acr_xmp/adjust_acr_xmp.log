@@ -1,0 +1,1150 @@
+2025-05-07 22:34:43
+{E:\temp\Pictures\Camera\延时\家\20250506\调整 ASC [{ s crs:Exposure2012 QUOTE {LINEAR  [{1 0.56} {22 0.67}] 0 2 FLOAT 2 true}}] .\}
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012413.xmp
+   crs:Exposure2012="+0.54"->   crs:Exposure2012="+0.56"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012414.xmp
+   crs:Exposure2012="+0.50"->   crs:Exposure2012="+0.57"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012415.xmp
+   crs:Exposure2012="+0.58"->   crs:Exposure2012="+0.57"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012416.xmp
+   crs:Exposure2012="+0.55"->   crs:Exposure2012="+0.58"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012417.xmp
+   crs:Exposure2012="+0.50"->   crs:Exposure2012="+0.58"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012418.xmp
+   crs:Exposure2012="+0.45"->   crs:Exposure2012="+0.59"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012419.xmp
+   crs:Exposure2012="+0.50"->   crs:Exposure2012="+0.59"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012420.xmp
+   crs:Exposure2012="+0.50"->   crs:Exposure2012="+0.60"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012421.xmp
+   crs:Exposure2012="+0.50"->   crs:Exposure2012="+0.60"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012422.xmp
+   crs:Exposure2012="+0.50"->   crs:Exposure2012="+0.61"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012423.xmp
+   crs:Exposure2012="+0.45"->   crs:Exposure2012="+0.61"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012424.xmp
+   crs:Exposure2012="+0.43"->   crs:Exposure2012="+0.62"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012425.xmp
+   crs:Exposure2012="+0.45"->   crs:Exposure2012="+0.62"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012426.xmp
+   crs:Exposure2012="+0.40"->   crs:Exposure2012="+0.63"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012427.xmp
+   crs:Exposure2012="+0.45"->   crs:Exposure2012="+0.63"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012428.xmp
+   crs:Exposure2012="+0.42"->   crs:Exposure2012="+0.64"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012429.xmp
+   crs:Exposure2012="+0.50"->   crs:Exposure2012="+0.64"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012430.xmp
+   crs:Exposure2012="+0.56"->   crs:Exposure2012="+0.65"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012431.xmp
+   crs:Exposure2012="+0.58"->   crs:Exposure2012="+0.65"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012432.xmp
+   crs:Exposure2012="+0.62"->   crs:Exposure2012="+0.66"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012433.xmp
+   crs:Exposure2012="+0.60"->   crs:Exposure2012="+0.66"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012434.xmp
+   crs:Exposure2012="+0.65"->   crs:Exposure2012="+0.67"
+2025-05-08 21:29:47
+{E:\temp\Pictures\Camera\延时\家\20250506\调整 ASC [{ s crs:WhiteBalance QUOTE {CONSTANT Custom [] 0 0 FLOAT 0 false}} { s crs:Temperature QUOTE {LINEAR  [{1 5550} {137 4850}] 0 10000 INT 0 false}} { s crs:Tint QUOTE {LINEAR  [{1 29} {137 35}] 0 10000 INT 0 true}}] .\}
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012355.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5550"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012356.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5544"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012357.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5539"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012358.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5534"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012359.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5529"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012360.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5524"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012361.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5519"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012362.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5513"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012363.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5508"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012364.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5503"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012365.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5498"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012366.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5493"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012367.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5488"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012368.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5483"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012369.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5477"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012370.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5472"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012371.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5467"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012372.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5462"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012373.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5457"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012374.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5452"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012375.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5447"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012376.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5441"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012377.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5436"
+   crs:Tint="-150"->   crs:Tint="+29"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012378.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5431"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012379.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5426"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012380.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5421"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012381.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5416"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012382.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5411"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012383.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5405"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012384.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5400"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012385.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5395"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012386.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5390"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012387.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5385"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012388.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5380"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012389.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5375"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012390.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5369"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012391.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5364"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012392.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5359"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012393.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5354"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012394.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5349"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012395.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5344"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012396.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5338"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012397.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5333"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012398.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5328"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012399.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5323"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012400.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5318"
+   crs:Tint="-150"->   crs:Tint="+30"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012401.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5313"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012402.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5308"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012403.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5302"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012404.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5297"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012405.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5292"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012406.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5287"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012407.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5282"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012408.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5277"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012409.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5272"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012410.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5266"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012411.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5261"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012412.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5256"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012413.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5251"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012414.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5246"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012415.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5241"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012416.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5236"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012417.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5230"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012418.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5225"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012419.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5220"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012420.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5215"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012421.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5210"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012422.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5205"
+   crs:Tint="-150"->   crs:Tint="+31"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012423.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5200"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012424.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5194"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012425.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5189"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012426.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5184"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012427.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5179"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012428.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5174"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012429.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5169"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012430.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5163"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012431.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5158"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012432.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5153"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012433.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5148"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012434.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5143"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012435.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5138"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012436.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5133"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012437.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5127"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012438.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5122"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012439.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5117"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012440.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5112"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012441.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5107"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012442.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5102"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012443.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5097"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012444.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5091"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012445.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5086"
+   crs:Tint="-150"->   crs:Tint="+32"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012446.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5081"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012447.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5076"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012448.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5071"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012449.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5066"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012450.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5061"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012451.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5055"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012452.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5050"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012453.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5045"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012454.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5040"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012455.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5035"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012456.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5030"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012457.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5025"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012458.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5019"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012459.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5014"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012460.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5009"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012461.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="5004"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012462.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4999"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012463.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4994"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012464.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4988"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012465.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4983"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012466.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4978"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012467.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4973"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012468.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4968"
+   crs:Tint="-150"->   crs:Tint="+33"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012469.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4963"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012470.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4958"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012471.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4952"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012472.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4947"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012473.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4942"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012474.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4937"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012475.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4932"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012476.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4927"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012477.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4922"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012478.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4916"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012479.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4911"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012480.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4906"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012481.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4901"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012482.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4896"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012483.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4891"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012484.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4886"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012485.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4880"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012486.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4875"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012487.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4870"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012488.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4865"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012489.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4860"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012490.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4855"
+   crs:Tint="-150"->   crs:Tint="+34"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012491.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4850"
+   crs:Tint="-150"->   crs:Tint="+35"
+2025-05-10 00:07:15
+{E:\temp\Pictures\Camera\延时\家\20250506\调整 ASC [{ s crs:WhiteBalance QUOTE {CONSTANT Custom [] 0 0 FLOAT 0 false}} { s crs:Temperature QUOTE {LINEAR  [{1 4400} {138 4200}] 0 10000 INT 0 false}} { s crs:Tint QUOTE {LINEAR  [{1 28} {138 22}] 0 10000 INT 0 true}}] .\}
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012651.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4400"
+   crs:Tint="-150"->   crs:Tint="+28"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012652.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4398"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012653.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4397"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012654.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4395"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012655.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4394"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012656.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4392"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012657.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4391"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012658.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4389"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012659.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4388"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012660.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4386"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012661.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4385"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012662.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4383"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012663.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4382"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012664.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4381"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012665.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4379"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012666.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4378"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012667.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4376"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012668.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4375"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012669.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4373"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012670.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4372"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012671.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4370"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012672.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4369"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012673.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4367"
+   crs:Tint="-150"->   crs:Tint="+27"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012674.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4366"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012675.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4364"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012676.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4363"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012677.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4362"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012678.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4360"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012679.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4359"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012680.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4357"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012681.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4356"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012682.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4354"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012683.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4353"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012684.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4351"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012685.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4350"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012686.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4348"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012687.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4347"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012688.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4345"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012689.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4344"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012690.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4343"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012691.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4341"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012692.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4340"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012693.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4338"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012694.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4337"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012695.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4335"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012696.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4334"
+   crs:Tint="-150"->   crs:Tint="+26"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012697.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4332"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012698.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4331"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012699.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4329"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012700.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4328"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012701.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4327"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012702.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4325"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012703.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4324"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012704.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4322"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012705.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4321"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012706.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4319"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012707.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4318"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012708.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4316"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012709.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4315"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012710.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4313"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012711.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4312"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012712.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4310"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012713.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4309"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012714.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4308"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012715.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4306"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012716.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4305"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012717.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4303"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012718.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4302"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012719.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4300"
+   crs:Tint="-150"->   crs:Tint="+25"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012720.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4299"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012721.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4297"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012722.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4296"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012723.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4294"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012724.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4293"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012725.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4291"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012726.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4290"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012727.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4289"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012728.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4287"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012729.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4286"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012730.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4284"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012731.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4283"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012732.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4281"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012733.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4280"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012734.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4278"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012735.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4277"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012736.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4275"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012737.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4274"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012738.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4272"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012739.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4271"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012740.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4270"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012741.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4268"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012742.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4267"
+   crs:Tint="-150"->   crs:Tint="+24"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012743.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4265"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012744.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4264"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012745.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4262"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012746.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4261"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012747.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4259"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012748.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4258"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012749.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4256"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012750.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4255"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012751.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4254"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012752.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4252"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012753.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4251"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012754.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4249"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012755.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4248"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012756.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4246"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012757.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4245"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012758.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4243"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012759.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4242"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012760.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4240"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012761.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4239"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012762.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4237"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012763.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4236"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012764.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4235"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012765.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4233"
+   crs:Tint="-150"->   crs:Tint="+23"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012766.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4232"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012767.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4230"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012768.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4229"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012769.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4227"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012770.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4226"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012771.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4224"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012772.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4223"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012773.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4221"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012774.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4220"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012775.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4218"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012776.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4217"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012777.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4216"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012778.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4214"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012779.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4213"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012780.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4211"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012781.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4210"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012782.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4208"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012783.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4207"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012784.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4205"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012785.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4204"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012786.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4202"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012787.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4201"
+   crs:Tint="-150"->   crs:Tint="+22"
+读取文件:E:\temp\Pictures\Camera\延时\家\20250506\调整\A7R5_DSC012788.xmp
+   crs:WhiteBalance="Custom"->   crs:WhiteBalance="Custom"
+   crs:Temperature="2000"->   crs:Temperature="4200"
+   crs:Tint="-150"->   crs:Tint="+22"

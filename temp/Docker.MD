@@ -1,5 +1,48 @@
 # Docker
 
+## 安装
+
+```shell
+# 更新软件包
+sudo apt update
+sudo apt upgrade
+
+# 安装依赖包
+sudo apt install apt-transport-https ca-certificates curl software-properties-common
+
+# 添加 Docker 官方 GPG 密钥
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# 添加 Docker 仓库
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+# 更新
+sudo apt update
+
+# 确保你现在从 Docker 官方仓库安装 Docker 而不是 Debian 默认仓库
+# 你应该看到它指向 https://download.docker.com/，确保这就是官方的 Docker 仓库
+apt-cache policy docker-ce
+
+# 安装 Docker
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# 动 Docker 并设置为开机自启
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# 使用以下命令来验证 Docker 是否安装成功
+sudo docker --version
+
+# 卸载 docker
+sudo apt purge docker-ce
+sudo rm -rf /var/lib/docker
+```
+
+
+
 ## Docker基本使用
 
 ### Image

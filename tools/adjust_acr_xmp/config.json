@@ -30,78 +30,68 @@
 */
 
 {
-  "path": "E:\\temp\\pictures\\A7R5\\20241201",
+  "path": "E:\\temp\\Pictures\\Camera\\延时\\家\\20250506\\调整",
   "sort": "ASC",
   "matchers": [
+    // {
+    //   "matchMode": "s",
+    //   "matcher": "crs:Exposure2012",
+    //   "valueLocation": "QUOTE",
+    //   "valueSetting": {
+    //     "valueFunc": "LINEAR",
+    //     "exampleValues": [
+    //       {"x": 1, "y": 0.56},
+    //       {"x": 22, "y": 0.67}
+    //     ],
+    //     "limitMin": 0.000000,
+    //     "limitMax": 2.000000,
+    //     "valueType": "FLOAT",
+    //     "scale": 2,
+    //     "plusSign": true
+    //   }
+    // },
     {
       "matchMode": "s",
-      "matcher": "crs:CropTop",
+      "matcher": "crs:WhiteBalance",
+      "valueLocation": "QUOTE",
+      "valueSetting": {
+        "valueFunc": "CONSTANT",
+        "constantValue": "Custom",
+        "valueType": "FLOAT"
+      }
+    },
+    {
+      "matchMode": "s",
+      "matcher": "crs:Temperature",
       "valueLocation": "QUOTE",
       "valueSetting": {
         "valueFunc": "LINEAR",
-        "constantValue": "abc",
         "exampleValues": [
-          {"x": 1, "y": 0.169395},
-          {"x": 1157, "y": 0.000000}
+          {"x": 1, "y": 4400},
+          {"x": 138, "y": 4200}
         ],
-        "limitMin": 0.000000,
-        "limitMax": 1.000000,
-        "valueType": "FLOAT",
-        "scale": 6,
+        "limitMin": 0,
+        "limitMax": 10000,
+        "valueType": "INT",
         "plusSign": false
       }
     },
     {
       "matchMode": "s",
-      "matcher": "crs:CropLeft",
+      "matcher": "crs:Tint",
       "valueLocation": "QUOTE",
       "valueSetting": {
         "valueFunc": "LINEAR",
         "exampleValues": [
-          {"x": 1, "y": 0.397519},
-          {"x": 1157, "y": 0.000000}
+          {"x": 1, "y": 28},
+          {"x": 138, "y": 22}
         ],
-        "limitMin": 0.000000,
-        "limitMax": 1.000000,
-        "valueType": "FLOAT",
-        "scale": 6,
-        "plusSign": false
-      }
-    },
-    {
-      "matchMode": "s",
-      "matcher": "crs:CropBottom",
-      "valueLocation": "QUOTE",
-      "valueSetting": {
-        "valueFunc": "LINEAR",
-        "exampleValues": [
-          {"x": 1, "y": 0.642054},
-          {"x": 1157, "y": 1.000000}
-        ],
-        "limitMin": 0.000000,
-        "limitMax": 1.000000,
-        "valueType": "FLOAT",
-        "scale": 6,
-        "plusSign": false
-      }
-    },
-    {
-      "matchMode": "s",
-      "matcher": "crs:CropRight",
-      "valueLocation": "QUOTE",
-      "valueSetting": {
-        "valueFunc": "LINEAR",
-        "exampleValues": [
-          {"x": 1, "y": 0.870177},
-          {"x": 1157, "y": 1.000000}
-        ],
-        "limitMin": 0.000000,
-        "limitMax": 1.000000,
-        "valueType": "FLOAT",
-        "scale": 6,
-        "plusSign": false
+        "limitMin": 0,
+        "limitMax": 10000,
+        "valueType": "INT",
+        "plusSign": true
       }
     }
   ]
-  // ,"logPath": "E:\\VirtualBoxVMs\\shared\\windows"  // 日志输出目录, 默认输出到 path
+  ,"logPath": ".\\"  // 日志输出目录, 默认输出到 path
 }

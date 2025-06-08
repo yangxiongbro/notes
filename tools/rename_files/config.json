@@ -12,8 +12,10 @@
 // JPG$ --> jpg
 
 {
-  "path": "D:\\documents\\notes\\tools\\rename_files\\test",
-  "matcher": "^DSC",
-  "replace": "A7R5_DSC"
-  // ,"logPath": "E:\\VirtualBoxVMs\\shared\\windows"  // 日志输出目录, 默认输出到 path
+  "path": "E:\\Need2Sync\\Pictures\\Camera\\广东\\天河公园\\20250607\\RAW",
+//  "matcher": "^_DSC",
+//  "replace": "A7R5_DSC01",
+  "matcher": "-已增强-NR",
+  "replace": "",
+  "logPath": ".\\"  // 日志输出目录, 默认输出到 path
 }
