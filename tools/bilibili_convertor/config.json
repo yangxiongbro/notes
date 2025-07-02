@@ -1,4 +1,4 @@
 {
-  "scanPath": "E:\\temp\\Videos\\bilibili\\origin-test",   // 读取目录
-  "outputPath": "E:\\temp\\Videos\\bilibili\\output-test"  // 结果输出目录
+  "scanPath": "D:\\video\\bilibili\\m4s",   // 读取目录
+  "outputPath": "E:\\Need2Sync\\Videos\\Bilibili"  // 结果输出目录
 }
