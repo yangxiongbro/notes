@@ -979,7 +979,7 @@ public abstract class BaseException extends Exception {
 
 ```java
 /**
- * <b><code>AbstractBusinessExceptionAssert</code></b>
+ * <b><code>IBusinessExceptionFactory</code></b>
  * <p/>
  * 创建异常接口实现类，由于枚举不能继承，所以不能使用抽象类
  * <p/>
@@ -987,7 +987,7 @@ public abstract class BaseException extends Exception {
  *
  * @author yang xiong
  */
-public interface IBaseBusinessExceptionFactory extends IExceptionAssertResponseEnum, IBaseAssert {
+public interface IBusinessExceptionFactory extends IExceptionAssertResponseEnum, IBaseAssert {
     @Override
     default BaseException newException(Object... args) {
         String msg = MessageFormat.format(this.getMessage(), args);
@@ -1002,7 +1002,6 @@ public interface IBaseBusinessExceptionFactory extends IExceptionAssertResponseE
         return new BaseBusinessException(this, args, msg, t);
     }
 }
-
 ```
 
 
@@ -1019,15 +1018,15 @@ public interface IBaseBusinessExceptionFactory extends IExceptionAssertResponseE
  *
  * @author yang xiong
  */
-public class BaseBusinessException extends BaseException {
+public class BusinessException extends BaseException {
 
     private static final long serialVersionUID = 1L;
 
-    public BaseBusinessException(IExceptionAssertResponseEnum exceptionAssertResponseEnum, Object[] args, String message) {
+    public BusinessException(IExceptionAssertResponseEnum exceptionAssertResponseEnum, Object[] args, String message) {
         super(exceptionAssertResponseEnum, args, message);
     }
 
-    public BaseBusinessException(IExceptionAssertResponseEnum exceptionAssertResponseEnum, Object[] args, String message, Throwable cause) {
+    public BusinessException(IExceptionAssertResponseEnum exceptionAssertResponseEnum, Object[] args, String message, Throwable cause) {
         super(exceptionAssertResponseEnum, args, message, cause);
     }
 }
@@ -1047,12 +1046,12 @@ public class BaseBusinessException extends BaseException {
  *
  * @author yang xiong
  */
-public enum BaseBusinessExceptionAssertResponseEnum implements IBaseBusinessExceptionFactory {
+public enum BusinessExceptionAssertResponseEnum implements IBusinessExceptionFactory {
 
     /**
      * 通用异常
      */
-    EXCEPTION(100001, "{0}"),
+    THROW_EXCEPTION(100001, "{0}"),
 
     /**
      * 未找到文件
@@ -1062,7 +1061,7 @@ public enum BaseBusinessExceptionAssertResponseEnum implements IBaseBusinessExce
     /**
      * 未找到文件
      */
-    FILE_NOT_FOUND_IN_DIR(200002, "在目录:{0},未找到文件:{1}.");
+    FILE_NOT_FOUND_IN_DIR(200002, "在目录:{0},未找到文件:{1}."),
 
     /**
      * 返回码
@@ -1074,7 +1073,7 @@ public enum BaseBusinessExceptionAssertResponseEnum implements IBaseBusinessExce
      */
     private String message;
 
-    BaseBusinessExceptionAssertResponseEnum(int code, String message) {
+    BusinessExceptionAssertResponseEnum(int code, String message) {
         this.code = code;
         this.message = message;
     }
@@ -1119,6 +1118,15 @@ public class GlobalExceptionHandler {
         return ResponseResult.failed(e.getExceptionAssertResponseEnum().getCode(),e.getMessage());
     }
 }
+```
+
+
+
+#### 使用
+
+```java
+// response 为 null时抛出异常
+BusinessExceptionAssertResponseEnum.NEW_BUSINESS_EXCEPTION.assertNotNull(response, "response 为 null");
 ```
 
 
