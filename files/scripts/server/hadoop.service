@@ -1,103 +1,20 @@
 [Unit]
-# 必填：服务描述
 Description=Hadoop Application
-
-# 强依赖的服务（如果依赖服务启动失败，本服务也不会启动），强依赖MySQL
-# Requires=mysql.service
-
-# 弱依赖（尽可能启动依赖服务，但不强制）
-# Wants=mysql.service
-
-# 定义启动顺序，表示在网络启动后运行，多个服务用空格分隔
 After=network.target
 
-# 冲突服务（不能同时运行）
-# Conflicts=old-service.service
-
-
 [Service]
-# Type：进程类型（常用 simple 或 forking）
-#   simple：默认类型，前台运行的服务。启动后立即视为活动状态，ExecStart 的进程是主进程
-#   forking：传统后台守护进程，ExecStart 的进程会 fork 子进程后退出
-#   oneshot：执行单次任务，任务完成后服务自动停止（非守护进程）
-#   dbus：D-Bus 服务，获取 D-Bus 名称后启动
-#   notify：服务就绪时发送通知，需要服务支持 sd_notify()
-#   idle：延迟启动（系统空闲时），避免与其他服务启动竞争
 Type=simple
 
-# 运行用户/组
 User=hadoop
-Group=hadoop
+Group=apps
 
-# 应用的工作目录
 WorkingDirectory=/opt/apps/hadoop
 
-# 绝对路径启动命令（最重要！）
-ExecStart=/opt/apps/hadoop/sbin/start-dfs.sh
-
-# 可选：重载配置时执行的命令
-# ExecReload=
-
-# 可选：停止服务时执行的命令
+ExecStart=/home/hadoop/start-dfs.sh.simple
 ExecStop=/opt/apps/hadoop/sbin/stop-dfs.sh
 
-# 重启策略（常用 on-failure 或 always）
-#   no: 不重启
-#   on-success: 成功退出时重启
-#   on-failure: 非正常退出时重启（退出码非0）（推荐）
-#   always: 总是重启
 Restart=on-failure
-
-# 重启前等待时间
 RestartSec=5s
 
-# 可选：设置环境变量（可多次使用）
-# Environment="DEBUG=false"
-# Environment="PORT=8080"
-# EnvironmentFile=/etc/myapp/env.conf
-
-## 可选：内存限制
-# MemoryMax=1G
-# MemoryHigh=800M
-# MemoryLimit=512M
-
-## 可选：CPU 限制
-# 最多使用 1.5 个核心
-# CPUQuota=150%
-# CPU 时间权重
-# CPUWeight=50
-
-## 可选：IO 限制
-# IOWeight=20
-# DeviceAllow=/dev/nvme0n1 rw
-
-## 可选：文件系统保护
-# 禁止访问 /home /root
-# ProtectHome=yes
-# 只读访问系统目录
-# ProtectSystem=strict
-
-## 可选：能力限制
-# CapabilityBoundingSet=CAP_NET_BIND_SERVICE
-# NoNewPrivileges=yes
-
-## 可选：命名空间隔离
-# PrivateTmp=yes
-# PrivateDevices=yes
-# PrivateUsers=yes
-
-## 定时任务替代 cron，WantedBy指定为timers.target
-# [Timer]
-# OnCalendar=daily
-# Persistent=true
-
 [Install]
-# 在系统进入运行级别模式时启动
-# 定义服务所属的 target（相当于传统运行级别）
-#   multi-user.target：级别 3，标准文本模式（无图形界面）
-#   graphical.target：级别 5，图形界面模式
-#   default.target：系统默认，通常指向 graphical.target
-#   network.target：网络就绪后启动
-#   timers.target：定时器服务
-#   sysinit.target：系统初始化早期阶段
 WantedBy=multi-user.target

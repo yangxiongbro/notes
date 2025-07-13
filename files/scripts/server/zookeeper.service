@@ -1,0 +1,22 @@
+[Unit]
+Description=Zookeeper
+After=network.target
+
+[Service]
+Type=simple
+
+User=zookeeper
+Group=apps
+
+WorkingDirectory=/opt/apps/zookeeper/
+PIDFile=/opt/data/zookeeper/zookeeper_server.pid
+
+ExecStart=/opt/apps/zookeeper/bin/zkServer.sh start-foreground
+ExecStop=/opt/apps/zookeeper/bin/zkServer.sh stop
+ExecReload=/opt/apps/zookeeper/bin/zkServer.sh restart
+
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
