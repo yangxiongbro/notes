@@ -1,0 +1,21 @@
+[Unit]
+Description=Kafka
+# 集群启动需要zookeeper
+After=network.target zookeeper.service
+
+[Service]
+Type=simple
+
+User=kafka
+Group=apps
+
+WorkingDirectory=/opt/apps/kafka/
+
+ExecStart=/opt/apps/kafka/bin/kafka-server-start.sh /opt/apps/kafka/config/server.properties
+ExecStop=/opt/apps/kafka/bin/kafka-server-stop.sh
+
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

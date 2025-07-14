@@ -9,7 +9,7 @@ User=zookeeper
 Group=apps
 
 WorkingDirectory=/opt/apps/zookeeper/
-PIDFile=/opt/data/zookeeper/zookeeper_server.pid
+# PIDFile=/opt/data/zookeeper/zookeeper_server.pid
 
 ExecStart=/opt/apps/zookeeper/bin/zkServer.sh start-foreground
 ExecStop=/opt/apps/zookeeper/bin/zkServer.sh stop
