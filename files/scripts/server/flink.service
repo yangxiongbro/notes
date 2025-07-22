@@ -12,7 +12,7 @@ Group=apps
 # Environment="FLINK_HOME=/opt/apps/flink"
 
 WorkingDirectory=/opt/apps/flink
-PIDFile=/opt/temp/flink/flink-flink-standalonesession.pid
+# PIDFile=/opt/temp/flink/flink-flink-standalonesession.pid
 
 ExecStart=/home/flink/start-cluster.sh.simple
 ExecStop=/opt/apps/flink/bin/stop-cluster.sh
