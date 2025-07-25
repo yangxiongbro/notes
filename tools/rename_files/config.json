@@ -12,7 +12,7 @@
 // JPG$ --> jpg
 
 {
-  "path": "E:\\Need2Sync\\Pictures\\Camera\\广东\\广州大桥\\RAW",
+  "path": "E:\\Need2Sync\\Pictures\\Camera\\广东\\广州大桥\\20250719\\RAW",
   "matcher": "^_DSC",
   "replace": "A7R5_DSC01",
 //  "matcher": "-已增强-NR",
