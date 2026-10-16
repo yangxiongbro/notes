@@ -11,11 +11,35 @@
 // ^NOTE_20U_ --> 
 // JPG$ --> jpg
 
+// 相机照片
 {
-  "path": "E:\\Need2Sync\\Pictures\\Camera\\广东\\广州大桥\\20251117\\RAW",
-  "matcher": "^_DSC",
-  "replace": "A7R5_DSC01",
-//  "matcher": "-已增强-NR",
-//  "replace": "",
+  "path": "E:\\Need2Sync\\Pictures\\4K",
+  "matcher": "^DSC",
+  "replace": "A7C2_20260924_",
+  // "matcher": "-已增强-NR",
+  // "replace": "",
   "logPath": ".\\"  // 日志输出目录, 默认输出到 path
 }
+
+// 无人机照片
+// {
+//   "path": "E:\\Need2Sync\\Pictures\\Camera\\海南\\家\\20260408\\RAW",
+//   // "matcher": "^DJI_[0-9]+_",
+//   // "replace": "DJI_MINI5_PRO_20260408_",
+//   "matcher": "_D.DNG$",
+//   "replace": ".DNG",
+//   // "matcher": "_D.JPG$",
+//   // "replace": ".JPG",
+//   "logPath": ".\\"  // 日志输出目录, 默认输出到 path
+// }
+
+// 无人机视频
+// {
+//   "path": "V:\\Need2Sync\\Videos\\Camera\\海南\\正门岭大桥\\20260501",
+//   "matcher": "^DJI_[0-9]+_",
+//   "replace": "DJI_MINI5_PRO_20260429_",
+//   // "matcher": "_D.MP4$",
+//   // "replace": ".MP4",
+//   "logPath": ".\\"  // 日志输出目录, 默认输出到 path
+// }
+

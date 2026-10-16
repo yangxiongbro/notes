@@ -1,3 +1,8261 @@
+# JVM
+
+## 简介
+
+### 什么是JVM
+
+Java Virtual Machine - java 程序的运行环境（java 二进制字节码的运行环境）
+
+### 好处
+
+- 一次编写，到处运行
+- 自动内存管理，垃圾回收功能
+- 数组下标越界检查
+- 多态
+- ...
+
+### jvm jre jdk 比较
+
+![](D:\documents\notes\solid\Java.assets\001.PNG)
+
+
+
+### 常见的JVM
+
+![](D:\documents\notes\solid\Java.assets\002.PNG)
+
+
+
+### JVM 基本结构
+
+![](D:\documents\notes\solid\Java.assets\003.PNG)
+
+
+
+## 内存结构
+
+### 程序计数器（PC Register）
+
+#### 定义
+
+Program Counter Register 程序计数器（寄存器）
+
+#### 特点
+
+- 线程私有
+- 不会内存溢出
+
+#### 作用
+
+记住下一条jvm指令的执行地址
+
+![](D:\documents\notes\solid\Java.assets\004.PNG)
+
+
+
+### 虚拟机栈（JVM Stacks）
+
+#### 定义
+
+Java Virtual Machine Stacks （Java 虚拟机栈）
+
+- 每个线程运行时所需的内存，称为虚拟机栈
+- 每个栈由多个栈帧（Frame）组成，对应每次方法调用时所占用的内存
+- 每个线程只能有一个活动的栈帧，对应当前正在执行的那个方法
+
+栈帧：每个方法运行时需要的内存（参数、局部变量、返回地址）
+
+![](D:\documents\notes\solid\Java.assets\005.PNG)
+
+
+
+#### 特点
+
+- 线程私有
+
+#### 相关 JVM 参数
+
+-Xss size
+
+Linux/x64(64-bit): 1024 KB
+
+macOS(64-bit): 1024 KB
+
+Oracle Solaris/x64(64-bit): 1024 KB
+
+Windows: 根据虚拟内存决定
+
+
+
+#### 栈内存溢出
+
+##### 栈帧过多导致栈内存溢出
+
+递归没有正确设置递归出口、类循环引用时进行序列化
+
+##### 栈帧过大
+
+
+
+#### 线程运行诊断
+
+##### CPU占用过多
+
+```sh
+nohup java -jar test.jar > runoob.log 2>&1 &
+# 2>&1 解释：
+
+# 将标准错误 2 重定向到标准输出 &1 ，标准输出 &1 再被重定向输入到 runoob.log 文件中。
+
+# 0 – stdin (standard input，标准输入)
+# 1 – stdout (standard output，标准输出)
+# 2 – stderr (standard error，标准错误输出)
+top
+# 获取PID
+ps H -eo pid, tid, %cpu | grep PID
+# 通过PID获取线程
+jstack tid
+# 通过 java 工具获取线程信息
+# 将tid转16进制，通过匹配 jstack 输出的 nid 定位到对应线程，查看对应占用cpu过多的源码
+```
+
+
+
+##### 程序长时间无响应
+
+**死锁**
+
+通过 jstack 获取死锁信息
+
+
+
+#### 问题辨析
+
+垃圾回收是否涉及栈内存？
+
+不涉及，方法调用结束栈帧出栈后自动释放栈帧内存。
+
+栈内存分配越大越好吗？
+
+不一定，栈内存和线程数成反比，栈内存越大线程数越少。
+
+方法内的局部变量是否线程安全？
+
+如果方法内局部变量没有逃离方法的作用范围，则是线程安全的。
+
+如果局部变量引用了对象，并逃离方法的作用范围，则需要考虑线程安全问题。如果返回的是基本数据类型则没有线程安全问题。
+
+
+
+### 本地方法栈（Native Method Stacks）
+
+#### 定义
+
+本地方法运行需要的内存
+
+#### 特点
+
+- 线程私有
+
+### 堆（Heap）
+
+#### 定义
+
+通过 new 关键字创建对象都会使用堆内存
+
+#### 特点
+
+- 它是线程共享的，堆中对象都需要考虑线程安全问题
+- 有垃圾回收机制
+
+#### 堆内存溢出
+
+java.lang.OutOfMemoryError:  GC overhead limit exceeded
+
+垃圾回收器花费超过 98% 的时间只回收了不到 %2 的堆空间时将报这个错。使用JVM参数 -XX:-UseGCOverheadLimit 关闭该错误。
+
+java.lang.OutOfMemoryError: Java heap space
+
+堆空间内存不足错误。
+
+
+
+
+
+#### 相关 JVM 参数
+
+-Xmx size 设置最大堆大小
+
+-Xmx8m
+
+-Xms size 设置初始堆大小
+
+-Xms8m
+
+
+
+#### 堆内存诊断
+
+##### jps
+
+查看当前系统中有哪些 java 进程。
+
+
+
+##### jmap
+
+查看堆内存占用情况，只能查询某个时刻的堆内存信息。
+
+```sh
+jps
+# 查看 java 进程
+jmap -heap pid
+# 查看堆内存信息
+```
+
+
+
+##### jconsole
+
+图形界面，多功能的监测工具，可以连续监测。
+
+```sh
+jconsole
+# 连接到启动的应用
+```
+
+
+
+##### jvisualvm
+
+堆 Dump 保存快照，查找分析占用内存过多的对象。
+
+```sh
+jvisualvm
+# 连接到启动的应用
+```
+
+
+
+### 方法区（Method Area）
+
+#### 定义
+
+通过 new 关键字创建对象都会使用堆内存
+
+存放类结构相关信息，例如运行时常量池，成员变量，方法数据，方法和构造函数的代码，特殊方法（类构造器）。
+
+方法区在JVM启动时被创建，逻辑上是堆的一部分
+
+HotSpot 在 java 1.8之前的永久代和 1.8 之后的元空间都是方法区的一种实现。
+
+内存不足时抛出内存不足异常。
+
+#### 组成
+
+HotSpot 方法区实现:
+
+![](D:\documents\notes\solid\Java.assets\006.PNG)
+
+
+
+#### 方法区内存溢出
+
+##### 例子
+
+1.8 之前
+
+-XX:MaxPermSize=8m
+
+1.8 之后
+
+-XX:MaxMetaspaceSize=8m
+
+```java
+public class Demo extends ClassLoader{ // 可以用来加载类的二进制字节码
+    public static void main(String[] args){
+        int j = 0;
+        try{
+            Demo demo = new Demo();
+            for(int i = 0; i < 20000; i++, j++){
+                // ClassWriter 作用是生成类的二进制字节码
+                ClassWriter cw = new ClassWriter(0);
+                // 版本号，类修饰符，类名，包名，父类，接口
+                cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, "Class"+i,null,"lava/lang/Object", null);
+                // 类的二进制字节码
+                byte[] code = cw.toByteArray();
+                // 执行类加载
+                test.defineClass("Class"+i, code,0,code.length);
+            }
+        } finally{
+            System.out.println(j);
+        }
+    }
+}
+
+// java.lang.OutOfMemoryError: PermGen space
+// java.lang.OutOfMemoryError: Metaspace
+```
+
+
+
+##### 出现场景
+
+- spring
+- mybatis
+
+使用 CGLib 生成代理类，mybatis 接口实现类等
+
+
+
+#### 相关 JVM 参数
+
+设置方法区大小
+
+1.8 之前
+
+-XX:MaxPermSize=size
+
+-XX:MaxPermSize=8m
+
+1.8 之后
+
+-XX:MaxMetaspaceSize=size
+
+-XX:MaxMetaspaceSize=8m
+
+
+
+#### 运行时常量池
+
+- 常量池，就是一张表，虚拟机指令根据这张常量表找到要执行的类名、方法名、参数类型、字面量等信息
+- 运行时常量池，常量池是 *.class 文件中的，当该类被加载，它的常量池信息就会被放入运行时常量池，并把里面的符号地址变为真实地址。
+
+```java
+// 二进制字节码（类基本信息，常量池，类方法定义，包含了虚拟机指令）
+public class JavaApp {
+    public static void main(String [] args){
+        System.out.println("hello world");
+    }
+}
+
+// 反编译二进制字节码
+// PS D:\develop\code\java\jvm\out\production\jvm> javap -v .\JavaApp.class
+// Classfile /D:/develop/code/java/jvm/out/production/jvm/JavaApp.class
+//   Last modified 2022年6月27日; size 524 bytes
+//   MD5 checksum 7c885a2b9385027997581b72fac41fd9
+//   Compiled from "JavaApp.java"
+//类基本信息
+// public class JavaApp
+//   minor version: 0
+//   major version: 55
+//   flags: (0x0021) ACC_PUBLIC, ACC_SUPER
+//   this_class: #5                          // JavaApp
+//   super_class: #6                         // java/lang/Object
+//   interfaces: 0, fields: 0, methods: 2, attributes: 1
+//常量池
+// Constant pool:
+//    #1 = Methodref          #6.#20         // java/lang/Object."<init>":()V
+//    #2 = Fieldref           #21.#22        // java/lang/System.out:Ljava/io/PrintStream;
+//    #3 = String             #23            // hello world
+//    #4 = Methodref          #24.#25        // java/io/PrintStream.println:(Ljava/lang/String;)V
+//    #5 = Class              #26            // JavaApp
+//    #6 = Class              #27            // java/lang/Object
+//    #7 = Utf8               <init>
+//    #8 = Utf8               ()V
+//    #9 = Utf8               Code
+//   #10 = Utf8               LineNumberTable
+//   #11 = Utf8               LocalVariableTable
+//   #12 = Utf8               this
+//   #13 = Utf8               LJavaApp;
+//   #14 = Utf8               main
+//   #15 = Utf8               ([Ljava/lang/String;)V
+//   #16 = Utf8               args
+//   #17 = Utf8               [Ljava/lang/String;
+//   #18 = Utf8               SourceFile
+//   #19 = Utf8               JavaApp.java
+//   #20 = NameAndType        #7:#8          // "<init>":()V
+//   #21 = Class              #28            // java/lang/System
+//   #22 = NameAndType        #29:#30        // out:Ljava/io/PrintStream;
+//   #23 = Utf8               hello world
+//   #24 = Class              #31            // java/io/PrintStream
+//   #25 = NameAndType        #32:#33        // println:(Ljava/lang/String;)V
+//   #26 = Utf8               JavaApp
+//   #27 = Utf8               java/lang/Object
+//   #28 = Utf8               java/lang/System
+//   #29 = Utf8               out
+//   #30 = Utf8               Ljava/io/PrintStream;
+//   #31 = Utf8               java/io/PrintStream
+//   #32 = Utf8               println
+//   #33 = Utf8               (Ljava/lang/String;)V
+//类方法定义
+// {
+//   public JavaApp();
+//     descriptor: ()V
+//     flags: (0x0001) ACC_PUBLIC
+//     Code:
+//       stack=1, locals=1, args_size=1
+//虚拟机指令
+//          0: aload_0
+//          1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+//          4: return
+//       LineNumberTable:
+//         line 1: 0
+//       LocalVariableTable:
+//         Start  Length  Slot  Name   Signature
+//             0       5     0  this   LJavaApp;
+// 
+//   public static void main(java.lang.String[]);
+//     descriptor: ([Ljava/lang/String;)V
+//     flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+//     Code:
+//       stack=2, locals=1, args_size=1
+//虚拟机指令
+//          0: getstatic     #2                  // Field java/lang/System.out:Ljava/io/PrintStream;
+//          3: ldc           #3                  // String hello world
+//          5: invokevirtual #4                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+//          8: return
+//       LineNumberTable:
+//         line 3: 0
+//         line 4: 8
+//       LocalVariableTable:
+//         Start  Length  Slot  Name   Signature
+//             0       9     0  args   [Ljava/lang/String;
+// }
+// SourceFile: "JavaApp.java"
+
+
+
+```
+
+
+
+#### StringTable
+
+```java
+public class JavaApp {
+    public static void main(String [] args){
+        String s1 = "a";
+        String s2 = "b";
+        String s3 = "a" + "b";
+        String s4 = s1 + s2;
+        String s5 = "ab";
+        String s6 = s4.intern();
+        System.out.println(s3 == s4); // false
+        System.out.println(s3 == s5); // true
+        System.out.println(s3 == s6); // true
+
+        String x2 = new String("c") + new String("d");
+        String x1 = "cd";
+        x2.intern();
+        System.out.println(x1 == x2); // false
+    }
+}
+```
+
+常量池中的字符串仅是符号，第一次用到时才会把字符串从常量池中放入 StringTable 并变为对象。
+
+StringTable 是一个哈希表，可以避免重复创建字符串对象。
+
+字符串变量拼接的原理是 StringBuilder(1.8) ，从反编译知道。
+
+字符串常量拼接的原理是编译器优化。
+
+可以使用 intern 方法，将 StringTable 中还没有的字符串对象放入 StringTable 中。
+
+##### intern()
+
+1.8 将字符串对象尝试放入 StringTable 中，如果有则不放入，如果没有则放入 StringTable，然后返回 StringTable 中的对象。
+
+
+
+1.6 将字符串对象尝试放入 StringTable 中，如果有则不放入，如果没有则将此对象复制一份，再放入 StringTable，然后返回 StringTable 中的对象。
+
+```java
+public class JavaApp {
+    public static void main(String [] args){
+        String x2 = new String("c") + new String("d");
+        String x1 = "cd";
+        String x3 = x2.intern();
+        //1.6 1.8
+        System.out.println(x1 == x2); // false
+        System.out.println(x1 == x3); // true
+    }
+}
+
+public class JavaApp {
+    public static void main(String [] args){
+        String x2 = new String("c") + new String("d");
+        String x3 = x2.intern();
+        String x1 = "cd";
+        // 1.6
+        System.out.println(x1 == x2); // false
+        System.out.println(x1 == x3); // true
+        // 1.8
+        System.out.println(x1 == x2); // true
+        System.out.println(x1 == x3); // true
+    }
+}
+```
+
+
+
+#### StringTable 位置
+
+从 1.7 开始， StringTable 从永久代中移动到堆中，由于永久代的垃圾回收需要 Full GC ，转移到堆中，只需要 Mirror GC 就可以进行回收 StringTable 中的对象。
+
+##### 证明案例
+
+分别在 1.6 和 1.8 的环境下向 StringTable 不断添加字符串，导致 StringTable 内存溢出。
+
+```java
+// 1.8 设置 -Xmx10m -XX:-UseGCOverheadLimit
+// 1.6 设置 -XX:MaxPermSize=10m
+public class JavaApp {
+    public static void main(String [] args){
+        List<String> list = new ArrayList<>();
+        int i = 0;
+        try{
+            for(int j = 0;j<260000;j++){
+                list.add(String.valueOf(j).intern());
+                i++;
+            }
+        }catch (Throwable e){
+            e.printStackTrace();
+        }finally {
+            System.out.println(i);
+        }
+    }
+}
+
+// 在 1.6 中为  java.lang.OutOfMemoryError: PermGen space
+// 在 1.8 中为 java.lang.OutOfMemoryError: Java heap space
+```
+
+
+
+#### StringTable 垃圾回收
+
+```java
+// -Xmx10m ：设置堆内存大小
+// -XX:+PrintStringTableStatistics ：打印 StringTable 统计信息
+// -XX:+PrintGCDetails -verbose:gx ：打印垃圾回收信息
+public class JavaApp {
+    public static void main(String [] args){
+        int i = 0;
+        try{
+            
+        }catch (Throwable e){
+            e.printStackTrace();
+        }finally {
+            System.out.println(i);
+        }
+    }
+}
+// [0.002s][warning][gc] -XX:+PrintGCDetails is deprecated. Will use -Xlog:gc* instead.
+// [0.021s][info   ][gc,heap] Heap region size: 1M
+// [0.022s][info   ][gc     ] Using G1
+// [0.022s][info   ][gc,heap,coops] Heap address: 0x00000000ff600000, size: 10 MB, Compressed Oops mode: 32-bit
+// 0
+// [0.134s][info   ][gc,heap,exit ] Heap
+// [0.134s][info   ][gc,heap,exit ]  garbage-first heap   total 10240K, used 1024K [0x00000000ff600000, 0x0000000100000000)
+// [0.134s][info   ][gc,heap,exit ]   region size 1024K, 2 young (2048K), 0 survivors (0K)
+// [0.134s][info   ][gc,heap,exit ]  Metaspace       used 6380K, capacity 6443K, committed 6528K, reserved 1056768K
+// [0.134s][info   ][gc,heap,exit ]   class space    used 559K, capacity 570K, committed 640K, reserved 1048576K
+// SymbolTable statistics:
+// Number of buckets       :     20011 =    160088 bytes, each 8
+// Number of entries       :     26605 =    638520 bytes, each 24
+// Number of literals      :     26605 =   1125416 bytes, avg  42.301
+// Total footprint         :           =   1924024 bytes
+// Average bucket size     :     1.330
+// Variance of bucket size :     1.336
+// Std. dev. of bucket size:     1.156
+// Maximum bucket size     :         9
+// StringTable statistics:
+// Number of buckets       :     65536 =    524288 bytes, each 8
+// Number of entries       :      2926 =     46816 bytes, each 16
+// Number of literals      :      2926 =    242696 bytes, avg  82.945 // 字符串对象数量
+// Total footprsize_t         :           =    813800 bytes
+// Average bucket size     :     0.045
+// Variance of bucket size :     0.045
+// Std. dev. of bucket size:     0.212
+// Maximum bucket size     :         2
+```
+
+
+
+将大量字符串加入到 StringTable 中，会发现 StringTable 中有些字符串对象被回收了
+
+```java
+// -Xmx10m ：设置堆内存大小
+// -XX:+PrintStringTableStatistics ：打印 StringTable 统计信息
+// -XX:+PrintGCDetails -verbose:gx ：打印垃圾回收信息
+public class JavaApp {
+    public static void main(String [] args){
+        int i = 0;
+        try{
+            for(int j = 0;j<50000;j++){
+                String.valueOf(j).intern();
+                i++;
+            }
+        }catch (Throwable e){
+            e.printStackTrace();
+        }finally {
+            System.out.println(i);
+        }
+    }
+}
+// [0.002s][warning][gc] -XX:+PrintGCDetails is deprecated. Will use -Xlog:gc* instead.
+// [0.005s][info   ][gc,heap] Heap region size: 1M
+// [0.006s][info   ][gc     ] Using G1
+// [0.006s][info   ][gc,heap,coops] Heap address: 0x00000000ff600000, size: 10 MB, Compressed Oops mode: 32-bit
+// [0.108s][info   ][gc,start     ] GC(0) Pause Young (Normal) (G1 Evacuation Pause)
+// [0.108s][info   ][gc,task      ] GC(0) Using 2 workers of 13 for evacuation
+// [0.114s][info   ][gc,phases    ] GC(0)   Pre Evacuate Collection Set: 0.0ms
+// [0.114s][info   ][gc,phases    ] GC(0)   Evacuate Collection Set: 6.3ms
+// [0.114s][info   ][gc,phases    ] GC(0)   Post Evacuate Collection Set: 0.1ms
+// [0.114s][info   ][gc,phases    ] GC(0)   Other: 0.2ms
+// [0.114s][info   ][gc,heap      ] GC(0) Eden regions: 4->0(1)
+// [0.114s][info   ][gc,heap      ] GC(0) Survivor regions: 0->1(1)
+// [0.114s][info   ][gc,heap      ] GC(0) Old regions: 0->3
+// [0.114s][info   ][gc,heap      ] GC(0) Humongous regions: 0->0
+// [0.114s][info   ][gc,metaspace ] GC(0) Metaspace: 6420K->6420K(1056768K)
+// [0.114s][info   ][gc           ] GC(0) Pause Young (Normal) (G1 Evacuation Pause) 4M->3M(10M) 6.590ms
+// [0.114s][info   ][gc,cpu       ] GC(0) User=0.00s Sys=0.00s Real=0.01s
+// 50000
+// [0.117s][info   ][gc,heap,exit ] Heap
+// [0.117s][info   ][gc,heap,exit ]  garbage-first heap   total 10240K, used 3100K [0x00000000ff600000, 0x0000000100000000)
+// [0.117s][info   ][gc,heap,exit ]   region size 1024K, 2 young (2048K), 1 survivors (1024K)
+// [0.117s][info   ][gc,heap,exit ]  Metaspace       used 6439K, capacity 6539K, committed 6784K, reserved 1056768K
+// [0.117s][info   ][gc,heap,exit ]   class space    used 564K, capacity 602K, committed 640K, reserved 1048576K
+// SymbolTable statistics:
+// Number of buckets       :     20011 =    160088 bytes, each 8
+// Number of entries       :     26688 =    640512 bytes, each 24
+// Number of literals      :     26688 =   1127872 bytes, avg  42.261
+// Total footprint         :           =   1928472 bytes
+// Average bucket size     :     1.334
+// Variance of bucket size :     1.340
+// Std. dev. of bucket size:     1.158
+// Maximum bucket size     :         9
+// StringTable statistics:
+// Number of buckets       :     65536 =    524288 bytes, each 8
+// Number of entries       :     52920 =    846720 bytes, each 16
+// Number of literals      :     52920 =   2642672 bytes, avg  49.937 // 字符串对象数量
+// Total footprsize_t         :           =   4013680 bytes
+// Average bucket size     :     0.807
+// Variance of bucket size :     1.567
+// Std. dev. of bucket size:     1.252
+// Maximum bucket size     :         7
+```
+
+
+
+#### StringTable 性能调优
+
+**减小哈希冲突**
+
+-XX:StringTableSize=200000 ：设置 HashTable bucket 大小
+
+**重复使用的字符串考虑入池**
+
+```java
+// -XX:StringTableSize=200000 ：设置 HashTable bucket 大小
+// -XX:+PrintStringTableStatistics ：打印 StringTable 统计信息
+public class JavaApp {
+    public static void main(String [] args){
+        long start = System.nanoTime();
+        for(int j = 0;j<400000;j++){
+            String.valueOf(j).intern();
+        }
+        System.out.println("cost:"+(System.nanoTime()-start)/1000000);
+    }
+}
+// 设置 HashTable bucket 大小为 200000
+// cost:90
+// SymbolTable statistics:
+// Number of buckets       :     20011 =    160088 bytes, each 8
+// Number of entries       :     27108 =    650592 bytes, each 24
+// Number of literals      :     27108 =   1149848 bytes, avg  42.417
+// Total footprint         :           =   1960528 bytes
+// Average bucket size     :     1.355
+// Variance of bucket size :     1.359
+// Std. dev. of bucket size:     1.166
+// Maximum bucket size     :         9
+// StringTable statistics:
+// Number of buckets       :    262144 =   2097152 bytes, each 8
+// Number of entries       :    402971 =   6447536 bytes, each 16
+// Number of literals      :    402971 =  19446096 bytes, avg  48.257
+// Total footprsize_t         :           =  27990784 bytes
+// Average bucket size     :     1.537
+// Variance of bucket size :     1.529
+// Std. dev. of bucket size:     1.237
+// Maximum bucket size     :         7
+
+// 不设置 HashTable bucket
+// cost:193
+// SymbolTable statistics:
+// Number of buckets       :     20011 =    160088 bytes, each 8
+// Number of entries       :     27108 =    650592 bytes, each 24
+// Number of literals      :     27108 =   1149848 bytes, avg  42.417
+// Total footprint         :           =   1960528 bytes
+// Average bucket size     :     1.355
+// Variance of bucket size :     1.359
+// Std. dev. of bucket size:     1.166
+// Maximum bucket size     :         9
+// StringTable statistics:
+// Number of buckets       :     65536 =    524288 bytes, each 8
+// Number of entries       :    402971 =   6447536 bytes, each 16
+// Number of literals      :    402971 =  19446096 bytes, avg  48.257
+// Total footprsize_t         :           =  26417920 bytes
+// Average bucket size     :     6.149
+// Variance of bucket size :    17.513
+// Std. dev. of bucket size:     4.185
+// Maximum bucket size     :        19
+```
+
+
+
+
+
+## 直接内存
+
+#### 定义
+
+Direct Memory
+
+- 常见于 NIO 操作时，用于数据缓冲区
+- 分别配回收陈本较高，但读写性能高
+- 不受 JVM 内存回收管理
+
+
+
+#### 应用
+
+
+
+```java
+public class JavaApp {
+
+    private static final String FROM = "E:\\downloads\\youtube\\Sig M18.mp4";
+
+    private static final String TO = "E:\\downloads\\youtube\\Sig M18.mp4.bak";
+
+    private static final int _1MB = 1024 * 1024;
+
+    public static void main(String [] args) throws IOException {
+        io();
+        directBuffer();
+    }
+
+    private static void directBuffer() throws IOException {
+        long start = System.nanoTime();
+        try(FileChannel from = new FileInputStream(FROM).getChannel();
+            FileChannel to = new FileOutputStream(TO).getChannel();){
+            ByteBuffer buf = ByteBuffer.allocateDirect(_1MB);
+            while (true) {
+                int len = from.read(buf);
+                if(-1 == len){
+                    break;
+                }
+                buf.flip();
+                to.write(buf);
+                buf.clear();
+            }
+        }
+        System.out.println("directBuffer 用时:"+(System.nanoTime()-start) / 1000000.0);
+    }
+
+    private static void io() throws IOException {
+        long start = System.nanoTime();
+        try(FileInputStream from = new FileInputStream(FROM);
+            FileOutputStream to = new FileOutputStream(TO);){
+            byte[] buf = new byte[_1MB];
+            while (true) {
+                int len = from.read(buf);
+                if(-1 == len){
+                    break;
+                }
+                to.write(buf, 0 , len);
+            }
+        }
+        System.out.println("io 用时:"+(System.nanoTime()-start) / 1000000.0);
+    }
+}
+
+// io 用时:310.6705
+// directBuffer 用时:160.1515
+```
+
+
+
+阻塞 IO
+
+![](D:\documents\notes\solid\Java.assets\007.PNG)
+
+
+
+NIO
+
+![](D:\documents\notes\solid\Java.assets\008.PNG)
+
+
+
+#### 分配和回收原理
+
+使用了 Unsafe 对象完成直接内存的分配和回收，并且回收需要主动调用 freeMemory 方法。
+
+ByteBuffer 的实现类内部，使用了 Cleaner （虚引用）来监测 ByteBuffer 对象，一旦 ByteBuffer 对象被垃圾回收，那么就会由 ReferenceHandler 线程通过 Cleaner 的 clean方法调用 freeMemory 来释放直接内存。
+
+
+
+##### 内存申请和释放
+
+```java
+public class JavaApp {
+
+    private static final int _1GB = 1024 * 1024 * 1024;
+
+    public static void main(String [] args) throws NoSuchFieldException, IllegalAccessException, IOException {
+        Unsafe unsafe = getUnsafe();
+        // 分配内存
+        long base = unsafe.allocateMemory(_1GB);
+        unsafe.setMemory(base, _1GB, (byte)0);
+        System.in.read();
+        // 释放内存
+        unsafe.freeMemory(base);
+        System.in.read();
+    }
+
+    public static Unsafe getUnsafe() throws NoSuchFieldException, IllegalAccessException {
+        Field field = Unsafe.class.getDeclaredField("theUnsafe");
+        field.setAccessible(true);
+        return (Unsafe) field.get(null);
+    }
+}
+```
+
+![](D:\documents\notes\solid\Java.assets\009.PNG)
+
+
+
+![](D:\documents\notes\solid\Java.assets\010.PNG)
+
+
+
+##### ByteBuffer 的申请与释放
+
+```java
+public class JavaApp {
+
+    private static final int _1GB = 1024 * 1024 * 1024;
+
+    public static void main(String [] args) throws IOException {
+        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(_1GB);
+        System.out.println("分配完毕");
+        System.in.read();
+        System.out.println("开始释放");
+        byteBuffer = null;
+        System.gc();
+    }
+}
+```
+
+在方法 allocateDirect 中创建了对象 DirectByteBuffer
+
+```java
+public static ByteBuffer allocateDirect(int capacity) {
+    return new DirectByteBuffer(capacity);
+}
+```
+
+在对象 DirectByteBuffer 的构造函数中 进行了内存分配。
+
+```java
+DirectByteBuffer(int cap) {                   // package-private
+
+    super(-1, 0, cap, cap);
+    boolean pa = VM.isDirectMemoryPageAligned();
+    int ps = Bits.pageSize();
+    long size = Math.max(1L, (long)cap + (pa ? ps : 0));
+    Bits.reserveMemory(size, cap);
+
+    long base = 0;
+    try {
+        base = UNSAFE.allocateMemory(size);
+    } catch (OutOfMemoryError x) {
+        Bits.unreserveMemory(size, cap);
+        throw x;
+    }
+    UNSAFE.setMemory(base, size, (byte) 0);
+    if (pa && (base % ps != 0)) {
+        // Round up to page boundary
+        address = base + ps - (base & (ps - 1));
+    } else {
+        address = base;
+    }
+    cleaner = Cleaner.create(this, new Deallocator(base, size, cap));
+    att = null;
+}
+```
+
+并将当前 DirectByteBuffer 对象和虚引用对象  Cleaner 关联，当当前 DirectByteBuffer 对象被垃圾回收器回收时会触发虚引用函数的 clean() 函数。
+
+```java
+public void clean() {
+    if (!remove(this))
+        return;
+    try {
+        thunk.run();
+    } catch (final Throwable x) {
+        AccessController.doPrivileged(new PrivilegedAction<>() {
+            public Void run() {
+                if (System.err != null)
+                    new Error("Cleaner terminated abnormally", x)
+                    .printStackTrace();
+                System.exit(1);
+                return null;
+            }});
+    }
+}
+```
+
+clean() 函数会调用 Deallocator 进行内存释放。
+
+```java
+private static class Deallocator implements Runnable
+{
+
+    private long address;
+    private long size;
+    private int capacity;
+
+    private Deallocator(long address, long size, int capacity) {
+        assert (address != 0);
+        this.address = address;
+        this.size = size;
+        this.capacity = capacity;
+    }
+
+    public void run() {
+        if (address == 0) {
+            // Paranoia
+            return;
+        }
+        UNSAFE.freeMemory(address);
+        address = 0;
+        Bits.unreserveMemory(size, capacity);
+    }
+
+}
+```
+
+##### 内存溢出
+
+```java
+public class JavaApp {
+
+    private static final int _100MB = 100 * 1024 * 1024;
+
+    public static void main(String [] args) {
+        List<ByteBuffer> list = new ArrayList<>(100);
+        int i = 0;
+        try{
+            while(true){
+                ByteBuffer byteBuffer = ByteBuffer.allocateDirect(_100MB);
+                list.add(byteBuffer);
+                i++;
+            }
+        } finally {
+            System.out.println(i);
+        }
+    }
+}
+
+// 39
+// Exception in thread "main" java.lang.OutOfMemoryError: Direct buffer memory
+// 	at java.base/java.nio.Bits.reserveMemory(Bits.java:175)
+// 	at java.base/java.nio.DirectByteBuffer.<init>(DirectByteBuffer.java:118)
+// 	at java.base/java.nio.ByteBuffer.allocateDirect(ByteBuffer.java:318)
+// 	at JavaApp.main(JavaApp.java:15)
+```
+
+
+
+#### 禁用显式垃圾回收对直接内存的影响
+
+调用 System.gc(); 通知 GC 进行垃圾回收，执行的时 Full GC。会对程序造成较大影响。
+
+禁用显式垃圾回收时无法手动通知 GC 进行垃圾回收，从而无法及时回收直接内存。只能等到 GC 自动进行垃圾回收时才能将直接内存回收。
+
+在禁用显式垃圾回收时可以手动调用释放内存。
+
+```java
+// -XX:+DisableExplicitGC 禁用显式垃圾回收
+public class JavaApp {
+
+    private static final int _1GB = 1024 * 1024 * 1024;
+
+    public static void main(String [] args) throws IOException {
+        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(_1GB);
+        System.out.println("分配完毕");
+        System.in.read();
+        System.out.println("开始释放");
+        byteBuffer = null;
+        System.gc(); // 无效
+        System.in.read();
+    }
+}
+```
+
+
+
+## 执行引擎
+
+### 垃圾回收器
+
+#### 如何判断对象可以回收
+
+##### 引用计数法
+
+根据对象被引用的数量决定是否回收该对象，当被引用的数量为 0 时，则可以对该对象进行垃圾回收。
+
+###### 出现的问题
+
+当多个对象出现循环引用时，这些对象由于被引用的数量都不可能为 0 ，所以无法回收这些对象。
+
+![](D:\documents\notes\solid\Java.assets\011.PNG)
+
+
+
+##### 可达性分析算法
+
+对堆中的对象进行扫描，判断是否能够沿着 GC Root 对象 为起点的引用链找到该对象，如果找不到，则标记当前对象为可回收对象，否则不回收当前对象。
+
+
+
+###### 根对象（GC Root 对象）
+
+**案例**
+
+使用 Memory Analyzer 内存分析工具寻找根对象
+
+**1、运行程序**
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) throws IOException {
+        List<Object> list = new ArrayList<>();
+        list.add("a");
+        list.add("b");
+        System.out.println(1);
+        System.in.read();
+
+        list = null;
+        System.out.println(2);
+        System.in.read();
+        System.out.println("end");
+    }
+}
+```
+
+**2、使用 jps 查看 java 进程**
+
+```sh
+PS D:\develop\code\java\jvm> jps
+20912 Jps
+21220 Launcher
+8388
+17708 JavaApp
+```
+
+**3、使用 jmap 抓取堆快照**
+
+```sh
+# format:二进制格式，存活的对象（抓取之前会进行一次垃圾回收），保存文件
+PS D:\develop\code\java\jvm> jmap -dump:format=b,live,file=JavaApp.dump.bin 17708
+Heap dump file created
+# list 被置为空之后抓取
+PS D:\develop\code\java\jvm> jmap -dump:format=b,live,file=JavaApp2.dump.bin 17708 
+Heap dump file created
+```
+
+**4、使用 mat 打开两份堆快照**
+
+打开 Open Query Browser -> Java Basics -> GC Roots 可以看到根对象被分为几大类
+
+![](D:\documents\notes\solid\Java.assets\012.PNG)
+
+线程内的局部变量所引用的对象都可以作为根对象
+
+![](D:\documents\notes\solid\Java.assets\013.PNG)
+
+
+
+当对象没有被引用时，对象将被回收
+
+![](D:\documents\notes\solid\Java.assets\014.PNG)
+
+
+
+
+
+##### 四种引用
+
+###### 强引用（StrongReference）
+
+只有所有 GC Roots 对象都不通过强引用引用该对象，该对象才能被垃圾回收。
+
+```java
+Object object = new Object();
+String str = "scc";
+//都是强引用
+```
+
+###### 软引用(SoftReference)
+
+仅有软引用引用该对象时，在垃圾回收后，内存仍然不足时会再次发起垃圾回收，回收软引用对象。
+
+可以配合引用队列来释放软引用自身。
+
+###### 软引用示例
+
+```java
+// -Xmx20m
+public class JavaApp {
+    private static final int _4MB = 4 * 1024 * 1024;
+    public static void main(String [] args) {
+        List<SoftReference<byte[]>> list = new ArrayList();
+        for(int i = 0; i<5;i++){
+            SoftReference<byte[]> ref = new SoftReference<>(new byte[_4MB]);
+            System.out.println(ref.get());
+            list.add(ref);
+            System.out.println(list.size());
+        }
+        System.out.println("循环结束:"+list.size());
+        for(SoftReference<byte[]> ref:list){
+            System.out.println(ref.get());
+        }
+    }
+}
+// 结果如下
+// [B@4c203ea1
+// 1
+// [B@27f674d
+// 2
+// [B@1d251891
+// 3
+// [B@48140564
+// 4
+// [B@58ceff1
+// 5
+// 循环结束:5
+// null
+// null
+// null
+// [B@48140564
+// [B@58ceff1
+
+// 垃圾回收详细信息
+// [0.002s][warning][gc] -XX:+PrintGCDetails is deprecated. Will use -Xlog:gc* instead.
+// [0.020s][info   ][gc,heap] Heap region size: 1M
+// [0.021s][info   ][gc     ] Using G1
+// [0.021s][info   ][gc,heap,coops] Heap address: 0x00000000fec00000, size: 20 MB, Compressed Oops mode: 32-bit
+// [B@4c203ea1
+// 1
+// [0.147s][info   ][gc,start     ] GC(0) Pause Young (Concurrent Start) (G1 Humongous Allocation)
+// [0.147s][info   ][gc,task      ] GC(0) Using 2 workers of 13 for evacuation
+// [0.148s][info   ][gc,phases    ] GC(0)   Pre Evacuate Collection Set: 0.0ms
+// [0.148s][info   ][gc,phases    ] GC(0)   Evacuate Collection Set: 1.3ms
+// [0.148s][info   ][gc,phases    ] GC(0)   Post Evacuate Collection Set: 0.1ms
+// [0.148s][info   ][gc,phases    ] GC(0)   Other: 0.2ms
+// [0.148s][info   ][gc,heap      ] GC(0) Eden regions: 3->0(8)
+// [0.148s][info   ][gc,heap      ] GC(0) Survivor regions: 0->1(2)
+// [0.148s][info   ][gc,heap      ] GC(0) Old regions: 0->0
+// [0.148s][info   ][gc,heap      ] GC(0) Humongous regions: 5->5
+// [0.148s][info   ][gc,metaspace ] GC(0) Metaspace: 6369K->6369K(1056768K)
+// [0.148s][info   ][gc           ] GC(0) Pause Young (Concurrent Start) (G1 Humongous Allocation) 7M->5M(20M) 1.644ms
+// [0.148s][info   ][gc,cpu       ] GC(0) User=0.03s Sys=0.00s Real=0.00s
+// [0.148s][info   ][gc           ] GC(1) Concurrent Cycle
+// [0.148s][info   ][gc,marking   ] GC(1) Concurrent Clear Claimed Marks
+// [0.149s][info   ][gc,marking   ] GC(1) Concurrent Clear Claimed Marks 0.004ms
+// [0.149s][info   ][gc,marking   ] GC(1) Concurrent Scan Root Regions
+// [0.150s][info   ][gc,marking   ] GC(1) Concurrent Scan Root Regions 0.861ms
+// [0.150s][info   ][gc,marking   ] GC(1) Concurrent Mark (0.150s)
+// [0.150s][info   ][gc,marking   ] GC(1) Concurrent Mark From Roots
+// [0.150s][info   ][gc,task      ] GC(1) Using 3 workers of 3 for marking
+// [0.150s][info   ][gc,marking   ] GC(1) Concurrent Mark From Roots 0.331ms
+// [0.150s][info   ][gc,marking   ] GC(1) Concurrent Preclean
+// [0.150s][info   ][gc,marking   ] GC(1) Concurrent Preclean 0.040ms
+// [0.150s][info   ][gc,marking   ] GC(1) Concurrent Mark (0.150s, 0.150s) 0.388ms
+// [B@27f674d[0.150s][info   ][gc,start     ] GC(1) Pause Remark
+// [0.151s][info   ][gc,stringtable] GC(1) Cleaned string and symbol table, strings: 2932 processed, 0 removed, symbols: 26618 processed, 0 removed
+// [0.151s][info   ][gc            ] GC(1) Pause Remark 11M->11M(20M) 1.032ms
+// [0.151s][info   ][gc,cpu        ] GC(1) User=0.00s Sys=0.00s Real=0.00s
+// [0.151s][info   ][gc,marking    ] GC(1) Concurrent Rebuild Remembered Sets
+// [0.151s][info   ][gc,marking    ] GC(1) Concurrent Rebuild Remembered Sets 0.035ms
+// [0.151s][info   ][gc,start      ] GC(1) Pause Cleanup
+// [0.151s][info   ][gc            ] GC(1) Pause Cleanup 11M->11M(20M) 0.024ms
+// [0.151s][info   ][gc,cpu        ] GC(1) User=0.00s Sys=0.00s Real=0.00s
+// [0.151s][info   ][gc,marking    ] GC(1) Concurrent Cleanup for Next Mark
+// 
+// 2
+// [0.151s][info   ][gc,marking    ] GC(1) Concurrent Cleanup for Next Mark 0.091ms
+// [0.151s][info   ][gc            ] GC(1) Concurrent Cycle 2.818ms
+// [B@1d251891
+// 3
+// [0.153s][info   ][gc,start      ] GC(2) Pause Young (Concurrent Start) (G1 Humongous Allocation)
+// [0.153s][info   ][gc,task       ] GC(2) Using 2 workers of 13 for evacuation
+// [0.154s][info   ][gc,phases     ] GC(2)   Pre Evacuate Collection Set: 0.0ms
+// [0.154s][info   ][gc,phases     ] GC(2)   Evacuate Collection Set: 0.8ms
+// [0.154s][info   ][gc,phases     ] GC(2)   Post Evacuate Collection Set: 0.1ms
+// [0.154s][info   ][gc,phases     ] GC(2)   Other: 0.1ms
+// [0.154s][info   ][gc,heap       ] GC(2) Eden regions: 1->0(1)
+// [0.154s][info   ][gc,heap       ] GC(2) Survivor regions: 1->1(2)
+// [0.154s][info   ][gc,heap       ] GC(2) Old regions: 0->0
+// [0.154s][info   ][gc,heap       ] GC(2) Humongous regions: 15->15
+// [0.154s][info   ][gc,metaspace  ] GC(2) Metaspace: 6419K->6419K(1056768K)
+// [0.154s][info   ][gc            ] GC(2) Pause Young (Concurrent Start) (G1 Humongous Allocation) 16M->16M(20M) 1.069ms
+// [0.154s][info   ][gc,cpu        ] GC(2) User=0.00s Sys=0.00s Real=0.00s
+// [0.154s][info   ][gc            ] GC(3) Concurrent Cycle
+// [0.154s][info   ][gc,marking    ] GC(3) Concurrent Clear Claimed Marks
+// [0.154s][info   ][gc,marking    ] GC(3) Concurrent Clear Claimed Marks 0.005ms
+// [0.154s][info   ][gc,marking    ] GC(3) Concurrent Scan Root Regions
+// [0.155s][info   ][gc,marking    ] GC(3) Concurrent Scan Root Regions 0.545ms
+// [0.155s][info   ][gc,marking    ] GC(3) Concurrent Mark (0.155s)
+// [0.155s][info   ][gc,marking    ] GC(3) Concurrent Mark From Roots
+// [0.155s][info   ][gc,start      ] GC(4) Pause Young (Normal) (G1 Humongous Allocation)
+// [0.155s][info   ][gc,task       ] GC(3) Using 3 workers of 3 for marking
+// [0.155s][info   ][gc,task       ] GC(4) Using 2 workers of 13 for evacuation
+// [0.155s][info   ][gc,phases     ] GC(4)   Pre Evacuate Collection Set: 0.5ms
+// [0.155s][info   ][gc,phases     ] GC(4)   Evacuate Collection Set: 0.8ms
+// [0.155s][info   ][gc,phases     ] GC(4)   Post Evacuate Collection Set: 0.0ms
+// [0.155s][info   ][gc,phases     ] GC(4)   Other: 0.1ms
+// [0.155s][info   ][gc,heap       ] GC(4) Eden regions: 0->0(1)
+// [0.155s][info   ][gc,heap       ] GC(4) Survivor regions: 1->1(1)
+// [0.155s][info   ][gc,heap       ] GC(4) Old regions: 0->1
+// [0.155s][info   ][gc,heap       ] GC(4) Humongous regions: 15->15
+// [0.155s][info   ][gc,metaspace  ] GC(4) Metaspace: 6419K->6419K(1056768K)
+// [0.155s][info   ][gc            ] GC(4) Pause Young (Normal) (G1 Humongous Allocation) 16M->16M(20M) 0.890ms
+// [0.155s][info   ][gc,cpu        ] GC(4) User=0.00s Sys=0.00s Real=0.00s
+// [0.156s][info   ][gc,task       ] GC(5) Using 2 workers of 13 for full compaction
+// [0.156s][info   ][gc,start      ] GC(5) Pause Full (G1 Humongous Allocation)
+// [0.156s][info   ][gc,phases,start] GC(5) Phase 1: Mark live objects
+// [0.157s][info   ][gc,stringtable ] GC(5) Cleaned string and symbol table, strings: 2933 processed, 3 removed, symbols: 26667 processed, 0 removed
+// [0.157s][info   ][gc,phases      ] GC(5) Phase 1: Mark live objects 1.068ms
+// [0.157s][info   ][gc,phases,start] GC(5) Phase 2: Prepare for compaction
+// [0.157s][info   ][gc,phases      ] GC(5) Phase 2: Prepare for compaction 0.168ms
+// [0.157s][info   ][gc,phases,start] GC(5) Phase 3: Adjust pointers
+// [0.157s][info   ][gc,phases      ] GC(5) Phase 3: Adjust pointers 0.356ms
+// [0.157s][info   ][gc,phases,start] GC(5) Phase 4: Compact heap
+// [0.158s][info   ][gc,phases      ] GC(5) Phase 4: Compact heap 0.205ms
+// [0.158s][info   ][gc,heap        ] GC(5) Eden regions: 0->0(1)
+// [0.158s][info   ][gc,heap        ] GC(5) Survivor regions: 1->0(1)
+// [0.158s][info   ][gc,heap        ] GC(5) Old regions: 1->2
+// [0.158s][info   ][gc,heap        ] GC(5) Humongous regions: 15->15
+// [0.158s][info   ][gc,metaspace   ] GC(5) Metaspace: 6419K->6419K(1056768K)
+// [0.158s][info   ][gc             ] GC(5) Pause Full (G1 Humongous Allocation) 16M->15M(20M) 2.052ms
+// [0.158s][info   ][gc,cpu         ] GC(5) User=0.00s Sys=0.00s Real=0.00s
+// [0.158s][info   ][gc,task        ] GC(6) Using 2 workers of 13 for full compaction
+// [0.158s][info   ][gc,start       ] GC(6) Pause Full (G1 Humongous Allocation)
+// [0.158s][info   ][gc,phases,start] GC(6) Phase 1: Mark live objects
+// [0.159s][info   ][gc,stringtable ] GC(6) Cleaned string and symbol table, strings: 2930 processed, 2 removed, symbols: 26667 processed, 0 removed
+// [0.159s][info   ][gc,phases      ] GC(6) Phase 1: Mark live objects 0.727ms
+// [0.159s][info   ][gc,phases,start] GC(6) Phase 2: Prepare for compaction
+// [0.159s][info   ][gc,phases      ] GC(6) Phase 2: Prepare for compaction 0.148ms
+// [0.159s][info   ][gc,phases,start] GC(6) Phase 3: Adjust pointers
+// [0.159s][info   ][gc,phases      ] GC(6) Phase 3: Adjust pointers 0.311ms
+// [0.159s][info   ][gc,phases,start] GC(6) Phase 4: Compact heap
+// [0.159s][info   ][gc,phases      ] GC(6) Phase 4: Compact heap 0.190ms
+// [0.160s][info   ][gc,heap        ] GC(6) Eden regions: 0->0(1)
+// [0.160s][info   ][gc,heap        ] GC(6) Survivor regions: 0->0(1)
+// [0.160s][info   ][gc,heap        ] GC(6) Old regions: 2->2
+// [0.160s][info   ][gc,heap        ] GC(6) Humongous regions: 15->0
+// [0.160s][info   ][gc,metaspace   ] GC(6) Metaspace: 6419K->6419K(1056768K)
+// [0.160s][info   ][gc             ] GC(6) Pause Full (G1 Humongous Allocation) 15M->0M(8M) 1.838ms
+// [0.160s][info   ][gc,cpu         ] GC(6) User=0.00s Sys=0.00s Real=0.00s
+// [0.160s][info   ][gc,marking     ] GC(3) Concurrent Mark From Roots 5.160ms
+// [0.160s][info   ][gc,marking     ] GC(3) Concurrent Mark Abort
+// [0.160s][info   ][gc             ] GC(3) Concurrent Cycle 5.757ms
+// [B@48140564
+// 4
+// [0.160s][info   ][gc,start       ] GC(7) Pause Young (Concurrent Start) (G1 Humongous Allocation)
+// [0.160s][info   ][gc,task        ] GC(7) Using 2 workers of 13 for evacuation
+// [0.161s][info   ][gc,phases      ] GC(7)   Pre Evacuate Collection Set: 0.0ms
+// [0.161s][info   ][gc,phases      ] GC(7)   Evacuate Collection Set: 0.1ms
+// [0.161s][info   ][gc,phases      ] GC(7)   Post Evacuate Collection Set: 0.0ms
+// [0.161s][info   ][gc,phases      ] GC(7)   Other: 0.1ms
+// [0.161s][info   ][gc,heap        ] GC(7) Eden regions: 1->0(1)
+// [0.161s][info   ][gc,heap        ] GC(7) Survivor regions: 0->1(1)
+// [0.161s][info   ][gc,heap        ] GC(7) Old regions: 2->2
+// [0.161s][info   ][gc,heap        ] GC(7) Humongous regions: 5->5
+// [0.161s][info   ][gc,metaspace   ] GC(7) Metaspace: 6419K->6419K(1056768K)
+// [0.161s][info   ][gc             ] GC(7) Pause Young (Concurrent Start) (G1 Humongous Allocation) 5M->5M(9M) 0.251ms
+// [0.161s][info   ][gc,cpu         ] GC(7) User=0.00s Sys=0.00s Real=0.00s
+// [0.161s][info   ][gc             ] GC(8) Concurrent Cycle
+// [0.161s][info   ][gc,marking     ] GC(8) Concurrent Clear Claimed Marks
+// [0.161s][info   ][gc,marking     ] GC(8) Concurrent Clear Claimed Marks 0.004ms
+// [0.161s][info   ][gc,marking     ] GC(8) Concurrent Scan Root Regions
+// [0.161s][info   ][gc,marking     ] GC(8) Concurrent Scan Root Regions 0.028ms
+// [0.161s][info   ][gc,marking     ] GC(8) Concurrent Mark (0.161s)
+// [0.161s][info   ][gc,marking     ] GC(8) Concurrent Mark From Roots
+// [0.161s][info   ][gc,task        ] GC(8) Using 3 workers of 3 for marking
+// [0.162s][info   ][gc,marking     ] GC(8) Concurrent Mark From Roots 1.270ms
+// [0.162s][info   ][gc,marking     ] GC(8) Concurrent Preclean
+// [0.162s][info   ][gc,marking     ] GC(8) Concurrent Preclean 0.037ms
+// [0.162s][info   ][gc,marking     ] GC(8) Concurrent Mark (0.161s, 0.162s) 1.323ms
+// [0.162s][info   ][gc,start       ] GC(8) Pause Remark
+// [0.163s][info   ][gc,stringtable ] GC(8) Cleaned string and symbol table, strings: 2928 processed, 0 removed, symbols: 26667 processed, 0 removed
+// [0.163s][info   ][gc             ] GC(8) Pause Remark 10M->10M(14M) 0.846ms
+// [0.163s][info   ][gc,cpu         ] GC(8) User=0.00s Sys=0.00s Real=0.00s
+// [0.163s][info   ][gc,marking     ] GC(8) Concurrent Rebuild Remembered Sets
+// [B@58ceff1
+// 5
+// [0.163s][info   ][gc,marking     ] GC(8) Concurrent Rebuild Remembered Sets 0.426ms
+// [0.164s][info   ][gc,start       ] GC(8) Pause Cleanup
+// [0.164s][info   ][gc             ] GC(8) Pause Cleanup 10M->10M(14M) 0.027ms
+// [0.164s][info   ][gc,cpu         ] GC(8) User=0.00s Sys=0.00s Real=0.00s
+// [0.164s][info   ][gc,marking     ] GC(8) Concurrent Cleanup for Next Mark
+// [0.164s][info   ][gc,marking     ] GC(8) Concurrent Cleanup for Next Mark 0.042ms
+// [0.164s][info   ][gc             ] GC(8) Concurrent Cycle 2.887ms
+// 循环结束:5
+// null
+// null
+// null
+// [B@48140564
+// [B@58ceff1
+// [0.175s][info   ][gc,heap,exit   ] Heap
+// [0.175s][info   ][gc,heap,exit   ]  garbage-first heap   total 14336K, used 11241K [0x00000000fec00000, 0x0000000100000000)
+// [0.175s][info   ][gc,heap,exit   ]   region size 1024K, 2 young (2048K), 1 survivors (1024K)
+// [0.175s][info   ][gc,heap,exit   ]  Metaspace       used 6686K, capacity 6766K, committed 7040K, reserved 1056768K
+// [0.175s][info   ][gc,heap,exit   ]   class space    used 593K, capacity 614K, committed 640K, reserved 1048576K
+// 
+```
+
+###### 软引用配合引用队列使用
+
+```java
+// -Xmx20m -XX:+PrintGCDetails -verbose:gc
+public class JavaApp {
+    private static final int _4MB = 4 * 1024 * 1024;
+    public static void main(String [] args) {
+        List<SoftReference<byte[]>> list = new ArrayList();
+        ReferenceQueue<byte[]> queue = new ReferenceQueue<>();
+        for(int i = 0; i<5;i++){
+            // 关联了引用队列，当软引用所关联的 byte[] 被垃圾回收时，软引用会自己加入到 queue 中去
+            SoftReference<byte[]> ref = new SoftReference<>(new byte[_4MB], queue);
+            System.out.println(ref.get());
+            list.add(ref);
+            System.out.println(list.size());
+        }
+        System.out.println("循环结束:"+list.size());
+
+        Reference<? extends byte[]> poll = queue.poll();
+        while(poll != null){
+            list.remove(poll);
+            poll = queue.poll();
+        }
+
+        for(SoftReference<byte[]> ref:list){
+            System.out.println(ref.get());
+        }
+    }
+}
+
+// [B@7c75222b
+// 1
+// [B@4c203ea1
+// 2
+// [B@27f674d
+// 3
+// [B@1d251891
+// 4
+// [B@48140564
+// 5
+// 循环结束:5
+// [B@1d251891
+// [B@48140564
+```
+
+
+
+###### 弱引用(WeakReference)
+
+仅有弱引用引用该对象时，在垃圾回收时，无论内存是否充足，都会回收弱引用对象。
+
+可以配合引用队列来释放弱引用自身。
+
+###### 弱引用示例
+
+```java
+// -Xmx20m -XX:+PrintGCDetails -verbose:gc
+public class JavaApp {
+    private static final int _4MB = 4 * 1024 * 1024;
+    public static void main(String [] args) {
+        List<WeakReference<byte[]>> list = new ArrayList();
+        for(int i = 0; i<5;i++){
+            WeakReference<byte[]> ref = new WeakReference<>(new byte[_4MB]);
+            list.add(ref);
+            for(WeakReference<byte[]> w:list){
+                System.out.print(w.get());
+            }
+            System.out.println(list.size());
+        }
+        System.out.println("循环结束:"+list.size());
+    }
+}
+```
+
+
+
+###### 弱引用配合引用队列使用
+
+与软引用类似
+
+
+
+###### 虚引用(PhantomReference)
+
+- 不会决定对象的生命周期
+- 任何时候都可能被垃圾收集器回收
+- 跟踪对象被垃圾收集器回收的活动,起哨兵作用
+- 必须和引用队列`ReferenceQueue`联合使用
+- 主要用来跟踪对象被垃圾回收的活动
+
+​    当垃圾回收器准备回收一个对象时，如果发现它还有虚引用，就会把这个虚引用加入到与之 关联的引用队列中。由 Reference Handler 线程调用虚引用的相关方法。
+
+```java
+Object obj = new Object();
+ReferenceQueue queue = new ReferenceQueue();
+PhantomReference reference = new PhantomReference(obj, queue);
+//强引用对象滞空，保留软引用
+obj = null;
+```
+
+###### 终结器引用
+
+无需手动编码，但其内部配合引用队列使用，在垃圾回收时，终结器引用入队（被引用对象暂时没有被回收），再由 Finalizer 线程通过终结器引用找到被引用对象并调用它的finalize 方法，第二次 GC 时才能回收被引用对象。
+
+
+
+#### 垃圾回收算法
+
+在垃圾回收过程中垃圾回收器会根据不同的情况使用不同的垃圾回收算法
+
+##### 标记清除
+
+Mark Sweep
+
+优点
+
+速度快
+
+缺点
+
+会产生内存碎片
+
+
+
+![](D:\documents\notes\solid\Java.assets\015.PNG)
+
+
+
+##### 标记整理
+
+Mark Compact
+
+优点
+
+不会产生内存碎片
+
+缺点
+
+整理内存过程中需要移动对象，速度较慢
+
+![](D:\documents\notes\solid\Java.assets\016.PNG)
+
+##### 复制
+
+Copy
+
+优点
+
+不会产生内存碎片
+
+缺点
+
+需要占用双倍内存空间
+
+![](D:\documents\notes\solid\Java.assets\017.PNG)
+
+
+
+#### 分代垃圾回收
+
+![](D:\documents\notes\solid\Java.assets\018.PNG)
+
+- 新对象首先分配在伊甸园区域
+- 新生代空间不足时，触发 Minor GC，伊甸园和幸存区 From 中存活（可达性分析算法）的对象使用复制算法复制到幸存区 To 中，存活的对象年龄加1，然后在逻辑上交换 From 和 To
+- Minor GC 会引发 stop the world(STW)。暂停其它用户线程，等垃圾回收结束后，用户线程才能继续运行
+- 当对象年龄超过阈值时，会晋升到老年代，最大寿命为 15。（在对象头中保存年龄的字段大小为 4bit，所以最大为 15 ）
+- 当老年代空间不足时，会先尝试触发 Minor GC，如果之后空间仍不足，那么将触发 Full GC，STW 的时间更长（对象多、回收算法不同）
+- Full GC 后空间仍然不足，将抛出内存不足异常
+
+
+
+##### 相关 JVM 参数
+
+| 含义                | 参数                                                        |
+| ------------------- | ----------------------------------------------------------- |
+| 堆初始大小          | -Xms                                                        |
+| 堆最大大小          | -Xmx 或 -XX:MaxHeapSize=size                                |
+| 新生代大小          | -Xmn 或 -XX:NewSize=size + -XX:MaxNewSize=size              |
+| 幸存区比例（动态）  | -XX:InitialSurvivorRatio=ratio 和 -XX:UseAdaptiveSizePolicy |
+| 幸存区比例          | -XX:SurvivorRatio=ratio（伊甸园的占比）                     |
+| 晋升阈值            | -XX:MaxTenuringThreshold=threshold                          |
+| 晋升详情            | -XX:PrintTenuringDistribution                               |
+| GC 详情             | -XX:PrintGCDetails -verbose:gc                              |
+| Full GC 前 Minor GC | -XX:+ScavengeBeforeFullGC                                   |
+
+
+
+##### GC 分析
+
+###### 不进行垃圾回收
+
+伊甸园存放初始对象，占用 28%
+
+幸存区 from 、幸存区 to 占用 0%
+
+```java
+// -Xms20m -Xmx20m -Xmn10m -XX:+UseSerialGC -XX:+PrintGCDetails -verbose:gc
+public class JavaApp {
+    private static final int _512KB = 512 * 1024;
+    private static final int _1MB = 1024 * 1024;
+    private static final int _6MB = 6 * _1MB;
+    private static final int _7MB = 7 * _1MB;
+    private static final int _8MB = 8 * _1MB;
+    public static void main(String [] args) {
+        
+    }
+}
+
+// [0.003s][warning][gc] -XX:+PrintGCDetails is deprecated. Will use -Xlog:gc* instead.
+// [0.034s][info   ][gc] Using Serial
+// [0.034s][info   ][gc,heap,coops] Heap address: 0x00000000fec00000, size: 20 MB, Compressed Oops mode: 32-bit
+// [0.159s][info   ][gc,heap,exit ] Heap
+// [0.159s][info   ][gc,heap,exit ]  def new generation   total 9216K, used 2351K [0x00000000fec00000, 0x00000000ff600000, 0x00000000ff600000)
+// [0.159s][info   ][gc,heap,exit ]   eden space 8192K,  28% used [0x00000000fec00000, 0x00000000fee4bf00, 0x00000000ff400000)
+// [0.159s][info   ][gc,heap,exit ]   from space 1024K,   0% used [0x00000000ff400000, 0x00000000ff400000, 0x00000000ff500000)
+// [0.159s][info   ][gc,heap,exit ]   to   space 1024K,   0% used [0x00000000ff500000, 0x00000000ff500000, 0x00000000ff600000)
+// [0.159s][info   ][gc,heap,exit ]  tenured generation   total 10240K, used 0K [0x00000000ff600000, 0x0000000100000000, 0x0000000100000000)
+// [0.159s][info   ][gc,heap,exit ]    the space 10240K,   0% used [0x00000000ff600000, 0x00000000ff600000, 0x00000000ff600200, 0x0000000100000000)
+// [0.159s][info   ][gc,heap,exit ]  Metaspace       used 6371K, capacity 6443K, committed 6528K, reserved 1056768K
+// [0.159s][info   ][gc,heap,exit ]   class space    used 559K, capacity 570K, committed 640K, reserved 1048576K
+```
+
+###### 一次垃圾回收
+
+新增 7 MB 对象
+
+先对新生代进行垃圾回收，2351K->966K
+
+不能被回收的对象放在幸存区 from，占用 94%
+
+新对象放在伊甸园，占用 92%
+
+```java
+// -Xms20m -Xmx20m -Xmn10m -XX:+UseSerialGC -XX:+PrintGCDetails -verbose:gc
+public class JavaApp {
+    private static final int _512KB = 512 * 1024;
+    private static final int _1MB = 1024 * 1024;
+    private static final int _6MB = 6 * _1MB;
+    private static final int _7MB = 7 * _1MB;
+    private static final int _8MB = 8 * _1MB;
+    public static void main(String [] args) {
+        List<byte[]> list = new ArrayList<>();
+        list.add(new byte[_7MB]);
+    }
+}
+
+// [0.003s][warning][gc] -XX:+PrintGCDetails is deprecated. Will use -Xlog:gc* instead.
+// [0.006s][info   ][gc] Using Serial
+// [0.006s][info   ][gc,heap,coops] Heap address: 0x00000000fec00000, size: 20 MB, Compressed Oops mode: 32-bit
+// [0.093s][info   ][gc,start     ] GC(0) Pause Young (Allocation Failure)
+// [0.094s][info   ][gc,heap      ] GC(0) DefNew: 2351K->966K(9216K)
+// [0.094s][info   ][gc,heap      ] GC(0) Tenured: 0K->0K(10240K)
+// [0.094s][info   ][gc,metaspace ] GC(0) Metaspace: 6386K->6386K(1056768K)
+// [0.094s][info   ][gc           ] GC(0) Pause Young (Allocation Failure) 2M->0M(19M) 1.597ms
+// [0.094s][info   ][gc,cpu       ] GC(0) User=0.00s Sys=0.00s Real=0.00s
+// [0.096s][info   ][gc,heap,exit ] Heap
+// [0.096s][info   ][gc,heap,exit ]  def new generation   total 9216K, used 8517K [0x00000000fec00000, 0x00000000ff600000, 0x00000000ff600000)
+// [0.096s][info   ][gc,heap,exit ]   eden space 8192K,  92% used [0x00000000fec00000, 0x00000000ff35fb00, 0x00000000ff400000)
+// [0.096s][info   ][gc,heap,exit ]   from space 1024K,  94% used [0x00000000ff500000, 0x00000000ff5f1a80, 0x00000000ff600000)
+// [0.096s][info   ][gc,heap,exit ]   to   space 1024K,   0% used [0x00000000ff400000, 0x00000000ff400000, 0x00000000ff500000)
+// [0.096s][info   ][gc,heap,exit ]  tenured generation   total 10240K, used 0K [0x00000000ff600000, 0x0000000100000000, 0x0000000100000000)
+// [0.096s][info   ][gc,heap,exit ]    the space 10240K,   0% used [0x00000000ff600000, 0x00000000ff600000, 0x00000000ff600200, 0x0000000100000000)
+// [0.096s][info   ][gc,heap,exit ]  Metaspace       used 6434K, capacity 6539K, committed 6784K, reserved 1056768K
+// [0.096s][info   ][gc,heap,exit ]   class space    used 564K, capacity 602K, committed 640K, reserved 1048576K
+```
+
+###### 两次垃圾回收
+
+第一次垃圾回收：幸存对象放在幸存区 from
+
+第二次垃圾回收：发现新生代放不下 7MB 的大对象，直接将大对象放在老年代
+
+```java
+// -Xms20m -Xmx20m -Xmn10m -XX:+UseSerialGC -XX:+PrintGCDetails -verbose:gc
+public class JavaApp {
+    private static final int _512KB = 512 * 1024;
+    private static final int _1MB = 1024 * 1024;
+    private static final int _6MB = 6 * _1MB;
+    private static final int _7MB = 7 * _1MB;
+    private static final int _8MB = 8 * _1MB;
+    public static void main(String [] args) {
+        List<byte[]> list = new ArrayList<>();
+        list.add(new byte[_7MB]);
+        list.add(new byte[_1MB]);
+    }
+}
+
+// [0.002s][warning][gc] -XX:+PrintGCDetails is deprecated. Will use -Xlog:gc* instead.
+// [0.006s][info   ][gc] Using Serial
+// [0.006s][info   ][gc,heap,coops] Heap address: 0x00000000fec00000, size: 20 MB, Compressed Oops mode: 32-bit
+// [0.097s][info   ][gc,start     ] GC(0) Pause Young (Allocation Failure)
+// [0.098s][info   ][gc,heap      ] GC(0) DefNew: 2351K->967K(9216K)
+// [0.098s][info   ][gc,heap      ] GC(0) Tenured: 0K->0K(10240K)
+// [0.098s][info   ][gc,metaspace ] GC(0) Metaspace: 6393K->6393K(1056768K)
+// [0.098s][info   ][gc           ] GC(0) Pause Young (Allocation Failure) 2M->0M(19M) 1.501ms
+// [0.098s][info   ][gc,cpu       ] GC(0) User=0.02s Sys=0.00s Real=0.00s
+// [0.100s][info   ][gc,start     ] GC(1) Pause Young (Allocation Failure)
+// [0.104s][info   ][gc,heap      ] GC(1) DefNew: 8462K->24K(9216K)
+// [0.104s][info   ][gc,heap      ] GC(1) Tenured: 0K->8134K(10240K)
+// [0.104s][info   ][gc,metaspace ] GC(1) Metaspace: 6413K->6413K(1056768K)
+// [0.104s][info   ][gc           ] GC(1) Pause Young (Allocation Failure) 8M->7M(19M) 3.613ms
+// [0.104s][info   ][gc,cpu       ] GC(1) User=0.00s Sys=0.00s Real=0.00s
+// [0.104s][info   ][gc,heap,exit ] Heap
+// [0.104s][info   ][gc,heap,exit ]  def new generation   total 9216K, used 1265K [0x00000000fec00000, 0x00000000ff600000, 0x00000000ff600000)
+// [0.104s][info   ][gc,heap,exit ]   eden space 8192K,  15% used [0x00000000fec00000, 0x00000000fed362b0, 0x00000000ff400000)
+// [0.104s][info   ][gc,heap,exit ]   from space 1024K,   2% used [0x00000000ff400000, 0x00000000ff4062c0, 0x00000000ff500000)
+// [0.104s][info   ][gc,heap,exit ]   to   space 1024K,   0% used [0x00000000ff500000, 0x00000000ff500000, 0x00000000ff600000)
+// [0.104s][info   ][gc,heap,exit ]  tenured generation   total 10240K, used 8134K [0x00000000ff600000, 0x0000000100000000, 0x0000000100000000)
+// [0.104s][info   ][gc,heap,exit ]    the space 10240K,  79% used [0x00000000ff600000, 0x00000000ffdf1818, 0x00000000ffdf1a00, 0x0000000100000000)
+// [0.104s][info   ][gc,heap,exit ]  Metaspace       used 6428K, capacity 6539K, committed 6784K, reserved 1056768K
+// [0.104s][info   ][gc,heap,exit ]   class space    used 564K, capacity 602K, committed 640K, reserved 1048576K
+```
+
+###### 大对象
+
+发现新生代放不下 8MB 的大对象，直接将大对象放在老年代，而不是将大对象放在新生代
+
+```java
+// -Xms20m -Xmx20m -Xmn10m -XX:+UseSerialGC -XX:+PrintGCDetails -verbose:gc
+public class JavaApp {
+    private static final int _512KB = 512 * 1024;
+    private static final int _1MB = 1024 * 1024;
+    private static final int _6MB = 6 * _1MB;
+    private static final int _7MB = 7 * _1MB;
+    private static final int _8MB = 8 * _1MB;
+    public static void main(String [] args) {
+        List<byte[]> list = new ArrayList<>();
+        list.add(new byte[_8MB]);
+    }
+}
+
+// [0.002s][warning][gc] -XX:+PrintGCDetails is deprecated. Will use -Xlog:gc* instead.
+// [0.006s][info   ][gc] Using Serial
+// [0.006s][info   ][gc,heap,coops] Heap address: 0x00000000fec00000, size: 20 MB, Compressed Oops mode: 32-bit
+// [0.097s][info   ][gc,heap,exit ] Heap
+// [0.097s][info   ][gc,heap,exit ]  def new generation   total 9216K, used 2515K [0x00000000fec00000, 0x00000000ff600000, 0x00000000ff600000)
+// [0.097s][info   ][gc,heap,exit ]   eden space 8192K,  30% used [0x00000000fec00000, 0x00000000fee74e80, 0x00000000ff400000)
+// [0.097s][info   ][gc,heap,exit ]   from space 1024K,   0% used [0x00000000ff400000, 0x00000000ff400000, 0x00000000ff500000)
+// [0.097s][info   ][gc,heap,exit ]   to   space 1024K,   0% used [0x00000000ff500000, 0x00000000ff500000, 0x00000000ff600000)
+// [0.097s][info   ][gc,heap,exit ]  tenured generation   total 10240K, used 8192K [0x00000000ff600000, 0x0000000100000000, 0x0000000100000000)
+// [0.097s][info   ][gc,heap,exit ]    the space 10240K,  80% used [0x00000000ff600000, 0x00000000ffe00010, 0x00000000ffe00200, 0x0000000100000000)
+// [0.097s][info   ][gc,heap,exit ]  Metaspace       used 6433K, capacity 6539K, committed 6784K, reserved 1056768K
+// [0.097s][info   ][gc,heap,exit ]   class space    used 564K, capacity 602K, committed 640K, reserved 1048576K
+```
+
+###### 大对象OOM
+
+存放第二个大对象时先触发了新生代 GC 后触发 Full GC 后发现内存还是不足导致 OOM。
+
+```java
+// -Xms20m -Xmx20m -Xmn10m -XX:+UseSerialGC -XX:+PrintGCDetails -verbose:gc
+public class JavaApp {
+    private static final int _512KB = 512 * 1024;
+    private static final int _1MB = 1024 * 1024;
+    private static final int _6MB = 6 * _1MB;
+    private static final int _7MB = 7 * _1MB;
+    private static final int _8MB = 8 * _1MB;
+    public static void main(String [] args) {
+        List<byte[]> list = new ArrayList<>();
+        list.add(new byte[_8MB]);
+        list.add(new byte[_8MB]);
+    }
+}
+
+// [0.002s][warning][gc] -XX:+PrintGCDetails is deprecated. Will use -Xlog:gc* instead.
+// [0.006s][info   ][gc] Using Serial
+// [0.006s][info   ][gc,heap,coops] Heap address: 0x00000000fec00000, size: 20 MB, Compressed Oops mode: 32-bit
+// [0.095s][info   ][gc,start     ] GC(0) Pause Young (Allocation Failure)
+// [0.096s][info   ][gc,start     ] GC(1) Pause Full (Allocation Failure)
+// [0.096s][info   ][gc,phases,start] GC(1) Phase 1: Mark live objects
+// [0.098s][info   ][gc,phases      ] GC(1) Phase 1: Mark live objects 1.356ms
+// [0.098s][info   ][gc,phases,start] GC(1) Phase 2: Compute new object addresses
+// [0.098s][info   ][gc,phases      ] GC(1) Phase 2: Compute new object addresses 0.113ms
+// [0.098s][info   ][gc,phases,start] GC(1) Phase 3: Adjust pointers
+// [0.098s][info   ][gc,phases      ] GC(1) Phase 3: Adjust pointers 0.357ms
+// [0.098s][info   ][gc,phases,start] GC(1) Phase 4: Move objects
+// [0.099s][info   ][gc,phases      ] GC(1) Phase 4: Move objects 0.455ms
+// [0.099s][info   ][gc             ] GC(1) Pause Full (Allocation Failure) 8M->8M(19M) 2.371ms
+// [0.099s][info   ][gc,heap        ] GC(0) DefNew: 2351K->0K(9216K)
+// [0.099s][info   ][gc,heap        ] GC(0) Tenured: 8192K->9183K(10240K)
+// [0.099s][info   ][gc,metaspace   ] GC(0) Metaspace: 6418K->6418K(1056768K)
+// [0.099s][info   ][gc             ] GC(0) Pause Young (Allocation Failure) 10M->8M(19M) 3.914ms
+// [0.099s][info   ][gc,cpu         ] GC(0) User=0.00s Sys=0.00s Real=0.00s
+// [0.099s][info   ][gc,start       ] GC(2) Pause Full (Allocation Failure)
+// [0.099s][info   ][gc,phases,start] GC(2) Phase 1: Mark live objects
+// [0.100s][info   ][gc,phases      ] GC(2) Phase 1: Mark live objects 0.726ms
+// [0.100s][info   ][gc,phases,start] GC(2) Phase 2: Compute new object addresses
+// [0.100s][info   ][gc,phases      ] GC(2) Phase 2: Compute new object addresses 0.112ms
+// [0.100s][info   ][gc,phases,start] GC(2) Phase 3: Adjust pointers
+// [0.100s][info   ][gc,phases      ] GC(2) Phase 3: Adjust pointers 0.345ms
+// [0.100s][info   ][gc,phases,start] GC(2) Phase 4: Move objects
+// [0.100s][info   ][gc,phases      ] GC(2) Phase 4: Move objects 0.111ms
+// [0.100s][info   ][gc,heap        ] GC(2) DefNew: 0K->0K(9216K)
+// [0.100s][info   ][gc,heap        ] GC(2) Tenured: 9183K->9169K(10240K)
+// [0.100s][info   ][gc,metaspace   ] GC(2) Metaspace: 6418K->6418K(1056768K)
+// [0.100s][info   ][gc             ] GC(2) Pause Full (Allocation Failure) 8M->8M(19M) 1.385ms
+// [0.100s][info   ][gc,cpu         ] GC(2) User=0.00s Sys=0.00s Real=0.00s
+// [0.101s][info   ][gc,heap,exit   ] Heap
+// [0.101s][info   ][gc,heap,exit   ]  def new generation   total 9216K, used 218K [0x00000000fec00000, 0x00000000ff600000, 0x00000000ff600000)
+// [0.101s][info   ][gc,heap,exit   ]   eden space 8192K,   2% used [0x00000000fec00000, 0x00000000fec36b58, 0x00000000ff400000)
+// [0.101s][info   ][gc,heap,exit   ]   from space 1024K,   0% used [0x00000000ff500000, 0x00000000ff500000, 0x00000000ff600000)
+// [0.101s][info   ][gc,heap,exit   ]   to   space 1024K,   0% used [0x00000000ff400000, 0x00000000ff400000, 0x00000000ff500000)
+// [0.101s][info   ][gc,heap,exit   ]  tenured generation   total 10240K, used 9169K [0x00000000ff600000, 0x0000000100000000, 0x0000000100000000)
+// [0.101s][info   ][gc,heap,exit   ]    the space 10240K,  89% used [0x00000000ff600000, 0x00000000ffef4618, 0x00000000ffef4800, 0x0000000100000000)
+// [0.101s][info   ][gc,heap,exit   ]  Metaspace       used 6437K, capacity 6539K, committed 6784K, reserved 1056768K
+// [0.101s][info   ][gc,heap,exit   ]   class space    used 565K, capacity 602K, committed 640K, reserved 1048576K
+// Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+// 	at JavaApp.main(JavaApp.java:14)
+// 
+// Process finished with exit code 1
+```
+
+###### 子线程 OOM 不会影响到主线程
+
+```java
+// -Xms20m -Xmx20m -Xmn10m -XX:+UseSerialGC -XX:+PrintGCDetails -verbose:gc
+public class JavaApp {
+    private static final int _512KB = 512 * 1024;
+    private static final int _1MB = 1024 * 1024;
+    private static final int _6MB = 6 * _1MB;
+    private static final int _7MB = 7 * _1MB;
+    private static final int _8MB = 8 * _1MB;
+    public static void main(String [] args) throws InterruptedException {
+        new Thread(()->{
+            List<byte[]> list = new ArrayList<>();
+            list.add(new byte[_8MB]);
+            list.add(new byte[_8MB]);
+        }).start();
+        Thread.sleep(5000L);
+    }
+}
+
+```
+
+
+
+#### 垃圾回收器
+
+##### 串行（Serial GC）
+
+单线程
+
+堆内存较小
+
+Serial：新生代垃圾回收（复制回收算法）
+
+SerialOld：老年代垃圾回收（标记整理回收算法）
+
+![](D:\documents\notes\solid\Java.assets\019.PNG)
+
+
+
+##### 吞吐量优先（Parallel GC）
+
+多线程
+
+堆内存较大，多核 CPU
+
+在单位时间内，STW 的时间最短
+
+1.8 默认垃圾回收器
+
+-XX:+UseParalleGC：新生代垃圾回收（复制回收算法），并行，垃圾回收过程用户线程不能同时运行
+
+-XX:+UseParalleOlGC：老年代垃圾回收（标记整理回收算法），并行，垃圾回收过程用户线程不能同时运行
+
+-XX:UseAdaptiveSizePolicy：动态调整幸存区比例
+
+-XX:GCTimeRatio： 默认99，1/(1+ratio)*运行时间=垃圾回收最长时间，如果垃圾回收时长超过垃圾回收最长时间则会增大堆空间大小
+
+-XXMaxGCPauseMillis：每次垃圾回收最长时间，如果垃圾回收时长超过每次垃圾回收最长时间则会减小堆空间大小
+
+-XX:ParallelGCThreads：指定垃圾回收工作线程数
+
+![](D:\documents\notes\solid\Java.assets\020.PNG)
+
+
+
+
+
+##### 响应时间优先（CMS）
+
+多线程
+
+堆内存较大，多核 CPU
+
+尽可能让单次 STW 的时间最短
+
+-XX:+UseParNewGC：新生代垃圾回收（复制回收算法）
+
+-XX:+UseConcMarkSweepGC：老年代垃圾回收（标记清除回收算法），并发，垃圾回收过程的某些阶段用户线程也能同时运行。标记清除回收算法会产生比较多的内存碎片导致并发回收失败的问题，这时候会使用串行垃圾回收 SerialOld 进行垃圾回收
+
+-XX:ParallelGCThreads：并行线程数
+
+=XX:ConcGCThreads：并发线程数=XX:ParallelGCThreads*0.25
+
+-XX:CMSInitiatingOccupancyFraction：进行垃圾回收的垃圾空间占比
+
+-XX:+CMSScanvengeBeforeRemark：在重新标记前对新生代进行一次垃圾回收
+
+![](D:\documents\notes\solid\Java.assets\021.PNG)
+
+初始标记：标记根对象
+
+并发标记：标记
+
+重新标记：
+
+
+
+##### G1
+
+###### 定义：Garbage First
+
+- 2004 论文发布
+- 2009 JDK 6u14 体验
+- 2012 JDK 7u4 官方支持
+- 2017 JDK 9 默认
+
+
+
+###### 适用场景
+
+同时注重吞吐量（Throughput）和低延迟（Low Latency），默认的暂停目标是 200 ms
+
+超大堆内存，会将堆划分为多个大小相等的 Region
+
+整体上是标记+整理算法，两个区域之间是复制算法
+
+
+
+###### 相关 JVM 参数
+
+| 含义                              | 参数                                       |
+| --------------------------------- | ------------------------------------------ |
+| 开启 G1 垃圾回收器                | -XX:+UseG1GC                               |
+| 堆区域大小（2 的 n 次幂 MB）      | -XX:G1HeapRegionSize=size                  |
+| 垃圾回收暂停目标                  | -XX:MaxGCPauseMillis=time                  |
+| 老年代进行并发标记阈值（默认45%） | -XX:InitiatingHeapOccupancyPercent=percent |
+
+
+
+###### G1 垃圾回收过程
+
+![](D:\documents\notes\solid\Java.assets\022.PNG)
+
+先对新生代进行垃圾回收，经过一段时间后老年代的垃圾积累变多之后（达到某个阈值），在新生代垃圾回收的同时对老年代的垃圾对象进行标记，标记完成之后对新生代和老年代同时进行垃圾回收。
+
+
+
+###### Young Collection
+
+堆内存分为多个区域（Region），每个区域都独立作为伊甸园、幸存区和老年代。
+
+
+
+![](D:\documents\notes\solid\Java.assets\023.jpg)
+
+当新生代堆内存达到阈值时进行垃圾回收，使用复制算法将存活对象复制到幸存区
+
+![image-20220725221339123](D:\documents\notes\solid\Java.assets\024.jpg)
+
+经过多次新生代垃圾回收，一部分幸存区对象晋升到老年代
+
+![image-20220725221727044](D:\documents\notes\solid\Java.assets\025.jpg)
+
+
+
+###### Young Collection 跨代引用
+
+新生代回收的跨代引用（老年代引用新生代）问题
+
+![image-20220726221009543](D:\documents\notes\solid\Java.assets\028.jpg)
+
+
+
+- 卡表 Remembered Set
+- 在引用表更时通过 post-write barrier + dirty card queue
+- concurrent refinement threads 更新 Remembered Set
+
+![image-20220726221426697](D:\documents\notes\solid\Java.assets\029.jpg)
+
+
+
+###### Young Collection + Concurrent Mark
+
+在 Young GC 时会进行 GC Root 的初始标记
+
+老年代占用空间比例达到阈值时，进行并发标记（不会 STW）
+
+-XX:InitiatingHeapOccupancyPercent=percent（默认45%）
+
+![image-20220725222216767](D:\documents\notes\solid\Java.assets\026.jpg)
+
+
+
+###### Mixed Collection
+
+会对 E、S、O 区域进行全面垃圾回收
+
+最终标记（Remark）会 STW
+
+拷贝存活（Evacuation）会 STW
+
+老年代的垃圾回收会根据最大暂停时间进行有选择的垃圾回收，优先回收价值高的区域
+
+-XX:MaxGCPauseMillis=ms
+
+![image-20220725223044911](D:\documents\notes\solid\Java.assets\027.jpg)
+
+
+
+###### Remark
+
+pre-write barrier + satb_mark_queue
+
+
+
+
+
+![image-20220726221946069](D:\documents\notes\solid\Java.assets\030.jpg)
+
+
+
+
+
+##### Full GC
+
+###### Serial GC
+
+- 新生代内存不足发生的垃圾收集 - minor gc
+- 老年代内存不足发生的垃圾收集 - full gc
+
+###### Parallel GC
+
+- 新生代内存不足发生的垃圾收集 - minor gc
+- 老年代内存不足发生的垃圾收集 - full gc
+
+###### CMS
+
+- 新生代内存不足发生的垃圾收集 - minor gc
+- 老年代内存不足（当并发标记时回收的速度比垃圾产生的速度快时不会产生 Full GC，当由于并发回收失败时，才会产生 Full GC）
+
+###### G1
+
+- 新生代内存不足发生的垃圾收集 - minor gc
+- 老年代内存不足（当并发标记时回收的速度比垃圾产生的速度快时不会产生 Full GC，当由于并发回收失败时，才会产生 Full GC）
+
+
+
+##### G1 优化
+
+###### JDK 8u20 字符串去重
+
+- 优点：节省大量内存
+- 缺点：略微多占用了 cpu 时间，新生代回收时间略微增加
+
+-XX:+UseStringDeduplication
+
+```java
+String s1 = new String("hello"); // char[]{'h','e','l','l','o'}
+String s2 = new String("hello"); // char[]{'h','e','l','l','o'}
+```
+
+
+
+- 将所有新分配的字符串放入一个队列
+- 当新生代回收时，G1 并发检查是否有字符串重复
+- 如果他们的值一样，让他们引用同一个 char[]
+- 注意，与String.intern()不一样，String.intern()关注的是字符串对象，而字符串去重关注的是 char[]，在 JAVA 内部，使用了不同的字符串表
+
+
+
+###### JDK 8u40 并发标记类卸载
+
+所有对象都经过并发标记后，就能知道哪些类不再被使用，当一个类加载器的所有类都不再使用，则卸载它所加载的所有类
+
+-XX:+ClassUnloadingWithConcurrentMark 默认启用
+
+
+
+###### JDK 8u60 回收巨型对象
+
+一个对象大于 Region 的一半时，称之为巨型对象
+
+G1 不会对巨型对象进行拷贝
+
+回收时被优先考虑
+
+G1 会跟踪老年代所有 incoming 引用，这样老年代 incoming 引用为0的巨型对象就可以在新生代垃圾回收时处理掉
+
+
+
+###### JDK 9 并发标记起始时间的调整
+
+- 并发标记必须在堆空间占满前完成，否则退化为 Full GC
+- JDK 9 之前需要使用 -XX:InitiatingHeapOccupancyPercent
+- JDK 9 可以动态调整 -XX:InitiatingHeapOccupancyPercent 用来设置初始值，进行数据采样并动态调整，总会添加一个安全的空档空间
+
+
+
+###### JDK 9 更高效的回收
+
+- 250+增强
+- 180+bug修复
+
+https://docs.oracle.com/en/java/javase/12/gctuning
+
+
+
+
+
+###### JDK 9 更高效的回收
+
+
+
+
+
+#### 垃圾回收器调优
+
+java -XX:+PrintFlagsFinal -version | findstr "GC"
+
+##### 新生代调优
+
+新生代特点：
+
+所有的 new 操作的内存分配非常廉价，线程内 new 的对象会保存在属于线程的一块内存
+
+TLAB(thread-local allocation buffer)
+
+死亡对象的回收代价时零
+
+大部分对象用过即死
+
+Minor GC 的时间远远低于 Full GC
+
+Oracle 推荐设置新生代大小为整个堆空间的 25% ~ 50%
+
+新生代能容纳所有 【并发量*（请求-响应）】的数据
+
+幸存区大到能保留【当前活跃对象+需要晋升对象】
+
+晋升阈值配置得当，让长时间存活对象尽快晋升
+
+对象晋升阈值 -XX:MaxTenuringThreshold=threshold
+
+打印存活对象信息 -XX:+PrintTenuringDistribution
+
+
+
+##### 老年代调优
+
+老年代的内存越大越好
+
+先不尝试做调优，如果有 Full GC 则先尝试调优新生代
+
+观察发生 Full GC 时老年代内存占用，将老年代内存预设调大 1/4 ~ 1/3
+
+老年代垃圾回收内存占用阈值 -XX:CMSInitiatingOccupancyFraction=percent
+
+
+
+##### 案例
+
+案例1 Full GC 和 Minor GC 频繁（由于新生代过小，导致年龄未够的新生代对象提前晋升老年代。解决方案：调大新生代大小）
+
+案例2 请求高峰期发生 Full GC，单次暂停时间特别长（CMS，CMS 重新标记阶段对象过多导致标记时间过长，使用 -XX:+CMSScavengeBeForeRemark 开启重新标记前进行新生代垃圾回收，减少标记对象数量）
+
+案例3 老年代充裕的情况下，发生 Full GC（CMS jdk1.7，元空间内存不足导致 Full GC，增大元空间大小）
+
+
+
+### 即时编译器(JIT)
+
+#### 分层编译(TieredCompilation)
+
+
+
+JVM 将执行状态分成了 5 个层次：
+
+- 第 0 层，解释执行（Interpreter）
+- 第 1 层，使用 C1 即时编译器编译执行（不带 profiling) 
+- 第 2 层，使用 C1 即时编译器编译执行（带基本的 profiling）
+- 第 3 层，使用 C1 即时编译器编译执行（带完全的 profiling）
+- 第 4 层，使用 C2 即时编译器编译执行
+
+>  profiling 是指在运行过程中收集一些程序执行状态的数据，例如【方法的调用次数】，【循环的回边次数】等 
+
+即时编译器(JIT）与解释器的区别
+
+- 解释器是将字节码解释为机器码，下次即使遇到相同的字节码，仍会执行重复的解释 
+- JIT 是将一些热点字节码编译为机器码，并存入 Code Cache 下次遇到相同的代码，直接执行，无需再编译 
+- 解释器是将字节码解释为针对所有平台都通用的机器码 
+- JIT 会根据平台类型，生成平台特定的机器码 
+
+对于占据大部分的不常用的代码，我们无需耗费时间将其编译成机器码，而是采取解释执行的方式运行；另 一方面对于仅占据小部分的热点代码，我们则可以将其编译成机器码以达到理想的运行速度。执行效率上简单比较一下 Interpreter < C1 < C2，总的目标是发现热点代码（hotspot 名称的由来）优化之。
+
+
+
+#### 逃逸分析
+
+##### 概念
+
+一种确定指针动态范围的静态分析，它可以分析在程序的哪些地方可以访问到指针。
+
+在JVM的即时编译语境下，逃逸分析将判断新建的对象是否逃逸。即时编译判断对象是否逃逸的依据：一种是对象是否被存入堆中（静态字段或者堆中对象的实例字段），另一种就是对象是否被传入未知代码。
+
+对象逃逸示例
+
+- 对象被复制给成员变量或者静态变量，可能被外部使用，此时变量就发生了逃逸
+- 对象通过return语句返回。如果对象通过return语句返回了，此时的程序并不能确定这个对象后续会不会被使用，外部的线程可以访问到这个变量，此时对象也发生了逃逸
+- ......
+
+
+
+##### 优点
+
+逃逸分析的优点总体上来说可以分为三个：对象可能分配在栈上、分离对象或标量替换、消除同步锁。
+
+###### **对象可能分配在栈上**
+
+JVM通过逃逸分析，分析出新对象的使用范围，就可能将对象在栈上进行分配。栈分配可以快速地在栈帧上创建和销毁对象，不用再将对象分配到堆空间，可以有效地减少 JVM 垃圾回收的压力。
+
+###### **分离对象或标量替换**
+
+当JVM通过逃逸分析，确定要将对象分配到栈上时，即时编译可以将对象打散，将对象替换为一个个很小的局部变量，我们将这个打散的过程叫做标量替换。将对象替换为一个个局部变量后，就可以非常方便的在栈上进行分配了。
+
+###### **同步锁消除**
+
+如果JVM通过逃逸分析，发现一个对象只能从一个线程被访问到，则访问这个对象时，可以不加同步锁。如果程序中使用了synchronized锁，则JVM会将synchronized锁消除。
+
+**这里，需要注意的是：这种情况针对的是synchronized锁，而对于Lock锁，则JVM并不能消除。**
+
+要开启同步消除，需要加上 -XX:+EliminateLocks 参数。因为这个参数依赖逃逸分析，所以同时要打开 -XX:+DoEscapeAnalysis 选项。
+
+**所以，并不是所有的对象和数组，都是在堆上进行分配的，由于即时编译的存在，如果JVM发现某些对象没有逃逸出方法，就很有可能被优化成在栈上分配。**
+
+
+
+```java
+public class JavaApp {
+    public static void main(String [] args) {
+        for(int i = 0;i < 200; i++){
+            long start = System.nanoTime();
+            for(int j = 0;j < 1000; j++){
+                new Object();
+            }
+            long end = System.nanoTime();
+            System.out.printf("%d\t%d\n", i, (end - start));
+        }
+    }
+}
+// 这段代码的内循环运行了一定次数之后运行速度变快的原因是什么呢？ 
+```
+
+
+刚才的一种优化手段称之为【逃逸分析】，发现新建的对象是否逃逸。可以使用 -XX:-DoEscapeAnalysis 关闭逃逸分析，再运行刚才的示例观察结果
+
+
+
+#### 方法内联（Inlining）
+
+```java
+private static int square(final int i) {
+    return i * i;
+}
+System.out.println(square(9));
+```
+
+
+
+如果发现 square 是热点方法，并且长度不会太长时，会进行内联，所谓的内联就是把方法内代码 拷贝、粘贴到调用者的位置：
+
+```
+System.out.println(9 * 9);
+```
+
+
+
+还能够进行常量折叠（constant folding）的优化
+
+```java
+System.out.println(81);
+```
+
+
+
+例
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        int x = 0;
+        for(int i = 0;i < 500; i++){
+            long start = System.nanoTime();
+            for(int j = 0;j < 1000; j++){
+                x = square(9);
+            }
+            long end = System.nanoTime();
+            System.out.printf("%d\t%d\t%d\n", i, x, (end - start));
+        }
+    }
+
+    private static int square(final int i) {
+        return i * i;
+    }
+}
+
+// 分别设置下面两种 JVM 参数后观察输出情况
+// 输出内联信息
+// -XX:+UnlockDiagnosticVMOptions -XX:+PrintInlining
+
+// 禁用内联
+// -XX:CompileCommand=dontinline,*JavaApp.square
+```
+
+
+
+#### 字段优化
+
+JMH 基准测试请参考：http://openjdk.java.net/projects/code-tools/jmh/
+
+##### 样例代码
+
+创建 maven 工程，添加依赖如下
+
+```xml
+<dependency>
+    <groupId>org.openjdk.jmh</groupId>
+    <artifactId>jmh-core</artifactId>
+    <version>1.35</version>
+</dependency>
+<dependency>
+    <groupId>org.openjdk.jmh</groupId>
+    <artifactId>jmh-generator-annprocess</artifactId>
+    <version>1.35</version>
+</dependency>
+```
+
+
+
+```java
+package test;
+
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
+
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
+// 程序预热，方便 JIT 统计出热点代码
+@Warmup(iterations = 2, time = 1)
+// 进行五轮测试
+@Measurement(iterations = 5,time = 1)
+@State(Scope.Benchmark)
+public class MyBenchmark {
+    int [] elements = randomInts(1000);
+
+    private static int[] randomInts(int size){
+        Random random = ThreadLocalRandom.current();
+        int[] values = new int[size];
+        for(int i = 0; i < size; i++){
+            values[i] = random.nextInt();
+        }
+        return values;
+    }
+
+    @Benchmark
+    public void test1(){
+        for(int i = 0; i < elements.length; i++){
+            doSum(elements[1]);
+        }
+    }
+
+    @Benchmark
+    public void test2(){
+        int [] local = this.elements;
+        for(int i = 0;i < local.length; i++){
+            doSum(elements[1]);
+        }
+    }
+
+    @Benchmark
+    public void test3(){
+        for(int element:elements){
+            doSum(element);
+        }
+    }
+
+    static int sum = 0;
+
+    @CompilerControl(CompilerControl.Mode.INLINE)
+    static void doSum(int x){
+        sum += x;
+    }
+
+    public static void main(String[] args) throws RunnerException {
+        Options opt = new OptionsBuilder()
+                .include(MyBenchmark.class.getSimpleName())
+                .forks(1)
+                .build();
+        new Runner(opt).run();
+    }
+}
+
+```
+
+
+
+##### 结果
+
+```shell
+# 允许内联
+						样本数 		  得分 		 误差    吞吐量
+Benchmark           Mode  Cnt         Score         Error  Units
+MyBenchmark.test1  thrpt    5  46665184.592 ± 2171282.544  ops/s
+MyBenchmark.test2  thrpt    5  47003670.065 ± 2226975.078  ops/s
+MyBenchmark.test3  thrpt    5   4330830.982 ±  178196.438  ops/s
+
+# 不允许内联
+Benchmark           Mode  Cnt       Score       Error  Units
+MyBenchmark.test1  thrpt    5  581505.643 ± 19885.459  ops/s
+MyBenchmark.test2  thrpt    5  390550.301 ± 12229.899  ops/s
+MyBenchmark.test3  thrpt    5  696184.667 ± 18680.990  ops/s
+```
+
+
+
+##### 分析
+
+test1 和 test2 关闭内联时差距为何变大了。
+
+在刚才的示例中，doSum 方法是否内联会影响 elements 成员变量读取的优化：
+
+如果 doSum 方法内联了，刚才的 test 方法会被优化成下面的样子（伪代码）：
+
+```java
+@Benchmark
+public void test1(){
+    // elements 首次读取会被缓存起来 -> int[] local
+    for(int i = 0; i < elements.length; i++){// 后续 999 次 求长度 <- local
+        sum += elements[1];// 1000 次取下标 i 的元素 <- local
+    }
+}
+```
+
+可以节省 1999 次 Field 读取操作
+
+但如果 doSum 方法没有内联，则不会进行上面的内联优化
+
+
+
+##### 结论
+
+尽量使用局部变量，不要使用静态变量和全局变量
+
+##### 练习
+
+在内联情况下将 elements 添加 volatile 修饰符，观察测试结果
+
+
+
+#### **关于面试题**
+
+**Java中的对象一定是在堆上分配的吗？**
+
+
+
+#### 反射优化
+
+##### 样例
+
+```java
+package test;
+
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+public class JavaApp {
+    public static void foo(){
+        System.out.println("foo...");
+    }
+
+    public static void main(String[]args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, IOException {
+        Method foo = JavaApp.class.getMethod("foo");
+        for(int i = 0; i <= 16; i++){
+            System.out.printf("%d\t", i);
+            foo.invoke(null);
+        }
+        System.in.read();
+    }
+}
+
+```
+
+样例中 前面 0~15 次调用的时间会比 16 次调用的时间长。
+
+##### 源码解析
+
+foo.invoke 前面 0~15 次调用使用的是 MethodAccessor 的 NativeMethodAccessorImpl 实现
+
+```java
+@CallerSensitive
+public Object invoke(Object obj, Object... args)
+    throws IllegalAccessException, IllegalArgumentException,
+InvocationTargetException
+{
+    if (!override) {
+        if (!Reflection.quickCheckMemberAccess(clazz, modifiers)) {
+            Class<?> caller = Reflection.getCallerClass();
+            checkAccess(caller, clazz, obj, modifiers);
+        }
+    }
+    MethodAccessor ma = methodAccessor;             // read volatile
+
+    if (ma == null) {
+        ma = acquireMethodAccessor();
+    }
+    return ma.invoke(obj, args);
+}
+
+```
+
+MethodAccessor 的几个实现类
+
+- MethodAccessorImpl，抽象实现类，不用管
+- DelegatingMethodAccessorImpl， 默认实现类，继承至 MethodAccessorImpl ，使用 MethodAccessorImpl 的子类去 invoke 函数
+- NativeMethodAccessorImpl，实际 invoke 函数的类
+
+
+
+NativeMethodAccessorImpl 源码
+
+```java
+
+class NativeMethodAccessorImpl extends MethodAccessorImpl {
+    private final Method method;
+    private DelegatingMethodAccessorImpl parent;
+    private int numInvocations;
+
+    NativeMethodAccessorImpl(Method var1) {
+        this.method = var1;
+    }
+
+    public Object invoke(Object var1, Object[] var2) throws IllegalArgumentException, InvocationTargetException {
+        // 方法的调用次数与膨胀阈值比较，膨胀阈值默认值为 15
+        // 当调用次数大于阈值时，将会替换掉 invoke 函数的实现类
+        // 运行期间动态生成新的方法访问器类
+        if (++this.numInvocations > ReflectionFactory.inflationThreshold() && !ReflectUtil.isVMAnonymousClass(this.method.getDeclaringClass())) {
+            MethodAccessorImpl var3 = (MethodAccessorImpl)(new MethodAccessorGenerator()).generateMethod(this.method.getDeclaringClass(), this.method.getName(), this.method.getParameterTypes(), this.method.getReturnType(), this.method.getExceptionTypes(), this.method.getModifiers());
+            this.parent.setDelegate(var3);
+        }
+
+        return invoke0(this.method, var1, var2);
+    }
+
+    void setParent(DelegatingMethodAccessorImpl var1) {
+        this.parent = var1;
+    }
+
+    private static native Object invoke0(Method var0, Object var1, Object[] var2);
+}
+
+```
+
+
+
+查看动态生成的方法访问器类
+
+[arthas-boot](https://github.com/alibaba/arthas)
+
+下载：https://alibaba.github.io/arthas/arthas-boot.jar
+
+在生成方法访问器类的地方打断点，使用 idea 的 Evaluate 执行 var3.getClass() 可以获取到生成的类的名字 sun.reflectGeneratedMethodAccessor1
+
+java -jar arthas-boot.jar
+
+连接到对应程序后执行：
+
+jad sun.reflect.GeneratedMethodAccessor1
+
+```java
+ClassLoader:
++-sun.reflect.DelegatingClassLoader@22a71081
+  +-sun.misc.Launcher$AppClassLoader@18b4aac2
+    +-sun.misc.Launcher$ExtClassLoader@4fccd51b
+
+Location:
+
+/*
+ * Decompiled with CFR.
+ *
+ * Could not load the following classes:
+ *  test.JavaApp
+ */
+package sun.reflect;
+
+import java.lang.reflect.InvocationTargetException;
+import sun.reflect.MethodAccessorImpl;
+import test.JavaApp;
+
+public class GeneratedMethodAccessor1
+extends MethodAccessorImpl {
+    /*
+     * Loose catch block
+     */
+    public Object invoke(Object object, Object[] objectArray) throws InvocationTargetException {
+        block4: {
+            if (objectArray == null || objectArray.length == 0) break block4;
+            throw new IllegalArgumentException();
+        }
+        try {
+            JavaApp.foo();
+            return null;
+        }
+        catch (Throwable throwable) {
+            throw new InvocationTargetException(throwable);
+        }
+        catch (ClassCastException | NullPointerException runtimeException) {
+            throw new IllegalArgumentException(super.toString());
+        }
+    }
+}
+```
+
+动态生成的方法访问器对要执行的方法进行直接调用，效率比反射调用高。
+
+
+
+##### 注意
+
+```java
+private static void checkInitted() {
+    if (!initted) {
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            public Void run() {
+                if (System.out == null) {
+                    return null;
+                } else {
+                    String var1 = System.getProperty("sun.reflect.noInflation");
+                    if (var1 != null && var1.equals("true")) {
+                        ReflectionFactory.noInflation = true;
+                    }
+
+                    var1 = System.getProperty("sun.reflect.inflationThreshold");
+                    if (var1 != null) {
+                        try {
+                            ReflectionFactory.inflationThreshold = Integer.parseInt(var1);
+                        } catch (NumberFormatException var3) {
+                            throw new RuntimeException("Unable to parse property sun.reflect.inflationThreshold", var3);
+                        }
+                    }
+
+                    ReflectionFactory.initted = true;
+                    return null;
+                }
+            }
+        });
+    }
+}
+```
+
+通过查看 ReflectionFactory 源码可知
+
+- sun.reflect.noInflation 可以用来禁用膨胀（直接生成 GeneratedMethodAccessor1 ，但首次生成比较耗时，如果仅反射调用一次，不划算
+
+- sun.reflect.inflation 可以修改膨胀阈值
+
+
+
+
+### 解释器
+
+
+
+## 类加载与字节码技术
+
+### 类文件结构
+
+```java
+public class JavaApp {
+    public static void main(String [] args) {
+        System.out.println("hello world");
+    }
+}
+// 编译:javac -parameters -d . JavaApp.java
+root@server01:/media/sf_shared# od -t xC JavaApp.class 
+0000000 ca fe ba be 00 00 00 37 00 22 0a 00 06 00 14 09
+0000020 00 15 00 16 08 00 17 0a 00 18 00 19 07 00 1a 07
+0000040 00 1b 01 00 06 3c 69 6e 69 74 3e 01 00 03 28 29
+0000060 56 01 00 04 43 6f 64 65 01 00 0f 4c 69 6e 65 4e
+0000100 75 6d 62 65 72 54 61 62 6c 65 01 00 12 4c 6f 63
+0000120 61 6c 56 61 72 69 61 62 6c 65 54 61 62 6c 65 01
+0000140 00 04 74 68 69 73 01 00 09 4c 4a 61 76 61 41 70
+0000160 70 3b 01 00 04 6d 61 69 6e 01 00 16 28 5b 4c 6a
+0000200 61 76 61 2f 6c 61 6e 67 2f 53 74 72 69 6e 67 3b
+0000220 29 56 01 00 04 61 72 67 73 01 00 13 5b 4c 6a 61
+0000240 76 61 2f 6c 61 6e 67 2f 53 74 72 69 6e 67 3b 01
+0000260 00 0a 53 6f 75 72 63 65 46 69 6c 65 01 00 0c 4a
+0000300 61 76 61 41 70 70 2e 6a 61 76 61 0c 00 07 00 08
+0000320 07 00 1c 0c 00 1d 00 1e 01 00 0b 68 65 6c 6c 6f
+0000340 20 77 6f 72 6c 64 07 00 1f 0c 00 20 00 21 01 00
+0000360 07 4a 61 76 61 41 70 70 01 00 10 6a 61 76 61 2f
+0000400 6c 61 6e 67 2f 4f 62 6a 65 63 74 01 00 10 6a 61
+0000420 76 61 2f 6c 61 6e 67 2f 53 79 73 74 65 6d 01 00
+0000440 03 6f 75 74 01 00 15 4c 6a 61 76 61 2f 69 6f 2f
+0000460 50 72 69 6e 74 53 74 72 65 61 6d 3b 01 00 13 6a
+0000500 61 76 61 2f 69 6f 2f 50 72 69 6e 74 53 74 72 65
+0000520 61 6d 01 00 07 70 72 69 6e 74 6c 6e 01 00 15 28
+0000540 4c 6a 61 76 61 2f 6c 61 6e 67 2f 53 74 72 69 6e
+0000560 67 3b 29 56 00 21 00 05 00 06 00 00 00 00 00 02
+0000600 00 01 00 07 00 08 00 01 00 09 00 00 00 2f 00 01
+0000620 00 01 00 00 00 05 2a b7 00 01 b1 00 00 00 02 00
+0000640 0a 00 00 00 06 00 01 00 00 00 01 00 0b 00 00 00
+0000660 0c 00 01 00 00 00 05 00 0c 00 0d 00 00 00 09 00
+0000700 0e 00 0f 00 01 00 09 00 00 00 37 00 02 00 01 00
+0000720 00 00 09 b2 00 02 12 03 b6 00 04 b1 00 00 00 02
+0000740 00 0a 00 00 00 0a 00 02 00 00 00 03 00 08 00 04
+0000760 00 0b 00 00 00 0c 00 01 00 00 00 09 00 10 00 11
+0001000 00 00 00 01 00 12 00 00 00 02 00 13
+
+```
+
+
+
+根据 JVM 规范，类文件结构如下
+
+```
+ClassFile {
+	u4				magic;
+	u2				minor_version;
+	u2				major_version;
+	u2				constant_pool_count;
+	cp_info			constant_pool[constant_pool_count-1];
+	u2				access_flags;
+	u2				this_class;
+	u2				super_class;
+	u2				interfaces_count;
+	u2				interfaces[interfaces_count];
+	u2				fields_count;
+	field_info		fields[fields_count];
+	u2				methods_count;
+	method_info		methods[methods_count];
+	u2				attributes_count;
+	attribute_info	attributes[attributes_count];
+}
+```
+
+
+
+#### 魔数
+
+0~3 字节，表示它是否是【class】类型文件
+
+0000000 **ca fe ba be** 00 00 00 37 00 22 0a 00 06 00 14 09
+
+#### 版本
+
+4~7 字节，表示类的版本  
+
+00 34（52）表示是 Java 8
+
+00 37（55）表示是 Java 11
+
+0000000 ca fe ba be **00 00 00 37** 00 22 0a 00 06 00 14 09
+
+#### 常量池
+
+| Constant Type               | Value |
+| --------------------------- | ----- |
+| CONSTANT_Class              | 7     |
+| CONSTANT_Fieldref           | 9     |
+| CONSTANT_Methodref          | 10    |
+| CONSTANT_InterfaceMethodred | 11    |
+| CONSTANT_String             | 8     |
+| CONSTANT_Integer            | 3     |
+| CONSTANT_Float              | 4     |
+| CONSTANT_Long               | 5     |
+| CONSTANT_Double             | 6     |
+| CONSTANT_NameAndType        | 12    |
+| CONSTANT_utf8               | 1     |
+| CONSTANT_MethodHandle       | 15    |
+| CONSTANT_MethodType         | 16    |
+| CONSTANT_InvokeDynamic      | 18    |
+
+8~9字节，表示常量池长度，00 22（34）表示常量池有 #1~#33项，注意 #0项不计入，也没有值
+
+0000000 ca fe ba be 00 00 00 37 **00 22** 0a 00 06 00 14 09
+
+
+
+第#1项 0a 表示一个 Method 信息，00 06（6） 和 00 14（20）表示它引用了常量池中#6和#20项来获得这个方法的【所属类】和【方法名】
+
+0000000 ca fe ba be 00 00 00 37 00 22 **0a 00 06 00 14** 09
+
+
+
+第#2项 09 表示一个 Field 信息，00 15（21） 和 00 16（22）表示它引用了常量池中 #21 和 #22 项来获得这个成员变量的【所属类】和【成员变量名】
+
+0000000 ca fe ba be 00 00 00 37 00 22 0a 00 06 00 14 **09**
+
+0000020 **00 15 00 16** 08 00 17 0a 00 18 00 19 07 00 1a 07
+
+
+
+第#3项 08 表示一个字符串常量名称，00 17（23）表示它引用了常量池中#23项
+
+0000020 00 15 00 16 **08 00 17** 0a 00 18 00 19 07 00 1a 07
+
+
+
+第#4项 0a 表示一个 Method 信息，00 18（24） 和  00 19（25）表示它引用了常量池中 #24 和 #25 项来获得这个成员变量的【所属类】和【方法名】
+
+0000020 00 15 00 16 08 00 17 **0a 00 18 00 19** 07 00 1a 07
+
+
+
+第#5项 07 表示一个 Class 信息，00 1a（26）表示它引用了常量池中#26项
+
+0000020 00 15 00 16 08 00 17 0a 00 18 00 19 **07 00 1a** 07
+
+
+
+第#6项 07 表示一个 Class 信息，00 1b（27）表示它引用了常量池中#27项
+
+0000020 00 15 00 16 08 00 17 0a 00 18 00 19 07 00 1a **07**
+
+0000040 **00 1b** 01 00 06 3c 69 6e 69 74 3e 01 00 03 28 29
+
+
+
+第#7项  01 表示一个 utf8 信息，00 06 表示长度，3c 69 6e 69 74 3e 是【<init>】
+
+0000040 00 1b **01 00 06 3c 69 6e 69 74 3e** 01 00 03 28 29
+
+
+
+第#8项  01 表示一个 utf8 信息，00 03 表示长度，28 29 56 是【()V】其实就是表示无参、无返回值
+
+0000040 00 1b 01 00 06 3c 69 6e 69 74 3e **01 00 03 28 29**
+
+0000060 **56** 01 00 04 43 6f 64 65 01 00 0f 4c 69 6e 65 4e
+
+
+
+第#9项  01 表示一个 utf8 信息，00 04 表示长度，43 6f 64 65 是【Code】
+
+0000060 56 **01 00 04 43 6f 64 65** 01 00 0f 4c 69 6e 65 4e
+
+
+
+第#10项  01 表示一个 utf8 信息，00 0f（15） 表示长度，4c 69 6e 65 4e 75 6d 62 65 72 54 61 62 6c 65 是【LineNumberTable】
+
+0000060 56 01 00 04 43 6f 64 65 **01 00 0f 4c 69 6e 65 4e**
+
+0000100 **75 6d 62 65 72 54 61 62 6c 65** 01 00 12 4c 6f 63
+
+
+
+第#11项  01 表示一个 utf8 信息，00 12（18） 表示长度，4c 6f 63 61 6c 56 61 72 69 61 62 6c 65 54 61 62 6c 65 是【LocalVariableTable】
+
+0000100 75 6d 62 65 72 54 61 62 6c 65 **01 00 12 4c 6f 63**
+
+0000120 **61 6c 56 61 72 69 61 62 6c 65 54 61 62 6c 65** 01
+
+
+
+第#12项  01 表示一个 utf8 信息，00 04（4） 表示长度，74 68 69 73 是【this】
+
+0000120 61 6c 56 61 72 69 61 62 6c 65 54 61 62 6c 65 **01**
+
+0000140 **00 04 74 68 69 73** 01 00 09 4c 4a 61 76 61 41 70
+
+
+
+第#13项  01 表示一个 utf8 信息，00 09（9） 表示长度，4c 4a 61 76 61 41 70 70 3b 是【LJavaApp;】
+
+0000140 00 04 74 68 69 73 **01 00 09 4c 4a 61 76 61 41 70**
+
+0000160 **70 3b** 01 00 04 6d 61 69 6e 01 00 16 28 5b 4c 6a
+
+
+
+第#14项  01 表示一个 utf8 信息，00 04（4） 表示长度，6d 61 69 6e 是【main】
+
+0000160 70 3b **01 00 04 6d 61 69 6e** 01 00 16 28 5b 4c 6a
+
+
+
+第#15项  01 表示一个 utf8 信息，00 16（22） 表示长度，28 5b 4c 6a 61 76 61 2f 6c 61 6e 67 2f 53 74 72 69 6e 67 3b 29 56 是【([Ljava/lang/String;)V】
+
+0000160 70 3b 01 00 04 6d 61 69 6e **01 00 16 28 5b 4c 6a**
+
+0000200 **61 76 61 2f 6c 61 6e 67 2f 53 74 72 69 6e 67 3b**
+
+0000220 **29 56** 01 00 04 61 72 67 73 01 00 13 5b 4c 6a 61
+
+
+
+第#16项  01 表示一个 utf8 信息，00 04（4） 表示长度，61 72 67 73 是【args】
+
+0000220 29 56 **01 00 04 61 72 67 73** 01 00 13 5b 4c 6a 61
+
+
+
+第#17项  01 表示一个 utf8 信息，00 13（19） 表示长度，5b 4c 6a 61 76 61 2f 6c 61 6e 67 2f 53 74 72 69 6e 67 3b 是【[Ljava/lang/String;】
+
+0000220 29 56 01 00 04 61 72 67 73 **01 00 13 5b 4c 6a 61**
+
+0000240 **76 61 2f 6c 61 6e 67 2f 53 74 72 69 6e 67 3b** 01
+
+
+
+第#18项  01 表示一个 utf8 信息，00 0a（10） 表示长度，53 6f 75 72 63 65 46 69 6c 65 是【SourceFile】
+
+0000240 76 61 2f 6c 61 6e 67 2f 53 74 72 69 6e 67 3b **01**
+
+0000260 **00 0a 53 6f 75 72 63 65 46 69 6c 65** 01 00 0c 4a
+
+
+
+第#19项  01 表示一个 utf8 信息，00 0c（12） 表示长度，4a  61 76 61 41 70 70 2e 6a 61 76 61 是【JavaApp.java】
+
+0000260 00 0a 53 6f 75 72 63 65 46 69 6c 65 **01 00 0c 4a**
+
+0000300 **61 76 61 41 70 70 2e 6a 61 76 61** 0c 00 07 00 08
+
+
+
+第#20项  0c 表示一个【名+类型】，00 07 00 08 引用了常量池中 #7 #8 两项
+
+0000300 61 76 61 41 70 70 2e 6a 61 76 61 **0c 00 07 00 08**
+
+
+
+第#21项 07 表示一个 Class 信息，00 1c（28）表示它引用了常量池中 #28 项
+
+0000320 **07 00 1c** 0c 00 1d 00 1e 01 00 0b 68 65 6c 6c 6f
+
+
+
+第#22项  0c 表示一个【名+类型】，00 1d（29） 00 1e（30） 引用了常量池中 #29#30两项
+
+0000320 07 00 1c **0c 00 1d 00 1e** 01 00 0b 68 65 6c 6c 6f
+
+
+
+第#23项  01 表示一个 utf8 信息，00 0b（11） 表示长度， 68 65 6c 6c 6f 20 77 6f 72 6c 64 是【hello world】
+
+0000320 07 00 1c 0c 00 1d 00 1e **01 00 0b 68 65 6c 6c 6f**
+
+0000340 **20 77 6f 72 6c 64** 07 00 1f 0c 00 20 00 21 01 00
+
+
+
+第#24项 07 表示一个 Class 信息，00 1f（31）表示它引用了常量池中 #31项
+
+0000340 20 77 6f 72 6c 64 **07 00 1f** 0c 00 20 00 21 01 00
+
+
+
+第#25项  0c 表示一个【名+类型】，00 20（32） 00 21（33） 引用了常量池中 #32 #33两项
+
+0000340 20 77 6f 72 6c 64 07 00 1f **0c 00 20 00 21** 01 00
+
+
+
+第#26项  01 表示一个 utf8 信息，00 07 表示长度，4a 61 76 61 41 70 70 是【JavaApp】
+
+0000340 20 77 6f 72 6c 64 07 00 1f 0c 00 20 00 21 **01 00**
+
+0000360 **07 4a 61 76 61 41 70 70** 01 00 10 6a 61 76 61 2f
+
+
+
+第#27项  01 表示一个 utf8 信息，00 10（16） 表示长度，6a 61 76 61 2f 6c 61 6e 67 2f 4f 62 6a 65 63 74 是【java/lang/Object】
+
+0000360 07 4a 61 76 61 41 70 70 **01 00 10 6a 61 76 61 2f**
+
+0000400 **6c 61 6e 67 2f 4f 62 6a 65 63 74** 01 00 10 6a 61
+
+
+
+第#28项  01 表示一个 utf8 信息，00 10（16） 表示长度，6a 61 76 61 2f 6c 61 6e 67 2f 53 79 73 74 65 6d 是【java/lang/System】
+
+0000400 6c 61 6e 67 2f 4f 62 6a 65 63 74 **01 00 10 6a 61**
+
+0000420 **76 61 2f 6c 61 6e 67 2f 53 79 73 74 65 6d** 01 00
+
+
+
+第#29项  01 表示一个 utf8 信息，00 03 表示长度，6f 75 74 是【out】
+
+0000420 76 61 2f 6c 61 6e 67 2f 53 79 73 74 65 6d **01 00**
+
+0000440 **03 6f 75 74** 01 00 15 4c 6a 61 76 61 2f 69 6f 2f
+
+
+
+第#30项  01 表示一个 utf8 信息，00 15（21） 表示长度，4c 6a 61 76 61 2f 69 6f 2f 50 72 69 6e 74 53 74 72 65 61 6d 3b 是【Ljava/io/PrintStream;】
+
+0000440 03 6f 75 74 **01 00 15 4c 6a 61 76 61 2f 69 6f 2f**
+
+0000460 **50 72 69 6e 74 53 74 72 65 61 6d 3b** 01 00 13 6a
+
+
+
+第#31项  01 表示一个 utf8 信息，00 13（19） 表示长度，6a 61 76 61 2f 69 6f 2f 50 72 69 6e 74 53 74 72 65 61 6d 是【java/io/PrintStream】
+
+0000460 50 72 69 6e 74 53 74 72 65 61 6d 3b **01 00 13 6a**
+
+0000500 **61 76 61 2f 69 6f 2f 50 72 69 6e 74 53 74 72 65**
+
+0000520 **61 6d** 01 00 07 70 72 69 6e 74 6c 6e 01 00 15 28
+
+
+
+第#32项  01 表示一个 utf8 信息，00 07（7）表示长度，70 72 69 6e 74 6c 6e 是【println】
+
+0000520 61 6d **01 00 07 70 72 69 6e 74 6c 6e** 01 00 15 28
+
+
+
+第#33项  01 表示一个 utf8 信息，00 15（21） 表示长度，28 4c 6a 61 76 61 2f 6c 61 6e 67 2f 53 74 72 69 6e 67 3b 29 56 是【(Ljava/lang/String;)V】
+
+0000520 61 6d 01 00 07 70 72 69 6e 74 6c 6e **01 00 15 28**
+
+0000540 **4c 6a 61 76 61 2f 6c 61 6e 67 2f 53 74 72 69 6e**
+
+0000560 **67 3b 29 56** 00 21 00 05 00 06 00 00 00 00 00 02
+
+
+
+#### 访问标识与继承信息
+
+
+
+21 表示该 class 是一个类，公共的
+
+0000560 67 3b 29 56 **00 21** 00 05 00 06 00 00 00 00 00 02
+
+
+
+05 表示根据常量池中 #5 找到本类全限定名
+
+0000560 67 3b 29 56 00 21 **00 05** 00 06 00 00 00 00 00 02
+
+
+
+06 表示根据常量池中 #6 找到父类全限定名
+
+0000560 67 3b 29 56 00 21 00 05 **00 06** 00 00 00 00 00 02
+
+
+
+表示接口数量，本类为 0 
+
+0000560 67 3b 29 56 00 21 00 05 00 06 **00 00** 00 00 00 02
+
+
+
+| Flag Name      | Value  | Interpretation                                               |
+| -------------- | ------ | ------------------------------------------------------------ |
+| ACC_PUBLIC     | 0x0001 | Declared public; may be accessed from outside its package.   |
+| ACC_FINAL      | 0x0010 | Declared final; no subclasses allowed.                       |
+| ACC_SUPER      | 0x0020 | Threat superclass methods specially when invoked by the invokespecial instruction. |
+| ACC_INTERFACE  | 0x0200 | Is an interface,not a class.                                 |
+| ACC_ABSTRACT   | 0x0400 | Declared abstract; must not be instantiated.                 |
+| ACC_SYNTHETIC  | 0x1000 | Declared synthetic; not present in the source code.          |
+| ACC_ANNOTATION | 0x2000 | Declared as an annotation type.                              |
+| ACC_ENUM       | 0x4000 | Declared as an enum type.                                    |
+
+
+
+#### Field 信息
+
+表示成员变量，本类为 0 
+
+0000560 67 3b 29 56 00 21 00 05 00 06 00 00 **00 00** 00 02
+
+| FieldType    | Type      | Interpretation                                               |
+| ------------ | --------- | ------------------------------------------------------------ |
+| B            | byte      | signed byte                                                  |
+| C            | char      | Unicode character code point in the Basic Multilingual Plane,encoded with UTF-16 |
+| D            | double    | double-percision floating-point value                        |
+| F            | float     | single-percision floating-point value                        |
+| I            | int       | integer                                                      |
+| J            | long      | long integer                                                 |
+| L ClassName; | reference | an instance of calss ClassName                               |
+| S            | short     | signed short                                                 |
+| Z            | boolean   | true or false                                                |
+| [            | reference | one array dimension                                          |
+
+
+
+#### Method 信息
+
+00 02 表示方法数量，本类为 2
+
+0000560 67 3b 29 56 00 21 00 05 00 06 00 00 00 00 **00 02**
+
+一个方法由 访问修饰符，名称，参数描述，方法属性数量，方法属性组成
+
+##### init
+
+00 01 表示访问修饰符（根据访问标识为 public）
+
+0000600 **00 01** 00 07 00 08 00 01 00 09 00 00 00 2f 00 01
+
+
+
+00 07 表示引用了常量池 #07 项作为方法名称
+
+0000600 00 01 **00 07** 00 08 00 01 00 09 00 00 00 2f 00 01
+
+
+
+00 08 表示引用了常量池 #08 项作为方法参数描述
+
+0000600 00 01 00 07 **00 08** 00 01 00 09 00 00 00 2f 00 01
+
+
+
+00 01 表示方法属性数量，本方法是 1
+
+0000600 00 01 00 07 00 08 **00 01** 00 09 00 00 00 2f 00 01
+
+
+
+00 09 表示引用了常量池 #09 项，发现是【Code】属性，00 00 00 2f 表示此属性的长度是 47。
+
+0000600 00 01 00 07 00 08 00 01 **00 09 00 00 00 2f 00 01**
+
+0000620 **00 01 00 00 00 05 2a b7 00 01 b1 00 00 00 02 00**
+
+0000640 **0a 00 00 00 06 00 01 00 00 00 01 00 0b 00 00 00**
+
+0000660 **0c 00 01 00 00 00 05 00 0c 00 0d 00 00** 00 09 00
+
+- 00 01 表示【操作数栈】最大深度。
+- 00 01 表示【局部变量表】最大槽（slot）数。
+- 00 00 00 05 表示字节码长度是 5。
+- 2a b7 00 01 b1 是字节码指令。
+
+00 00 00 02 表示方法细节属性数量是 2。
+
+00 0a 表示引用了常量池 #10 项，发现是【LineNumberTable】属性。
+
+- 00 00 00 06 表示此属性的总长度是 6。
+- 00 01 表示【LineNumberTable】长度。
+- 00 00 表示【字节码】行号 00 01【java 源码】行号。
+
+00 0b 表示引用了常量池 #11 项，发现是【LocalVariableTable】属性。
+
+- 00 00 00 0c 表示此属性的总长度是 12。
+- 00 01 表示【LocalVariableTable】长度。
+- 00 00 表示局部变量生命周期开始，相对于字节码的偏移量
+- 00 05 表示局部变量覆盖的范围长度
+- 00 0c 表示局部变量名称，本例引用了常量池 #12 项，是【this】。
+- 00 0d 表示局部变量的类型，本例引用了常量池 #13 项，是【LJavaApp;】。
+- 00 00 表示局部变量占有的槽位（slot）编号，本例是0。
+
+##### main
+
+00 09 表示访问修饰符（根据访问标识为 public static）
+
+0000660 0c 00 01 00 00 00 05 00 0c 00 0d 00 00 **00 09** 00
+
+
+
+00 0e 表示引用了常量池 #14 项作为方法名称
+
+0000660 0c 00 01 00 00 00 05 00 0c 00 0d 00 00 00 09 **00**
+
+0000700 **0e** 00 0f 00 01 00 09 00 00 00 37 00 02 00 01 00
+
+
+
+00 0f 表示引用了常量池 #15 项作为方法参数描述
+
+0000700 0e **00 0f** 00 01 00 09 00 00 00 37 00 02 00 01 00
+
+
+
+00 01 表示方法属性数量，本方法是 1
+
+0000700 0e 00 0f **00 01** 00 09 00 00 00 37 00 02 00 01 00
+
+
+
+00 09 表示引用了常量池 #09 项，发现是【Code】属性，00 00 00 37 表示此属性的长度是 55。
+
+0000700 0e 00 0f 00 01 **00 09 00 00 00 37 00 02 00 01 00**
+
+0000720 **00 00 09 b2 00 02 12 03 b6 00 04 b1 00 00 00 02**
+
+0000740 **00 0a 00 00 00 0a 00 02 00 00 00 03 00 08 00 04**
+
+0000760 **00 0b 00 00 00 0c 00 01 00 00 00 09 00 10 00 11**
+
+0001000 **00 00** 00 01 00 12 00 00 00 02 00 13
+
+- 00 02 表示【操作数栈】最大深度。
+- 00 01 表示【局部变量表】最大槽（slot）数。
+- 00 00 00 09 表示字节码长度是 9。
+- b2 00 02 12 03 b6 00 04 b1 是字节码指令。
+
+00 00 00 02 表示方法细节属性数量是 2。
+
+00 0a 表示引用了常量池 #10 项，发现是【LineNumberTable】属性。
+
+- 00 00 00 0a 表示此属性的总长度是 10。
+- 00 02 表示【LineNumberTable】长度。
+- 00 00 表示【字节码】行号 00 03【java 源码】行号。
+- 00 08 表示【字节码】行号 00 04【java 源码】行号。
+
+00 0b 表示引用了常量池 #11 项，发现是【LocalVariableTable】属性。
+
+- 00 00 00 0c 表示此属性的总长度是 12。
+- 00 01 表示【LocalVariableTable】长度。
+- 00 00 表示局部变量生命周期开始，相对于字节码的偏移量
+- 00 09 表示局部变量覆盖的范围长度
+- 00 10 表示局部变量名称，本例引用了常量池 #16 项，是【args】。
+- 00 11 表示局部变量的类型，本例引用了常量池 #17 项，是[Ljava/lang/String;】。
+- 00 00 表示局部变量占有的槽位（slot）编号，本例是0。
+
+
+
+
+
+
+
+#### 附加信息
+
+0001000 00 00 **00 01 00 12 00 00 00 02 00 13**
+
+00 01 表示附加属性数量。
+
+00 12 表示引用了常量池 #18 项，即【SourceFile】。
+
+00 00 00 02 表示此属性的长度。
+
+00 13 表示引用了常量池 #18 项，即【LJavaApp;】。
+
+
+
+#### 参考文献
+
+[Chapter 4. The class File Format (oracle.com)](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html)
+
+
+
+### 字节码指令
+
+#### 指令列表
+
+[JVM详解_指令集 - 简书 (jianshu.com)](https://www.jianshu.com/p/5718ebecff84)
+
+
+
+[The Java® Virtual Machine Specification (oracle.com)](https://docs.oracle.com/javase/specs/jvms/se8/html/index.html)
+
+#### 字节码解读
+
+##### init
+
+```shell
+# 构造函数字节码指令
+2a b7 00 01 b1
+aload_0 = 42 (0x2a)
+invokespecial = 183 (0xb7)
+return = 177 (0xb1)
+```
+
+1. 2a => aload_0 加载 slot 0 的局部变量到操作数栈，即 this，做为下面的 invokespecial 构造方法调用的参数
+2. b7 => invokespecial 预备调用构造方法
+3. 00 01 引用常量池中 #1 项， 即【Method java/lang/Object."<init>":()V】
+4. b1 => return 表示返回
+
+
+
+##### main
+
+main 函数字节码指令
+
+```shell
+# 构造函数字节码指令
+b2 00 02 12 03 b6 00 04 b1
+getstatic = 178 (0xb2)
+ldc = 18 (0x12)
+invokevirtual = 182 (0xb6)
+return = 177 (0xb1)
+```
+
+1. b2 => getstatic 加载静态变量
+2. 00 02 引用常量池中 #2 项， 即【java/lang/System.out:Ljava/io/PrintStream;】
+3. 12 => ldc 加载参数
+4. 03 引用常量池中 #3 项， 即【hello world】
+5. b6 => invokevirtual 预备调用成员方法
+6. 00 04 引用常量池中 #4 项， 即【Method java/io/PrintStream.println:(Ljava/lang/String;)V】
+7. b1 => return 表示返回
+
+
+
+#### javap 工具
+
+```shell
+# javap -v JavaApp.class
+# -v 显示详细信息
+E:\develop\code\java\jvm\out\production\jvm> javap -v JavaApp.class
+Classfile /E:/develop/code/java/jvm/out/production/jvm/JavaApp.class
+  Last modified 2022年8月17日; size 524 bytes
+  MD5 checksum 7c885a2b9385027997581b72fac41fd9
+  Compiled from "JavaApp.java"
+public class JavaApp
+  minor version: 0
+  major version: 55
+  flags: (0x0021) ACC_PUBLIC, ACC_SUPER
+  this_class: #5                          // JavaApp
+  super_class: #6                         // java/lang/Object
+  interfaces: 0, fields: 0, methods: 2, attributes: 1
+Constant pool:
+   #1 = Methodref          #6.#20         // java/lang/Object."<init>":()V
+   #2 = Fieldref           #21.#22        // java/lang/System.out:Ljava/io/PrintStream;
+   #3 = String             #23            // hello world
+   #4 = Methodref          #24.#25        // java/io/PrintStream.println:(Ljava/lang/String;)V
+   #5 = Class              #26            // JavaApp
+   #6 = Class              #27            // java/lang/Object
+   #7 = Utf8               <init>
+   #8 = Utf8               ()V
+   #9 = Utf8               Code
+  #10 = Utf8               LineNumberTable
+  #11 = Utf8               LocalVariableTable
+  #12 = Utf8               this
+  #13 = Utf8               LJavaApp;
+  #14 = Utf8               main
+  #15 = Utf8               ([Ljava/lang/String;)V
+  #16 = Utf8               args
+  #17 = Utf8               [Ljava/lang/String;
+  #18 = Utf8               SourceFile
+  #19 = Utf8               JavaApp.java
+  #20 = NameAndType        #7:#8          // "<init>":()V
+  #21 = Class              #28            // java/lang/System
+  #22 = NameAndType        #29:#30        // out:Ljava/io/PrintStream;
+  #23 = Utf8               hello world
+  #24 = Class              #31            // java/io/PrintStream
+  #25 = NameAndType        #32:#33        // println:(Ljava/lang/String;)V
+  #26 = Utf8               JavaApp
+  #27 = Utf8               java/lang/Object
+  #28 = Utf8               java/lang/System
+  #29 = Utf8               out
+  #30 = Utf8               Ljava/io/PrintStream;
+  #31 = Utf8               java/io/PrintStream
+  #32 = Utf8               println
+  #33 = Utf8               (Ljava/lang/String;)V
+{
+  public JavaApp();
+    descriptor: ()V
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: return
+      LineNumberTable:
+        line 1: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   LJavaApp;
+
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=1, args_size=1
+         0: getstatic     #2                  // Field java/lang/System.out:Ljava/io/PrintStream;
+         3: ldc           #3                  // String hello world
+         5: invokevirtual #4                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+         8: return
+      LineNumberTable:
+        line 3: 0
+        line 4: 8
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       9     0  args   [Ljava/lang/String;
+}
+SourceFile: "JavaApp.java"
+
+```
+
+
+
+#### 图解方法执行流程
+
+##### 原始 java 代码
+
+```java
+public class JavaApp {
+    public static void main(String [] args) {
+        int a = 10;
+        int b = Short.MAX_VALUE + 1;
+        int c = a + b;
+        System.out.println(c);
+    }
+}
+```
+
+
+
+##### 反编译后的字节码文件内容
+
+```shell
+PS E:\develop\code\java\jvm\out\production\jvm> javap -v JavaApp.class
+Classfile /E:/develop/code/java/jvm/out/production/jvm/JavaApp.class
+  Last modified 2022年8月24日; size 583 bytes
+  MD5 checksum 8aebb6be38d08be95f671e48b13c6786
+  Compiled from "JavaApp.java"
+public class JavaApp
+  minor version: 0
+  major version: 55
+  flags: (0x0021) ACC_PUBLIC, ACC_SUPER
+  this_class: #6                          // JavaApp
+  super_class: #7                         // java/lang/Object
+  interfaces: 0, fields: 0, methods: 2, attributes: 1
+Constant pool:
+   #1 = Methodref          #7.#25         // java/lang/Object."<init>":()V
+   #2 = Class              #26            // java/lang/Short
+   #3 = Integer            32768
+   #4 = Fieldref           #27.#28        // java/lang/System.out:Ljava/io/PrintStream;
+   #5 = Methodref          #29.#30        // java/io/PrintStream.println:(I)V
+   #6 = Class              #31            // JavaApp
+   #7 = Class              #32            // java/lang/Object
+   #8 = Utf8               <init>
+   #9 = Utf8               ()V
+  #10 = Utf8               Code
+  #11 = Utf8               LineNumberTable
+  #12 = Utf8               LocalVariableTable
+  #13 = Utf8               this
+  #14 = Utf8               LJavaApp;
+  #15 = Utf8               main
+  #16 = Utf8               ([Ljava/lang/String;)V
+  #17 = Utf8               args
+  #18 = Utf8               [Ljava/lang/String;
+  #19 = Utf8               a
+  #20 = Utf8               I
+  #21 = Utf8               b
+  #22 = Utf8               c
+  #23 = Utf8               SourceFile
+  #24 = Utf8               JavaApp.java
+  #25 = NameAndType        #8:#9          // "<init>":()V
+  #26 = Utf8               java/lang/Short
+  #27 = Class              #33            // java/lang/System
+  #28 = NameAndType        #34:#35        // out:Ljava/io/PrintStream;
+  #29 = Class              #36            // java/io/PrintStream
+  #30 = NameAndType        #37:#38        // println:(I)V
+  #31 = Utf8               JavaApp
+  #32 = Utf8               java/lang/Object
+  #33 = Utf8               java/lang/System
+  #34 = Utf8               out
+  #35 = Utf8               Ljava/io/PrintStream;
+  #36 = Utf8               java/io/PrintStream
+  #37 = Utf8               println
+  #38 = Utf8               (I)V
+{
+  public JavaApp();
+    descriptor: ()V
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: return
+      LineNumberTable:
+        line 1: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   LJavaApp;
+
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=4, args_size=1
+         0: bipush        10
+         2: istore_1
+         3: ldc           #3                  // int 32768
+         5: istore_2
+         6: iload_1
+         7: iload_2
+         8: iadd
+         9: istore_3
+        10: getstatic     #4                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        13: iload_3
+        14: invokevirtual #5                  // Method java/io/PrintStream.println:(I)V
+        17: return
+      LineNumberTable:
+        line 3: 0
+        line 4: 3
+        line 5: 6
+        line 6: 10
+        line 7: 17
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      18     0  args   [Ljava/lang/String;
+            3      15     1     a   I
+            6      12     2     b   I
+           10       8     3     c   I
+}
+SourceFile: "JavaApp.java"
+
+```
+
+
+
+##### 常量池载入运行时常量池
+
+![image-20220824215832233](D:\documents\notes\solid\Java.assets\031.jpg)
+
+
+
+##### 方法字节码载入方法区
+
+![image-20220824220259780](D:\documents\notes\solid\Java.assets\032.jpg)
+
+
+
+main 线程开始运行，分配栈帧内存
+
+stack=2, locals=4, args_size=1
+
+栈帧左边绿色区域（局部变量表）：栈帧根据局部变量表的变量数量（locals）分配 4 个槽位。
+
+栈帧右边蓝色区域（操作数栈）：根据最大栈深（stack）分配长度为 2 的栈。
+
+![image-20220824220409748](D:\documents\notes\solid\Java.assets\033.jpg)
+
+
+
+##### 执行引擎开始执行字节码
+
+###### bipush 10
+
+- 将一个 byte 压入操作数栈（其长度会补齐 4 个字节），类似的指令还有：
+- sipush 将一个 short 压入操作数栈（其长度会补齐 4 个字节）
+- ldc 将一个 int 压入操作数栈
+- ldc2_w 将一个 long 压入操作数栈（分两次压入，因为 long 是 8 个字节）
+- 这里小的数字都是喝字节码指令存在一起，超过 short 范围的数字存入了常量池
+
+![image-20220824222035534](D:\documents\notes\solid\Java.assets\034.jpg)
+
+
+
+###### istore_1
+
+- 将操作数栈顶数据出栈，存入局部变量表的 slot 1
+
+![image-20220824222303286](D:\documents\notes\solid\Java.assets\035.jpg)
+
+
+
+![image-20220824222427231](D:\documents\notes\solid\Java.assets\036.jpg)
+
+
+
+###### ldc #3
+
+- 从常量池加载 #3 数据到操作数栈
+- 注意 Short.MAX_VALUE 是 32767，所以 32768 = Short.MAX_VALUE + 1 实际是在编译期间计算好的
+
+![image-20220824222737605](D:\documents\notes\solid\Java.assets\037.jpg)
+
+
+
+###### istore_2
+
+将操作数栈顶数据出栈，存入局部变量表的 slot 2
+
+![image-20220824222820676](D:\documents\notes\solid\Java.assets\038.jpg)
+
+
+
+![image-20220824223104437](D:\documents\notes\solid\Java.assets\039.jpg)
+
+
+
+###### iload_1
+
+
+
+![image-20220824223347591](D:\documents\notes\solid\Java.assets\040.jpg)
+
+
+
+###### iload_2
+
+
+
+![image-20220824223417636](D:\documents\notes\solid\Java.assets\041.jpg)
+
+
+
+###### iadd
+
+
+
+![image-20220824223514348](D:\documents\notes\solid\Java.assets\042.jpg)
+
+
+
+###### istore_3
+
+
+
+![image-20220824223633610](D:\documents\notes\solid\Java.assets\043.jpg)
+
+
+
+![image-20220824223722050](D:\documents\notes\solid\Java.assets\044.jpg)
+
+
+
+###### getstatic #4
+
+
+
+![image-20220824223819070](D:\documents\notes\solid\Java.assets\045.jpg)
+
+
+
+![image-20220824223934416](D:\documents\notes\solid\Java.assets\046.jpg)
+
+
+
+###### iload_3
+
+
+
+![image-20220824224118335](D:\documents\notes\solid\Java.assets\047.jpg)
+
+
+
+###### invokevirtual #5
+
+- 找到常量池 #5 项
+- 定位到方法区 Method java/io/PrintStream.println:(I)V 方法
+- 生成新的栈帧（分配 locals、stack 等）
+- 传递参数，执行新栈帧中的字节码
+
+![image-20220824224427626](D:\documents\notes\solid\Java.assets\048.jpg)
+
+
+
+- 执行完毕，弹出栈帧
+
+- 清楚 main 操作数栈内容
+
+![image-20220824224640115](D:\documents\notes\solid\Java.assets\049.jpg)
+
+
+
+###### return
+
+- 完成 main 方法调用，弹出 main 栈帧
+- 程序结束
+
+
+
+#### 分析 i++
+
+##### 原始 java 代码
+
+```java
+public class JavaApp {
+    public static void main(String [] args) {
+        int a = 10;
+        int b = a++ + ++a + a--;
+        System.out.println(a);
+        System.out.println(b);
+    }
+}
+
+```
+
+
+
+##### 反编译后的字节码文件内容
+
+```shell
+PS E:\develop\code\java\jvm\out\production\jvm> javap -v JavaApp.class
+Classfile /E:/develop/code/java/jvm/out/production/jvm/JavaApp.class
+  Last modified 2022年8月25日; size 558 bytes
+  MD5 checksum 3e1b4120f5597e33e27729a437fac72f
+  Compiled from "JavaApp.java"
+public class JavaApp
+  minor version: 0
+  major version: 55
+  flags: (0x0021) ACC_PUBLIC, ACC_SUPER
+  this_class: #4                          // JavaApp
+  super_class: #5                         // java/lang/Object
+  interfaces: 0, fields: 0, methods: 2, attributes: 1
+Constant pool:
+   #1 = Methodref          #5.#22         // java/lang/Object."<init>":()V
+   #2 = Fieldref           #23.#24        // java/lang/System.out:Ljava/io/PrintStream;
+   #3 = Methodref          #25.#26        // java/io/PrintStream.println:(I)V
+   #4 = Class              #27            // JavaApp
+   #5 = Class              #28            // java/lang/Object
+   #6 = Utf8               <init>
+   #7 = Utf8               ()V
+   #8 = Utf8               Code
+   #9 = Utf8               LineNumberTable
+  #10 = Utf8               LocalVariableTable
+  #11 = Utf8               this
+  #12 = Utf8               LJavaApp;
+  #13 = Utf8               main
+  #14 = Utf8               ([Ljava/lang/String;)V
+  #15 = Utf8               args
+  #16 = Utf8               [Ljava/lang/String;
+  #17 = Utf8               a
+  #18 = Utf8               I
+  #19 = Utf8               b
+  #20 = Utf8               SourceFile
+  #21 = Utf8               JavaApp.java
+  #22 = NameAndType        #6:#7          // "<init>":()V
+  #23 = Class              #29            // java/lang/System
+  #24 = NameAndType        #30:#31        // out:Ljava/io/PrintStream;
+  #25 = Class              #32            // java/io/PrintStream
+  #26 = NameAndType        #33:#34        // println:(I)V
+  #27 = Utf8               JavaApp
+  #28 = Utf8               java/lang/Object
+  #29 = Utf8               java/lang/System
+  #30 = Utf8               out
+  #31 = Utf8               Ljava/io/PrintStream;
+  #32 = Utf8               java/io/PrintStream
+  #33 = Utf8               println
+  #34 = Utf8               (I)V
+{
+  public JavaApp();
+    descriptor: ()V
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: return
+      LineNumberTable:
+        line 1: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   LJavaApp;
+
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=3, args_size=1
+         0: bipush        10
+         2: istore_1
+         3: iload_1
+         4: iinc          1, 1
+         7: iinc          1, 1
+        10: iload_1
+        11: iadd
+        12: iload_1
+        13: iinc          1, -1
+        16: iadd
+        17: istore_2
+        18: getstatic     #2                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        21: iload_1
+        22: invokevirtual #3                  // Method java/io/PrintStream.println:(I)V
+        25: getstatic     #2                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        28: iload_2
+        29: invokevirtual #3                  // Method java/io/PrintStream.println:(I)V
+        32: return
+      LineNumberTable:
+        line 3: 0
+        line 4: 3
+        line 5: 18
+        line 6: 25
+        line 7: 32
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      33     0  args   [Ljava/lang/String;
+            3      30     1     a   I
+           18      15     2     b   I
+}
+SourceFile: "JavaApp.java"
+
+```
+
+
+
+##### 分析
+
+注意 iinc 指令是直接在局部变量 slot 上进行运算
+
+a++ 和 ++a 的区别是先执行 iload 还是先执行 iinc
+
+![image-20220825220623066](D:\documents\notes\solid\Java.assets\050.jpg)
+
+![image-20220825220816258](D:\documents\notes\solid\Java.assets\051.jpg)
+
+![image-20220825220947520](D:\documents\notes\solid\Java.assets\052.jpg)
+
+![image-20220825221034946](D:\documents\notes\solid\Java.assets\053.jpg)
+
+![image-20220825221118100](D:\documents\notes\solid\Java.assets\054.jpg)
+
+![image-20220825221340496](D:\documents\notes\solid\Java.assets\055.jpg)
+
+![image-20220825221232406](D:\documents\notes\solid\Java.assets\056.jpg)
+
+![image-20220825221432500](D:\documents\notes\solid\Java.assets\057.jpg)
+
+![image-20220825221538734](D:\documents\notes\solid\Java.assets\058.jpg)
+
+![image-20220825221634613](D:\documents\notes\solid\Java.assets\059.jpg)
+
+![image-20220825221742905](D:\documents\notes\solid\Java.assets\060.jpg)
+
+
+
+#### 条件判断指令
+
+##### 指令
+
+| 指令 | 助记符    | 含义             |
+| ---- | --------- | ---------------- |
+| 0x99 | ifeq      | 判断是否 == 0    |
+| 0x9a | ifne      | 判断是否 != 0    |
+| 0x9b | iflt      | 判断是否 < 0     |
+| 0x9c | ifge      | 判断是否 >= 0    |
+| 0x9d | ifgt      | 判断是否 > 0     |
+| 0x9e | ifle      | 判断是否 <= 0    |
+| 0x9f | if_icmpeq | 两个 int 是否 == |
+| 0xa0 | if_icmpne | 两个 int 是否 != |
+| 0xa1 | if_icmplt | 两个 int 是否 <  |
+| 0xa2 | if_icmpge | 两个 int 是否 >= |
+| 0xa3 | if_icmpgt | 两个 int 是否 >  |
+| 0xa4 | if_icmple | 两个 int 是否 <= |
+| 0xa5 | if_icmpeq | 两个引用是否 ==  |
+| 0xa6 | if_icmpne | 两个引用是否 !=  |
+| 0xc6 | ifnull    | 判断是否 == null |
+| 0xc7 | ifnonnull | 判断是否 != null |
+
+说明：
+
+- byte、short、char 都会按 int 比较，因为操作数栈都是 4 字节
+- goto 用来进行跳转到指定行号的字节码
+- long、float、double 的比较，查阅 [Chapter 6. The Java Virtual Machine Instruction Set (oracle.com)](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-6.html#jvms-6.5.lcmp)
+
+
+
+##### java 源码
+
+```java
+public class JavaApp {
+    public static void main(String [] args) {
+        int a = 0;
+        if(a == 0){
+            a = 10;
+        }else{
+            a = 20;
+        }
+    }
+}
+```
+
+
+
+##### 字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=1, locals=2, args_size=1
+         0: iconst_0
+         1: istore_1
+         2: iload_1
+         3: ifne          12
+         6: bipush        10
+         8: istore_1
+         9: goto          15
+        12: bipush        20
+        14: istore_1
+        15: return
+      LineNumberTable:
+        line 3: 0
+        line 4: 2
+        line 5: 6
+        line 7: 12
+        line 9: 15
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      16     0  args   [Ljava/lang/String;
+            2      14     1     a   I
+      StackMapTable: number_of_entries = 2
+        frame_type = 252 /* append */
+          offset_delta = 12
+          locals = [ int ]
+        frame_type = 2 /* same */
+}
+
+```
+
+
+
+
+
+#### 循环控制指令
+
+##### 指令
+
+循环控制使用的还是条件判断等基本指令
+
+
+
+##### while
+
+###### java 源码
+
+```java
+public class JavaApp {
+    public static void main(String [] args) {
+        int a = 0;
+        while(a<10){
+            a++;
+        }
+    }
+}
+```
+
+
+
+###### 字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=2, args_size=1
+         0: iconst_0
+         1: istore_1
+         2: iload_1
+         3: bipush        10
+         5: if_icmpge     14
+         8: iinc          1, 1
+        11: goto          2
+        14: return
+      LineNumberTable:
+        line 3: 0
+        line 4: 2
+        line 5: 8
+        line 7: 14
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      15     0  args   [Ljava/lang/String;
+            2      13     1     a   I
+      StackMapTable: number_of_entries = 2
+        frame_type = 252 /* append */
+          offset_delta = 2
+          locals = [ int ]
+        frame_type = 11 /* same */
+}
+
+```
+
+
+
+##### do while
+
+###### java 源码
+
+```java
+public class JavaApp {
+    public static void main(String [] args) {
+        int a = 0;
+        do{
+            a++;
+        }
+        while(a<10);
+    }
+}
+```
+
+
+
+###### 字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=2, args_size=1
+         0: iconst_0
+         1: istore_1
+         2: iinc          1, 1
+         5: iload_1
+         6: bipush        10
+         8: if_icmplt     2
+        11: return
+      LineNumberTable:
+        line 3: 0
+        line 5: 2
+        line 7: 5
+        line 8: 11
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      12     0  args   [Ljava/lang/String;
+            2      10     1     a   I
+      StackMapTable: number_of_entries = 1
+        frame_type = 252 /* append */
+          offset_delta = 2
+          locals = [ int ]
+}
+```
+
+
+
+##### for
+
+###### java 源码
+
+```java
+public class JavaApp {
+    public static void main(String [] args) {
+        for(int a=0;a<10;a++){
+
+        }
+    }
+}
+```
+
+
+
+###### 字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=2, args_size=1
+         0: iconst_0
+         1: istore_1
+         2: iload_1
+         3: bipush        10
+         5: if_icmpge     14
+         8: iinc          1, 1
+        11: goto          2
+        14: return
+      LineNumberTable:
+        line 3: 0
+        line 6: 14
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            2      12     1     a   I
+            0      15     0  args   [Ljava/lang/String;
+      StackMapTable: number_of_entries = 2
+        frame_type = 252 /* append */
+          offset_delta = 2
+          locals = [ int ]
+        frame_type = 250 /* chop */
+          offset_delta = 11
+}
+```
+
+
+
+##### 注意
+
+比较 while 和 for 的字节码，你会发现他们是一摸一样的，殊途同归
+
+
+
+
+
+#### 分析 x++
+
+##### 原始 java 代码
+
+```java
+public class JavaApp {
+    public static void main(String [] args) {
+        int i = 0;
+        int x = 0;
+        while (i < 10){
+            x=x++;
+            i++;
+        }
+        System.out.println(x);
+    }
+}
+```
+
+
+
+##### 反编译后的字节码文件内容
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=3, args_size=1
+         0: iconst_0
+         1: istore_1
+         2: iconst_0
+         3: istore_2
+         4: iload_1
+         5: bipush        10
+         7: if_icmpge     21
+        10: iload_2
+        11: iinc          2, 1
+        14: istore_2
+        15: iinc          1, 1
+        18: goto          4
+        21: getstatic     #7                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        24: iload_2
+        25: invokevirtual #13                 // Method java/io/PrintStream.println:(I)V
+        28: return
+      LineNumberTable:
+        line 3: 0
+        line 4: 2
+        line 5: 4
+        line 6: 10
+        line 7: 15
+        line 9: 21
+        line 10: 28
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      29     0  args   [Ljava/lang/String;
+            2      27     1     i   I
+            4      25     2     x   I
+      StackMapTable: number_of_entries = 2
+        frame_type = 253 /* append */
+          offset_delta = 4
+          locals = [ int, int ]
+        frame_type = 16 /* same */
+}
+```
+
+
+
+##### 分析
+
+将 x 加载到操作数栈后对局部变量表中的 x 自增，然后再把操作数栈的 x 复制回局部变量表，所以 x 一直等于初始值。
+
+```shell
+2: iconst_0
+3: istore_2
+......
+10: iload_2
+11: iinc          2, 1
+14: istore_2
+```
+
+
+
+#### 构造方法
+
+##### <cinit>()V
+
+```java
+public class JavaApp {
+    static int i = 10;
+    static {
+        i = 20;
+    }
+
+    static {
+        i = 30;
+    }
+
+    public static void main(String [] args) {
+
+    }
+}
+```
+
+编译器会按照从上至下的顺序，收集所有 static 静态代码块和静态成员赋值的代码，合并为一个特殊的方法<cinit>()V
+
+```shell
+{
+  static int i;
+    descriptor: I
+    flags: (0x0008) ACC_STATIC
+    
+  static {};
+    descriptor: ()V
+    flags: (0x0008) ACC_STATIC
+    Code:
+      stack=1, locals=0, args_size=0
+         0: bipush        10
+         2: putstatic     #7                  // Field i:I
+         5: bipush        20
+         7: putstatic     #7                  // Field i:I
+        10: bipush        30
+        12: putstatic     #7                  // Field i:I
+        15: return
+      LineNumberTable:
+        line 2: 0
+        line 4: 5
+        line 8: 10
+        line 9: 15
+}
+```
+
+<cinit>()V 方法会在类加载的初始化阶段被调用
+
+
+
+##### <init>()V
+
+```java
+public class JavaApp {
+    private String a = "s1";
+    {
+        b=20;
+    }
+
+    private int b = 10;
+
+    {
+        a = "s2";
+    }
+
+    public JavaApp(String a, int b){
+        this.a=a;
+        this.b=b;
+    }
+
+    public static void main(String [] args) {
+        JavaApp d=new JavaApp("s3", 30);
+        System.out.println(d.a);
+        System.out.println(d.b);
+    }
+}
+```
+
+编译器会按从上到下的顺序，收集所有 {} 代码块和成员变量赋值的代码，形成新的构造方法，但原始构造方法内的代码总在最后
+
+```shell
+{
+  public JavaApp(java.lang.String, int);
+    descriptor: (Ljava/lang/String;I)V
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=2, locals=3, args_size=3
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: aload_0
+         5: ldc           #7                  // String s1
+         7: putfield      #9                  // Field a:Ljava/lang/String;
+        10: aload_0
+        11: bipush        20
+        13: putfield      #15                 // Field b:I
+        16: aload_0
+        17: bipush        10
+        19: putfield      #15                 // Field b:I
+        22: aload_0
+        23: ldc           #19                 // String s2
+        25: putfield      #9                  // Field a:Ljava/lang/String;
+        28: aload_0
+        29: aload_1
+        30: putfield      #9                  // Field a:Ljava/lang/String;
+        33: aload_0
+        34: iload_2
+        35: putfield      #15                 // Field b:I
+        38: return
+      LineNumberTable:
+        line 13: 0
+        line 2: 4
+        line 4: 10
+        line 7: 16
+        line 10: 22
+        line 14: 28
+        line 15: 33
+        line 16: 38
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      39     0  this   LJavaApp;
+            0      39     1     a   Ljava/lang/String;
+            0      39     2     b   I
+}
+
+```
+
+
+
+#### 方法调用
+
+看一下几种不同的方法调用对应的字节码指令
+
+对于构造方法和静态方法执行的是 invokespecial（静态绑定），其他方法执行的是 invokevirtual（动态绑定）。
+
+构造方法和静态方法是确定的，不能被重载，所以在编译期间会被绑定。其他方法可以被重载，所以不能被静态绑定。
+
+在java 8 中私有方法执行的是 invokespecial，在 java 11 中对 invokespecial 这个字节码指令作了修改，所以在 java 11 中私有方法执行的是 invokevirtual。
+
+[Java为什么对private方法使用invokevirtual指令？ - 知乎 (zhihu.com)](https://www.zhihu.com/question/439794633/answer/1682842839)
+
+```java
+public class JavaApp {
+    public JavaApp(){
+
+    }
+
+    private void test1(){
+
+    }
+
+    private final void test2(){
+
+    }
+
+    public void test3(){
+
+    }
+
+    public static void test4(){
+
+    }
+
+    public static void main(String [] args) {
+        JavaApp d=new JavaApp();
+        d.test1();
+        d.test2();
+        d.test3();
+        d.test4();
+        JavaApp.test4();
+    }
+}
+
+```
+
+
+
+```shell
+# java 8
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=2, args_size=1
+         0: new           #2                  // class JavaApp
+         3: dup
+         4: invokespecial #3                  // Method "<init>":()V
+         7: astore_1
+         8: aload_1
+         9: invokespecial #4                  // Method test1:()V
+        12: aload_1
+        13: invokespecial #5                  // Method test2:()V
+        16: aload_1
+        17: invokevirtual #6                  // Method test3:()V
+        20: aload_1
+        21: pop
+        22: invokestatic  #7                  // Method test4:()V
+        25: invokestatic  #7                  // Method test4:()V
+        28: return
+      LineNumberTable:
+        line 23: 0
+        line 24: 8
+        line 25: 12
+        line 26: 16
+        line 27: 20
+        line 28: 25
+        line 29: 28
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      29     0  args   [Ljava/lang/String;
+            8      21     1     d   LJavaApp;
+}
+
+# java 11及以上
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=2, args_size=1
+         0: new           #7                  // class JavaApp
+         3: dup
+         4: invokespecial #9                  // Method "<init>":()V
+         7: astore_1
+         8: aload_1
+         9: invokevirtual #10                 // Method test1:()V
+        12: aload_1
+        13: invokevirtual #13                 // Method test2:()V
+        16: aload_1
+        17: invokevirtual #16                 // Method test3:()V
+        20: aload_1
+        21: pop
+        22: invokestatic  #19                 // Method test4:()V
+        25: invokestatic  #19                 // Method test4:()V
+        28: return
+      LineNumberTable:
+        line 23: 0
+        line 24: 8
+        line 25: 12
+        line 26: 16
+        line 27: 20
+        line 28: 25
+        line 29: 28
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      29     0  args   [Ljava/lang/String;
+            8      21     1     d   LJavaApp;
+}
+
+```
+
+
+
+
+
+#### 多态的原理
+
+##### java 代码
+
+```java
+import java.io.IOException;
+
+/**
+ * 演示多态原理，注意加上下面的 JVM 参数，禁用指针压缩
+ * -XX:-UseCompressedOops -XX:-UseCompressedClassPointers
+ */
+public class JavaApp {
+
+    public static void test(Animal animal){
+        animal.eat();
+        System.out.println(animal.toString());
+    }
+
+    public static void main(String [] args) throws IOException {
+        test(new Cat());
+        test(new Dog());
+        System.in.read();
+    }
+
+}
+
+abstract class Animal{
+    public abstract void eat();
+
+    @Override
+    public String toString() {
+        return "我是"+this.getClass().getSimpleName();
+    }
+}
+
+class Dog extends Animal{
+    @Override
+    public void eat() {
+        System.out.println("啃骨头");
+    }
+}
+
+class Cat extends Animal{
+    @Override
+    public void eat() {
+        System.out.println("吃鱼");
+    }
+}
+
+```
+
+
+
+##### 运行代码
+
+停在 System.in.read() 方法上，这时运行 jps 获取进程 id
+
+
+
+##### 运行 HSDB 工具
+
+进入 JDK 安装目录，执行
+
+```shell
+./bin/java -cp ./lib/sa-jdi.jar sun.jvm.hotspot.HSDB
+```
+
+进入图形界面 -> File -> Attach to HotSpot process -> 进程 id
+
+
+
+##### 查找某个对象的内存地址
+
+打开 Tools -> Find Object By Query -> 输入
+
+```sql
+-- select 别名 from 类全限名 别名
+select d from Dog d
+-- 0x000002ada4c27a40
+```
+
+
+
+##### 查看对象内存结构
+
+打开 Tools -> Inspector
+
+输入类型指针地址后回车
+
+![image-20220906002617124](D:\documents\notes\solid\Java.assets\061.jpg)
+
+
+
+查看对象 Class 的内存地址
+
+
+
+打开 Windows -> Console 
+
+输入 
+
+```shell
+# mem 开始地址 查看的word数
+mem 0x000001e3a4227a40 2
+# mark word
+0x000001e3a4227a40: 0x0000000000000001 
+# 对象的类型指针
+0x000001e3a4227a48: 0x000001e3ff8241a0 
+```
+
+
+
+打开 Tools -> Inspector
+
+输入类型指针地址后回车
+
+![image-20220906221433930](D:\documents\notes\solid\Java.assets\062.jpg)
+
+
+
+##### vtable
+
+多态方法存在一张叫做vtable的虚方法表中
+
+静态方法，final方法，私有方法不会列在虚方法表中
+
+
+
+![image-20220906221516923](D:\documents\notes\solid\Java.assets\063.jpg)
+
+
+
+vtable 与 对象的地址偏移量为 1b8 
+
+0x000001E3FF824358
+
+在对象头中可以看到 vtable 的长度
+
+![image-20220906222330123](D:\documents\notes\solid\Java.assets\064.jpg)
+
+
+
+```shell
+hsdb> mem 0x000001E3FF824358 6
+# 该对象中支持多态的方法入口地址
+# Object.finalize()
+0x000001e3ff824358: 0x000001e3ff421b10 
+# Object.equals()
+0x000001e3ff824360: 0x000001e3ff4215e8 
+# Animal.toString()
+0x000001e3ff824368: 0x000001e3ff823758 
+# Object.hashCode()
+0x000001e3ff824370: 0x000001e3ff421540 
+# Object.clone()
+0x000001e3ff824378: 0x000001e3ff421678 
+# Dog.eat()
+0x000001e3ff824380: 0x000001e3ff824148 
+```
+
+
+
+##### 验证方法地址
+
+Tools -> Class Browser
+
+输入类名，点击下面的地址，可以看到 eat() 方法的地址等于 vtable 中的一个地址
+
+![image-20220906223308107](D:\documents\notes\solid\Java.assets\065.jpg)
+
+
+
+点击父类，可以看到 toString() 方法的地址等于 vtable 中的一个地址
+
+![image-20220906223654571](D:\documents\notes\solid\Java.assets\066.jpg)
+
+
+
+点击 Object 类，可以看到 finalize()、equals()、hashCode()、clone() 方法的地址等于 vtable 中的一个地址
+
+![image-20220906223929816](D:\documents\notes\solid\Java.assets\067.jpg)
+
+
+
+##### 小结
+
+当执行 invokevirtual 指令时
+
+先通过栈帧中的对象引用找到对象
+
+分析对象头，找到对象的实际 Class
+
+Class 结构中有 vtable，它在类加载的链接阶段就已经根据方法的重写规则生成好了
+
+查表得到方法的具体地址
+
+执行方法的字节码
+
+
+
+#### 异常处理
+
+##### try-catch
+
+Java 源码
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        int i = 0;
+        try {
+            i = 10;
+        } catch (Exception e){
+            i = 20;
+        }
+    }
+
+}
+```
+
+
+
+主要字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=1, locals=3, args_size=1
+         0: iconst_0
+         1: istore_1
+         2: bipush        10
+         4: istore_1
+         5: goto          12
+         8: astore_2
+         9: bipush        20
+        11: istore_1
+        12: return
+      Exception table:
+         from    to  target type
+             2     5     8   Class java/lang/Exception
+      LineNumberTable:
+        line 4: 0
+        line 6: 2
+        line 9: 5
+        line 7: 8
+        line 8: 9
+        line 10: 12
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            9       3     2     e   Ljava/lang/Exception;
+            0      13     0  args   [Ljava/lang/String;
+            2      11     1     i   I
+      StackMapTable: number_of_entries = 2
+        frame_type = 255 /* full_frame */
+          offset_delta = 8
+          locals = [ class "[Ljava/lang/String;", int ]
+          stack = [ class java/lang/Exception ]
+        frame_type = 3 /* same */
+}
+
+```
+
+ Exception table 内的代码 [from, to) 块出现异常与声明的异常类型（type）进行匹配，如果一致就会进入目标行（target）
+
+第 8 行的字节码指令 astore_2 是将异常对象引用存入局部变量表的 Slot 2 位置
+
+
+
+##### 多个 single-catch 块的情况
+
+java 源码
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        int i = 0;
+        try {
+            i = 10;
+        } catch (ArithmeticException e){
+            i = 20;
+        } catch (NullPointerException e){
+            i = 30;
+        } catch (Exception e){
+            i = 40;
+        }
+    }
+
+}
+```
+
+
+
+主要字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=1, locals=3, args_size=1
+         0: iconst_0
+         1: istore_1
+         2: bipush        10
+         4: istore_1
+         5: goto          26
+         8: astore_2
+         9: bipush        20
+        11: istore_1
+        12: goto          26
+        15: astore_2
+        16: bipush        30
+        18: istore_1
+        19: goto          26
+        22: astore_2
+        23: bipush        40
+        25: istore_1
+        26: return
+      Exception table:
+         from    to  target type
+             2     5     8   Class java/lang/ArithmeticException
+             2     5    15   Class java/lang/NullPointerException
+             2     5    22   Class java/lang/Exception
+      LineNumberTable:
+        line 4: 0
+        line 6: 2
+        line 13: 5
+        line 7: 8
+        line 8: 9
+        line 13: 12
+        line 9: 15
+        line 10: 16
+        line 13: 19
+        line 11: 22
+        line 12: 23
+        line 14: 26
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            9       3     2     e   Ljava/lang/ArithmeticException;
+           16       3     2     e   Ljava/lang/NullPointerException;
+           23       3     2     e   Ljava/lang/Exception;
+            0      27     0  args   [Ljava/lang/String;
+            2      25     1     i   I
+      StackMapTable: number_of_entries = 4
+        frame_type = 255 /* full_frame */
+          offset_delta = 8
+          locals = [ class "[Ljava/lang/String;", int ]
+          stack = [ class java/lang/ArithmeticException ]
+        frame_type = 70 /* same_locals_1_stack_item */
+          stack = [ class java/lang/NullPointerException ]
+        frame_type = 70 /* same_locals_1_stack_item */
+          stack = [ class java/lang/Exception ]
+        frame_type = 3 /* same */
+}
+```
+
+ 
+
+因为异常出现时，只能进入 Exception table 中一个分支，所以局部变量表 Slot 2 位置被共用。
+
+
+
+##### multi-catch 的情况
+
+java 源码
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        try {
+            Method test = JavaApp.class.getMethod("test");
+            test.invoke(null);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void test(){
+        System.out.println("ok");
+    }
+}
+```
+
+
+
+主要字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=3, locals=2, args_size=1
+         0: ldc           #2                  // class JavaApp
+         2: ldc           #3                  // String test
+         4: iconst_0
+         5: anewarray     #4                  // class java/lang/Class
+         8: invokevirtual #5                  // Method java/lang/Class.getMethod:(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;
+        11: astore_1
+        12: aload_1
+        13: aconst_null
+        14: iconst_0
+        15: anewarray     #6                  // class java/lang/Object
+        18: invokevirtual #7                  // Method java/lang/reflect/Method.invoke:(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;
+        21: pop
+        22: goto          30
+        25: astore_1
+        26: aload_1
+        27: invokevirtual #11                 // Method java/lang/ReflectiveOperationException.printStackTrace:()V
+        30: return
+      Exception table:
+         from    to  target type
+             0    22    25   Class java/lang/NoSuchMethodException
+             0    22    25   Class java/lang/IllegalAccessException
+             0    22    25   Class java/lang/reflect/InvocationTargetException
+      LineNumberTable:
+        line 8: 0
+        line 9: 12
+        line 12: 22
+        line 10: 25
+        line 11: 26
+        line 13: 30
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+           12      10     1  test   Ljava/lang/reflect/Method;
+           26       4     1     e   Ljava/lang/ReflectiveOperationException;
+            0      31     0  args   [Ljava/lang/String;
+      StackMapTable: number_of_entries = 2
+        frame_type = 89 /* same_locals_1_stack_item */
+          stack = [ class java/lang/ReflectiveOperationException ]
+        frame_type = 4 /* same */
+
+  public static void test();
+    descriptor: ()V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=0, args_size=0
+         0: getstatic     #12                 // Field java/lang/System.out:Ljava/io/PrintStream;
+         3: ldc           #13                 // String ok
+         5: invokevirtual #14                 // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+         8: return
+      LineNumberTable:
+        line 16: 0
+        line 17: 8
+}
+```
+
+与多个 single-catch 情况相比异常处理的字节码为相同一段。
+
+
+
+##### finally
+
+java 源码
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        int i = 0;
+        try {
+            i = 10;
+        } catch (Exception e){
+            i = 20;
+        } finally {
+            i = 30;
+        }
+    }
+}
+```
+
+
+
+主要字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=1, locals=4, args_size=1
+         0: iconst_0
+         1: istore_1
+         2: bipush        10
+         4: istore_1
+         5: bipush        30
+         7: istore_1
+         8: goto          27
+        11: astore_2
+        12: bipush        20
+        14: istore_1
+        15: bipush        30
+        17: istore_1
+        18: goto          27
+        21: astore_3
+        22: bipush        30
+        24: istore_1
+        25: aload_3
+        26: athrow
+        27: return
+      Exception table:
+         from    to  target type
+             2     5    11   Class java/lang/Exception
+             2     5    21   any
+            11    15    21   any
+      LineNumberTable:
+        line 4: 0
+        line 6: 2
+        line 10: 5
+        line 11: 8
+        line 7: 11
+        line 8: 12
+        line 10: 15
+        line 11: 18
+        line 10: 21
+        line 11: 25
+        line 12: 27
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+           12       3     2     e   Ljava/lang/Exception;
+            0      28     0  args   [Ljava/lang/String;
+            2      26     1     i   I
+      StackMapTable: number_of_entries = 3
+        frame_type = 255 /* full_frame */
+          offset_delta = 11
+          locals = [ class "[Ljava/lang/String;", int ]
+          stack = [ class java/lang/Exception ]
+        frame_type = 73 /* same_locals_1_stack_item */
+          stack = [ class java/lang/Throwable ]
+        frame_type = 5 /* same */
+}
+```
+
+
+
+可以看到 finally 中的代码被复制了 3 份，分别放入 try 流程，catch 流程以及catch 剩余的异常类型流程。
+
+athrow 当抛出了未被 catch 块捕获到的异常，或者 catch 块内的代码发生了异常。
+
+
+
+##### finally 出现了 return
+
+java 源码
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        int result = test();
+        System.out.println(result);
+    }
+
+    public static int test(){
+        try{
+            return 10;
+        } finally {
+            return 20;
+        }
+    }
+}
+```
+
+
+
+主要字节码
+
+```shell
+{
+  public static int test();
+    descriptor: ()I
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=1, locals=2, args_size=0
+         0: bipush        10
+         2: istore_0
+         3: bipush        20
+         5: ireturn
+         6: astore_1
+         7: bipush        20
+         9: ireturn
+      Exception table:
+         from    to  target type
+             0     3     6   any
+      LineNumberTable:
+        line 10: 0
+        line 12: 3
+      StackMapTable: number_of_entries = 1
+        frame_type = 70 /* same_locals_1_stack_item */
+          stack = [ class java/lang/Throwable ]
+}
+
+```
+
+
+
+由于 finally 中的 ireturn 被插入了所有可能的流程，因此返回结果肯定以 finally 的为准。
+
+至于字节码中第 2 行，似乎没啥用，且看下个例子
+
+跟上例中的 finally 相比，发现没有了 athrow ，这告诉我们：如果在 finally 中出现 retuen，会吞掉异常。
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        int result = test();
+        System.out.println(result);
+    }
+
+    public static int test(){
+        try{
+            int i = 1/0;
+            return 10;
+        } finally {
+            return 20;
+        }
+    }
+}
+```
+
+
+
+##### finally 对返回值影响
+
+java 源码
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        int result = test();
+        System.out.println(result);
+    }
+
+    public static int test(){
+        int i = 10;
+        try{
+            return i;
+        } finally {
+            i = 20;
+        }
+    }
+}
+```
+
+
+
+主要字节码
+
+```shell
+{
+  public static int test();
+    descriptor: ()I
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=1, locals=3, args_size=0
+         0: bipush        10
+         2: istore_0
+         3: iload_0
+         4: istore_1
+         5: bipush        20
+         7: istore_0
+         8: iload_1
+         9: ireturn
+        10: astore_2
+        11: bipush        20
+        13: istore_0
+        14: aload_2
+        15: athrow
+      Exception table:
+         from    to  target type
+             3     5    10   any
+      LineNumberTable:
+        line 9: 0
+        line 11: 3
+        line 13: 5
+        line 11: 8
+        line 13: 10
+        line 14: 14
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            3      13     0     i   I
+      StackMapTable: number_of_entries = 1
+        frame_type = 255 /* full_frame */
+          offset_delta = 10
+          locals = [ int ]
+          stack = [ class java/lang/Throwable ]
+}
+```
+
+
+
+返回之前  4: istore_1，先把返回值暂存到 Slot 1，等到返回时，再把 Slot 1 中的值取出来。
+
+
+
+##### synchronized
+
+在同步时进行加锁解锁，为了保证加锁之后一定能将锁释放，使用了异常处理表进行异常处理，使得同步代码执行结束之后一定能释放锁。
+
+- 注意：方法级别的 synchronized 不会在字节码指令中有所体现。
+
+java 源码
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        Object lock = new Object();
+        synchronized (lock){
+            System.out.println("ok");
+        }
+    }
+}
+```
+
+
+
+主要字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=4, args_size=1
+         0: new           #2                  // class java/lang/Object
+         3: dup
+         4: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         7: astore_1
+         8: aload_1
+         9: dup
+        10: astore_2				# 将锁对象存储在 Slot 2 给 monitorenter 使用
+        11: monitorenter			
+        12: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        15: ldc           #4                  // String ok
+        17: invokevirtual #5                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+        20: aload_2					# 将 Slot 2 中的锁对象加载到操作数栈顶给 monitorexit 使用
+        21: monitorexit
+        22: goto          30
+        25: astore_3
+        26: aload_2
+        27: monitorexit
+        28: aload_3
+        29: athrow
+        30: return
+      Exception table:
+         from    to  target type
+            12    22    25   any
+            25    28    25   any
+      LineNumberTable:
+        line 4: 0
+        line 5: 8
+        line 6: 12
+        line 7: 20
+        line 8: 30
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      31     0  args   [Ljava/lang/String;
+            8      23     1  lock   Ljava/lang/Object;
+      StackMapTable: number_of_entries = 2
+        frame_type = 255 /* full_frame */
+          offset_delta = 25
+          locals = [ class "[Ljava/lang/String;", class java/lang/Object, class java/lang/Object ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 250 /* chop */
+          offset_delta = 4
+}
+SourceFile: "JavaApp.java"
+
+```
+
+
+
+
+
+
+
+### 编译期处理
+
+所谓的语法糖，其实就是 java 编译器把 *.java 源码编译为 *.class 字节码的过程中，自动生成和转换的一些代码，主要是为了减轻程序员的负担，算是 java 编译器给我们的一个额外福利（给糖吃嘛）
+
+注意，以下代码的分析，借助了 javap 工具， idea 的反编译功能， idea 插件 jclasslib 等工具．另外，编译器转换的结果直接就是 class 字节码，只是为了便于阅读，给出了几乎等价的 java 源码方式，并不是编译器还会转换出中间的 java 源码，切记。
+
+
+
+#### 默认构造器
+
+##### java 源码
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+
+    }
+}
+```
+
+
+
+##### 主要字节码
+
+在类中没有实现构造函数的情况下，
+
+编译之后自动生成无参构造函数，并在无参构造函数中调用父类无参构造函数。
+
+```shell
+{
+  public JavaApp();
+    descriptor: ()V
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: return
+      LineNumberTable:
+        line 1: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   LJavaApp;
+}
+SourceFile: "JavaApp.java"
+
+```
+
+
+
+#### 自动拆装箱
+
+这个特性是 JDK 5 开始加入的
+
+##### 代码片段 1
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        Integer x = 1;
+        int y = x;
+    }
+}
+```
+
+这段代码在 JDK 5 之前是无法编译通过的，必须改写为
+
+##### 代码片段 2
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        Integer x = Integer.valueOf(1);
+        int y = x.intValue();
+    }
+}
+```
+
+显然之前版本的代码太麻烦了，需要在基本类型和包装类型之间来回转换（尤其是集合类中操作的都是包装类型），因此这些转换的事情在 JDK 5 以后都由编译器在编译阶段完成。即 代码片段 1 都会在编译阶段被转换为 代码片段 2。
+
+##### 代码片段 1 主要字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=1, locals=3, args_size=1
+         0: iconst_1
+         1: invokestatic  #2                  // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+         4: astore_1
+         5: aload_1
+         6: invokevirtual #3                  // Method java/lang/Integer.intValue:()I
+         9: istore_2
+        10: return
+      LineNumberTable:
+        line 4: 0
+        line 5: 5
+        line 6: 10
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      11     0  args   [Ljava/lang/String;
+            5       6     1     x   Ljava/lang/Integer;
+           10       1     2     y   I
+}
+```
+
+
+
+#### 泛型集合取值
+
+##### 泛型擦除
+
+泛型也是在 JDK 5 开始加入的特性，但 java 在编译泛型代码后会执行 泛型擦除 的动作，即泛型信息在编译为字节码之后就丢失了，实际的类型都当做了 Object 类型来处理：
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        List<Integer> list = new ArrayList<>();
+        list.add(10);// 实际调用的是 List.add(Object e)
+        Integer x = list.get(0);// 实际调用的是 Object obj = List.get(int index);
+    }
+}
+```
+
+所以在取值时，编译器真正生成的字节码中，还要额外做一个类型转换的操作：
+
+```java
+Integer x = (Integer)list.get(0);
+```
+
+主要字节码
+
+```java
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=3, args_size=1
+         0: new           #2                  // class java/util/ArrayList
+         3: dup
+         4: invokespecial #3                  // Method java/util/ArrayList."<init>":()V
+         7: astore_1
+         8: aload_1
+         9: bipush        10
+        11: invokestatic  #4                  // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+        14: invokeinterface #5,  2            // InterfaceMethod java/util/List.add:(Ljava/lang/Object;)Z
+        19: pop
+        20: aload_1
+        21: iconst_0
+        22: invokeinterface #6,  2            // InterfaceMethod java/util/List.get:(I)Ljava/lang/Object;
+        27: checkcast     #7                  // class java/lang/Integer
+        30: astore_2
+        31: return
+      LineNumberTable:
+        line 7: 0
+        line 8: 8
+        line 9: 20
+        line 10: 31
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      32     0  args   [Ljava/lang/String;
+            8      24     1  list   Ljava/util/List;
+           31       1     2     x   Ljava/lang/Integer;
+      LocalVariableTypeTable:
+        Start  Length  Slot  Name   Signature
+            8      24     1  list   Ljava/util/List<Ljava/lang/Integer;>;
+}
+```
+
+如果前面的 x 变量类型修改为 int 基本类型那么最终生成的字节码是：
+
+```java
+int x = ((Integer)list.get(0)).intValue();
+```
+
+主要字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=3, args_size=1
+         0: new           #2                  // class java/util/ArrayList
+         3: dup
+         4: invokespecial #3                  // Method java/util/ArrayList."<init>":()V
+         7: astore_1
+         8: aload_1
+         9: bipush        10
+        11: invokestatic  #4                  // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+        14: invokeinterface #5,  2            // InterfaceMethod java/util/List.add:(Ljava/lang/Object;)Z
+        19: pop
+        20: aload_1
+        21: iconst_0
+        22: invokeinterface #6,  2            // InterfaceMethod java/util/List.get:(I)Ljava/lang/Object;
+        27: checkcast     #7                  // class java/lang/Integer
+        30: invokevirtual #8                  // Method java/lang/Integer.intValue:()I
+        33: istore_2
+        34: return
+      LineNumberTable:
+        line 7: 0
+        line 8: 8
+        line 9: 20
+        line 10: 34
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      35     0  args   [Ljava/lang/String;
+            8      27     1  list   Ljava/util/List;
+           34       1     2     x   I
+      LocalVariableTypeTable:
+        Start  Length  Slot  Name   Signature
+            8      27     1  list   Ljava/util/List<Ljava/lang/Integer;>;
+}
+```
+
+还好这些麻烦事都不用自己做。
+
+##### 获取泛型信息
+
+擦除的是字节码上的泛型信息，可以看到 LocalVariableTypeTable 仍然保留了方法参数泛型的信息。
+
+局部变量的泛型信息无法获取，只有参数、返回值的泛型信息才能通过使用反射，够获得这些信息：
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) throws NoSuchMethodException {
+        Method test = JavaApp.class.getMethod("test", List.class, Map.class);
+        Type[] types = test.getGenericParameterTypes();
+        for(Type type:types){
+            print(type);
+        }
+        print(test.getGenericReturnType());
+    }
+
+    private static void print(Type type){
+        if(type instanceof ParameterizedType){ // 参数化类型
+            ParameterizedType parameterizedType = (ParameterizedType) type;
+            System.out.println("原始类型 - " + parameterizedType.getRawType());
+            Type[] arguments = parameterizedType.getActualTypeArguments();
+            for(int i = 0;i < arguments.length; i++){
+                System.out.printf("泛型参数[%d] - %s\n", i, arguments[i]);
+            }
+        }
+    }
+
+    public Set<Integer> test(List<Integer> list, Map<Integer, Object> map){
+        return null;
+    }
+}
+```
+
+
+
+
+
+#### 可变参数
+
+可变参数也是 JDK 5 开始加入的新特性：
+
+##### java 源码
+
+###### 可变参数
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        foo("hello", "world");
+    }
+
+    private static void foo(String... args){
+        String[] array = args;
+        System.out.println(array);
+    }
+}
+```
+
+可变参数 String... args 其实是一个 String[] args，从代码中的赋值语句中就可以看出来。
+
+同样 java 编译器会在编译期间将上述代码变换为：
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        foo(new String[]{"hello", "world"});
+    }
+
+    private static void foo(String[] args){
+        String[] array = args;
+        System.out.println(array);
+    }
+}
+```
+
+###### 注意
+
+如果调用了 foo() 则等价代码为 foo(new String[]{})，创建了一个空数组，而不会传递 null 进去
+
+
+
+##### 主要字节码
+
+```shell
+{
+  public JavaApp();
+    descriptor: ()V
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: return
+      LineNumberTable:
+        line 2: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   LJavaApp;
+
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=4, locals=1, args_size=1
+         0: iconst_2
+         1: anewarray     #2                  // class java/lang/String
+         4: dup
+         5: iconst_0
+         6: ldc           #3                  // String hello
+         8: aastore
+         9: dup
+        10: iconst_1
+        11: ldc           #4                  // String world
+        13: aastore
+        14: invokestatic  #5                  // Method foo:([Ljava/lang/String;)V
+        17: return
+      LineNumberTable:
+        line 5: 0
+        line 6: 17
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      18     0  args   [Ljava/lang/String;
+}
+```
+
+
+
+#### foreach 循环
+
+仍是 JDK 5 开始引入的语法糖
+
+##### Java 源码
+
+###### 数组的循环：
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        int[] array = {1, 2, 3, 4, 5};
+        for(int e:array){
+            System.out.println(e);
+        }
+    }
+}
+```
+
+会被编译器转换为：
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        int[] array = {1, 2, 3, 4, 5};
+        for(int i = 0:i < array.length; i++){
+            int e = array[i];
+            System.out.println(e);
+        }
+    }
+}
+```
+
+###### 集合的循环：
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        List<Integer> list = Arrays.asList(1, 2, 3, 4, 5);
+        for(Integer e:array){
+            System.out.println(e);
+        }
+    }
+}
+```
+
+实际被编译器转换为对迭代器的调用：
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        List<Integer> list = Arrays.asList(1, 2, 3, 4, 5);
+        Iterator iter = list.iterator();
+        while(iter.hasNext()){
+        	Integer e = (Integer)iter.next();
+        	System.out.println(e);
+        }
+    }
+}
+```
+
+###### 注意
+
+foreach 循环写法，能够配合数组，以及所有实现了 Iterable 接口的集合类一起使用，其中 Iterable 用来获取集合的迭代器（Iterator）
+
+
+
+##### 主要字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=4, locals=6, args_size=1
+         0: iconst_5
+         1: newarray       int
+         3: dup
+         4: iconst_0
+         5: iconst_1
+         6: iastore
+         7: dup
+         8: iconst_1
+         9: iconst_2
+        10: iastore
+        11: dup
+        12: iconst_2
+        13: iconst_3
+        14: iastore
+        15: dup
+        16: iconst_3
+        17: iconst_4
+        18: iastore
+        19: dup
+        20: iconst_4
+        21: iconst_5
+        22: iastore
+        23: astore_1
+        24: aload_1
+        25: astore_2
+        26: aload_2
+        27: arraylength
+        28: istore_3
+        29: iconst_0
+        30: istore        4
+        32: iload         4
+        34: iload_3
+        35: if_icmpge     58
+        38: aload_2
+        39: iload         4
+        41: iaload
+        42: istore        5
+        44: getstatic     #2                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        47: iload         5
+        49: invokevirtual #3                  // Method java/io/PrintStream.println:(I)V
+        52: iinc          4, 1
+        55: goto          32
+        58: return
+      LineNumberTable:
+        line 5: 0
+        line 6: 24
+        line 7: 44
+        line 6: 52
+        line 9: 58
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+           44       8     5     e   I
+            0      59     0  args   [Ljava/lang/String;
+           24      35     1 array   [I
+      StackMapTable: number_of_entries = 2
+        frame_type = 255 /* full_frame */
+          offset_delta = 32
+          locals = [ class "[Ljava/lang/String;", class "[I", class "[I", int, int ]
+          stack = []
+        frame_type = 248 /* chop */
+          offset_delta = 25
+}
+```
+
+
+
+
+
+
+
+#### switch 字符串
+
+##### java 源码
+
+```java
+public class JavaApp {
+
+    public static void choose(String str){
+        switch (str){
+            case "hello":
+                System.out.println("h");
+                break;
+            case "world":
+                System.out.println("w");
+                break;
+        }
+    }
+}
+```
+
+
+
+会被编译器转换为：
+
+```java
+public class JavaApp {
+
+    public static void choose(String str){
+        byte x = -1;
+        switch (str.hashCode()){
+            case 99162322:
+                if(str.equals("hello")){
+                    x = 0;
+                }
+                break;
+            case 113318802:
+                if(str.equals("world")){
+                    x = 1;
+                }
+                break;
+        }
+        switch (x){
+            case 0:
+                System.out.println("h");
+                break;
+            case 1:
+                System.out.println("w");
+                break;
+        }
+    }
+}
+```
+
+可以看到，执行了两遍 wsitch，第一遍是根据字符串的 hashCode 和 equals 将字符串转换为相应 byte 类型，第二遍才是利用 byte 执行进行比较。
+
+为什么第一遍时必须比较 hashCode，又利用 equals 比较呢？hashCode 是为了提高效率，减少可能的比较；而 equals 是为了防止 hashCode1 冲突，例如 BM 和 C. 这两个字符串的 hashCode 值都是2123。
+
+##### 注意
+
+swith 配合 String 和枚举使用时，变量不能为 null，原因是
+
+
+
+##### 主要字节码
+
+```shell
+{
+  public static void choose(java.lang.String);
+    descriptor: (Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=3, args_size=1
+         0: aload_0
+         1: astore_1
+         2: iconst_m1
+         3: istore_2
+         4: aload_1
+         5: invokevirtual #4                  // Method java/lang/String.hashCode:()I
+         8: lookupswitch  { // 2
+                99162322: 36
+               113318802: 50
+                 default: 61
+            }
+        36: aload_1
+        37: ldc           #2                  // String hello
+        39: invokevirtual #5                  // Method java/lang/String.equals:(Ljava/lang/Object;)Z
+        42: ifeq          61
+        45: iconst_0
+        46: istore_2
+        47: goto          61
+        50: aload_1
+        51: ldc           #6                  // String world
+        53: invokevirtual #5                  // Method java/lang/String.equals:(Ljava/lang/Object;)Z
+        56: ifeq          61
+        59: iconst_1
+        60: istore_2
+        61: iload_2
+        62: lookupswitch  { // 2
+                       0: 88
+                       1: 99
+                 default: 107
+            }
+        88: getstatic     #7                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        91: ldc           #8                  // String h
+        93: invokevirtual #9                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+        96: goto          107
+        99: getstatic     #7                  // Field java/lang/System.out:Ljava/io/PrintStream;
+       102: ldc           #10                 // String w
+       104: invokevirtual #9                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+       107: return
+      LineNumberTable:
+        line 9: 0
+        line 11: 88
+        line 12: 96
+        line 14: 99
+        line 17: 107
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0     108     0   str   Ljava/lang/String;
+      StackMapTable: number_of_entries = 6
+        frame_type = 253 /* append */
+          offset_delta = 36
+          locals = [ class java/lang/String, int ]
+        frame_type = 13 /* same */
+        frame_type = 10 /* same */
+        frame_type = 26 /* same */
+        frame_type = 10 /* same */
+        frame_type = 249 /* chop */
+          offset_delta = 7
+}
+```
+
+
+
+
+
+#### switch 枚举
+
+##### Java 源码
+
+```java
+public class JavaApp {
+
+    public static void choose(Sex sex){
+        switch (sex){
+            case MALE:
+                System.out.println("男");
+                break;
+            case FEMALE:
+                System.out.println("女");
+                break;
+        }
+    }
+}
+
+enum Sex{
+    MALE,FEMALE
+}
+```
+
+会被编译器转换为：
+
+```java
+public class JavaApp {
+	/**
+	 * 定义一个合成类（仅 jvm 使用，对我们不可见）
+	 * 用来映射枚举的 ordinal 与数组元素的关系
+	 * 枚举的 ordinal 表示枚举对象的序号，从 0 开始
+	 * 即 MALE 的 ordinal() = 0，FEMALE 的 ordinal() = 1
+	 */
+    public class $MAP {
+        // 数组大小即为枚举元素个数，里面存储 case 用来对比的数字
+        static int[] map = new int[2];
+        static {
+            map[Sex.MALE.ordinal()] = 1;
+            map[Sex.FEMALE.ordinal()] = 2;
+        }
+    }
+    
+    public static void choose(Sex sex){
+        int x = $MAP.amp[sex.ordinal()];
+        switch (x){
+            case 1:
+                System.out.println("男");
+                break;
+            case 2:
+                System.out.println("女");
+                break;
+        }
+    }
+}
+```
+
+
+
+##### 主要字节码
+
+```shell
+{
+  public static void choose(Sex);
+    descriptor: (LSex;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=1, args_size=1
+         0: getstatic     #4                  // Field JavaApp$1.$SwitchMap$Sex:[I
+         3: aload_0
+         4: invokevirtual #5                  // Method Sex.ordinal:()I
+         7: iaload
+         8: lookupswitch  { // 2
+                       1: 36
+                       2: 47
+                 default: 55
+            }
+        36: getstatic     #6                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        39: ldc           #7                  // String 男
+        41: invokevirtual #8                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+        44: goto          55
+        47: getstatic     #6                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        50: ldc           #9                  // String 女
+        52: invokevirtual #8                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+        55: return
+      LineNumberTable:
+        line 9: 0
+        line 11: 36
+        line 12: 44
+        line 14: 47
+        line 17: 55
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      56     0   sex   LSex;
+      StackMapTable: number_of_entries = 3
+        frame_type = 36 /* same */
+        frame_type = 10 /* same */
+        frame_type = 7 /* same */
+}
+```
+
+
+
+#### 枚举类
+
+JDK 7 新增了枚举类，以前面的性别枚举为例：
+
+##### java 源码
+
+```java
+enum Sex{
+    MALE,FEMALE
+}
+```
+
+
+
+会被编译器转换为：
+
+```java
+public final class Sex extends Enum<Sex>{
+    public static final Sex MALE;
+    public static final Sex FEMALE;
+    private static final Sex[] $VALUES;
+    
+    static {
+        MALE = new Sex("MALE", 0);
+        FEMALE = new Sex("FEMALE", 1);
+        $VALUES = new Sex[]{MALE,FEMALE};
+    }
+    
+    private Sex(String name, int ordinal){
+        super(name, ordinal);
+    }
+    
+    public static Sex[] values(){
+        return $VALUES.clone();
+    }
+    
+    public static Sex valueOf(String name){
+        return Enum.valueOf(Sex.class, name)
+    }
+}
+```
+
+
+
+##### 主要字节码
+
+```shell
+public final class Sex extends java.lang.Enum<Sex>
+  minor version: 0
+  major version: 52
+  flags: (0x4031) ACC_PUBLIC, ACC_FINAL, ACC_SUPER, ACC_ENUM
+  this_class: #4                          // Sex
+  super_class: #12                        // java/lang/Enum
+  interfaces: 0, fields: 3, methods: 4, attributes: 2
+Constant pool:
+   #1 = Fieldref           #4.#36         // Sex.$VALUES:[LSex;
+   #2 = Methodref          #37.#38        // "[LSex;".clone:()Ljava/lang/Object;
+   #3 = Class              #17            // "[LSex;"
+   #4 = Class              #39            // Sex
+   #5 = Methodref          #12.#40        // java/lang/Enum.valueOf:(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;
+   #6 = Methodref          #12.#41        // java/lang/Enum."<init>":(Ljava/lang/String;I)V
+   #7 = String             #13            // MALE
+   #8 = Methodref          #4.#41         // Sex."<init>":(Ljava/lang/String;I)V
+   #9 = Fieldref           #4.#42         // Sex.MALE:LSex;
+  #10 = String             #15            // FEMALE
+  #11 = Fieldref           #4.#43         // Sex.FEMALE:LSex;
+  #12 = Class              #44            // java/lang/Enum
+  #13 = Utf8               MALE
+  #14 = Utf8               LSex;
+  #15 = Utf8               FEMALE
+  #16 = Utf8               $VALUES
+  #17 = Utf8               [LSex;
+  #18 = Utf8               values
+  #19 = Utf8               ()[LSex;
+  #20 = Utf8               Code
+  #21 = Utf8               LineNumberTable
+  #22 = Utf8               valueOf
+  #23 = Utf8               (Ljava/lang/String;)LSex;
+  #24 = Utf8               LocalVariableTable
+  #25 = Utf8               name
+  #26 = Utf8               Ljava/lang/String;
+  #27 = Utf8               <init>
+  #28 = Utf8               (Ljava/lang/String;I)V
+  #29 = Utf8               this
+  #30 = Utf8               Signature
+  #31 = Utf8               ()V
+  #32 = Utf8               <clinit>
+  #33 = Utf8               Ljava/lang/Enum<LSex;>;
+  #34 = Utf8               SourceFile
+  #35 = Utf8               Sex.java
+  #36 = NameAndType        #16:#17        // $VALUES:[LSex;
+  #37 = Class              #17            // "[LSex;"
+  #38 = NameAndType        #45:#46        // clone:()Ljava/lang/Object;
+  #39 = Utf8               Sex
+  #40 = NameAndType        #22:#47        // valueOf:(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;
+  #41 = NameAndType        #27:#28        // "<init>":(Ljava/lang/String;I)V
+  #42 = NameAndType        #13:#14        // MALE:LSex;
+  #43 = NameAndType        #15:#14        // FEMALE:LSex;
+  #44 = Utf8               java/lang/Enum
+  #45 = Utf8               clone
+  #46 = Utf8               ()Ljava/lang/Object;
+  #47 = Utf8               (Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;
+{
+  public static final Sex MALE;
+    descriptor: LSex;
+    flags: (0x4019) ACC_PUBLIC, ACC_STATIC, ACC_FINAL, ACC_ENUM
+
+  public static final Sex FEMALE;
+    descriptor: LSex;
+    flags: (0x4019) ACC_PUBLIC, ACC_STATIC, ACC_FINAL, ACC_ENUM
+
+  public static Sex[] values();
+    descriptor: ()[LSex;
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=1, locals=0, args_size=0
+         0: getstatic     #1                  // Field $VALUES:[LSex;
+         3: invokevirtual #2                  // Method "[LSex;".clone:()Ljava/lang/Object;
+         6: checkcast     #3                  // class "[LSex;"
+         9: areturn
+      LineNumberTable:
+        line 1: 0
+
+  public static Sex valueOf(java.lang.String);
+    descriptor: (Ljava/lang/String;)LSex;
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=1, args_size=1
+         0: ldc           #4                  // class Sex
+         2: aload_0
+         3: invokestatic  #5                  // Method java/lang/Enum.valueOf:(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;
+         6: checkcast     #4                  // class Sex
+         9: areturn
+      LineNumberTable:
+        line 1: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      10     0  name   Ljava/lang/String;
+
+  static {};
+    descriptor: ()V
+    flags: (0x0008) ACC_STATIC
+    Code:
+      stack=4, locals=0, args_size=0
+         0: new           #4                  // class Sex
+         3: dup
+         4: ldc           #7                  // String MALE
+         6: iconst_0
+         7: invokespecial #8                  // Method "<init>":(Ljava/lang/String;I)V
+        10: putstatic     #9                  // Field MALE:LSex;
+        13: new           #4                  // class Sex
+        16: dup
+        17: ldc           #10                 // String FEMALE
+        19: iconst_1
+        20: invokespecial #8                  // Method "<init>":(Ljava/lang/String;I)V
+        23: putstatic     #11                 // Field FEMALE:LSex;
+        26: iconst_2
+        27: anewarray     #4                  // class Sex
+        30: dup
+        31: iconst_0
+        32: getstatic     #9                  // Field MALE:LSex;
+        35: aastore
+        36: dup
+        37: iconst_1
+        38: getstatic     #11                 // Field FEMALE:LSex;
+        41: aastore
+        42: putstatic     #1                  // Field $VALUES:[LSex;
+        45: return
+      LineNumberTable:
+        line 2: 0
+        line 1: 26
+}
+Signature: #33                          // Ljava/lang/Enum<LSex;>;
+```
+
+
+
+
+
+#### try-with-resources
+
+JDK 7 开始新增了对需要关闭的资源处理的特殊语法 try-with-resources
+
+```java
+try(资源变量 = 创建资源对象){
+    
+}catch(){
+    
+}
+```
+
+
+
+##### java 源码
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        try(InputStream is = new FileInputStream("")) {
+
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+}
+```
+
+
+
+其中资源对象需要实现 AutoCloseable 接口，例如 InputStream、OutputStream、Connection、Statement、ResultSet 等接口都实现了 AutoCloseable ，使用 try-with-resources 可以不用写 finally 语句块，编译器会帮助生成关闭资源代码。
+
+会被编译器转换为：
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        try{
+			InputStream is = new FileInputStream("");
+            Throwable t = null;
+            try {
+                
+            } catch (Throwable e1) {
+                t = e1;
+                throw e1;
+            } finally {
+                if(is != null) {
+                    if(t != null) {
+                        try {
+                            is.close();
+                        } catch (Throwable e2) {
+                            // 如果 close 出现异常，作为被压制异常添加
+                            t.addSuppressed(e2);
+                        }
+                    } else {
+                        is.close();
+                    }
+                }
+            }
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+}
+```
+
+
+
+##### 压制异常
+
+为什么要设计一个 addSuppressed(Throwable e)（添加被压制异常）的方法呢？是为了防止异常信息的丢失（想想 try-with-resources 生成的 finally 中如果抛出了异常）：
+
+```java
+public class MyResources implements AutoCloseable{
+
+    @Override
+    public void close() throws Exception {
+        throw new Exception("close 异常");
+    }
+}
+
+public class JavaApp {
+
+    public static void main(String [] args) {
+        try(MyResources resource = new MyResources()){
+            int i = 1/0;
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+}
+
+```
+
+输出：
+
+```shell
+java.lang.ArithmeticException: / by zero
+	at JavaApp.main(JavaApp.java:9)
+	Suppressed: java.lang.Exception: close 异常
+		at MyResources.close(MyResources.java:5)
+		at JavaApp.main(JavaApp.java:10)
+```
+
+如上所示，两个异常信息都不会丢失。
+
+
+
+##### 主要字节码
+
+```shell
+{
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=3, locals=4, args_size=1
+         0: new           #2                  // class java/io/FileInputStream
+         3: dup
+         4: ldc           #3                  // String
+         6: invokespecial #4                  // Method java/io/FileInputStream."<init>":(Ljava/lang/String;)V
+         9: astore_1
+        10: aconst_null
+        11: astore_2
+        12: aload_1
+        13: ifnull        40
+        16: aload_2
+        17: ifnull        36
+        20: aload_1
+        21: invokevirtual #5                  // Method java/io/InputStream.close:()V
+        24: goto          40
+        27: astore_3
+        28: aload_2
+        29: aload_3
+        30: invokevirtual #7                  // Method java/lang/Throwable.addSuppressed:(Ljava/lang/Throwable;)V
+        33: goto          40
+        36: aload_1
+        37: invokevirtual #5                  // Method java/io/InputStream.close:()V
+        40: goto          48
+        43: astore_1
+        44: aload_1
+        45: invokevirtual #9                  // Method java/io/IOException.printStackTrace:()V
+        48: return
+      Exception table:
+         from    to  target type
+            20    24    27   Class java/lang/Throwable
+             0    40    43   Class java/io/IOException
+      LineNumberTable:
+        line 8: 0
+        line 10: 12
+        line 12: 40
+        line 10: 43
+        line 11: 44
+        line 13: 48
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+           10      30     1    is   Ljava/io/InputStream;
+           44       4     1     e   Ljava/io/IOException;
+            0      49     0  args   [Ljava/lang/String;
+      StackMapTable: number_of_entries = 5
+        frame_type = 255 /* full_frame */
+          offset_delta = 27
+          locals = [ class "[Ljava/lang/String;", class java/io/InputStream, class java/lang/Throwable ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 8 /* same */
+        frame_type = 249 /* chop */
+          offset_delta = 3
+        frame_type = 66 /* same_locals_1_stack_item */
+          stack = [ class java/io/IOException ]
+        frame_type = 4 /* same */
+}
+```
+
+
+
+
+
+#### 方法重写时的桥接方法
+
+我们都知道，方法重写时对返回值分两种情况：
+
+- 父子类的返回值完全一致
+- 子类返回值可以是父类返回值的子类
+
+##### java 源码
+
+```java
+public class Parent{
+    public Number age(){
+        return 35;
+    }
+}
+
+public class Child extends Parent{
+    @Override
+    public Integer age(){
+        return 10;
+    }
+}
+
+```
+
+
+
+对于子类，java 编译器会做如下处理：
+
+```java
+public class Child extends Parent{
+    public Integer age(){
+        return 10;
+    }
+    // 此方法才是真正重写了父类 public Number age() 方法
+    public synthetic bridge Number age(){
+        return age();
+    }
+}
+```
+
+其中桥接方法比较特殊，仅对 java 虚拟机可见，并且与原来的 public Integer age() 没有命名冲突，可以用下面的反射代码来验证：
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        Method[] methods = Child.class.getDeclaredMethods();
+        for(Method method : methods){
+            System.out.println(method);
+        }
+    }
+
+}
+// 输出
+// public java.lang.Integer Child.age()
+// public java.lang.Number Child.age()
+```
+
+
+
+##### 主要字节码
+
+```shell
+{
+  public java.lang.Integer age();
+    descriptor: ()Ljava/lang/Integer;
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: bipush        10
+         2: invokestatic  #2                  // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+         5: areturn
+      LineNumberTable:
+        line 4: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       6     0  this   LChild;
+
+  public java.lang.Number age();
+    descriptor: ()Ljava/lang/Number;
+    flags: (0x1041) ACC_PUBLIC, ACC_BRIDGE, ACC_SYNTHETIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokevirtual #3                  // Method age:()Ljava/lang/Integer;
+         4: areturn
+      LineNumberTable:
+        line 1: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   LChild;
+}
+```
+
+
+
+#### 匿名内部类
+
+##### java 源码
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("ok");
+            }
+        };
+    }
+
+}
+```
+
+会被编译器转换为：
+
+```java
+// 额外生成的类
+final class JavaApp$1 implements Runable {
+    JavaApp$1() {
+        
+    }
+    public void run() {
+        System.out.println("ok");
+    }
+}
+
+public class JavaApp {
+
+    public static void main(String [] args) {
+        Runnable runnable = new JavaApp$1();
+    }
+
+}
+```
+
+
+
+##### 引用局部变量
+
+```java
+public class JavaApp {
+
+    public static void main(String [] args) {
+        test(1);
+    }
+
+    public static void test(final int x){
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("ok:" + x);
+            }
+        };
+    }
+}
+```
+
+会被编译器转换为：
+
+```java
+// 额外生成的类
+final class JavaApp$1 implements Runable {
+	int val$x;
+    JavaApp$1(int x) {
+        this.val$x = x;
+    }
+    public void run() {
+        System.out.println("ok:" + this.val$x);
+    }
+}
+
+public class JavaApp {
+
+    public static void main(String [] args) {
+        test(1);
+    }
+
+    public static void test(final int x){
+        Runnable runnable = new JavaApp$1(x);;
+    }
+}
+```
+
+
+
+##### 主要字节码
+
+```java
+public class JavaApp
+  minor version: 0
+  major version: 52
+  flags: (0x0021) ACC_PUBLIC, ACC_SUPER
+  this_class: #4                          // JavaApp
+  super_class: #5                         // java/lang/Object
+  interfaces: 0, fields: 0, methods: 2, attributes: 2
+Constant pool:
+   #1 = Methodref          #5.#22         // java/lang/Object."<init>":()V
+   #2 = Class              #23            // JavaApp$1
+   #3 = Methodref          #2.#22         // JavaApp$1."<init>":()V
+   #4 = Class              #24            // JavaApp
+   #5 = Class              #25            // java/lang/Object
+   #6 = Utf8               InnerClasses
+   #7 = Utf8               <init>
+   #8 = Utf8               ()V
+   #9 = Utf8               Code
+  #10 = Utf8               LineNumberTable
+  #11 = Utf8               LocalVariableTable
+  #12 = Utf8               this
+  #13 = Utf8               LJavaApp;
+  #14 = Utf8               main
+  #15 = Utf8               ([Ljava/lang/String;)V
+  #16 = Utf8               args
+  #17 = Utf8               [Ljava/lang/String;
+  #18 = Utf8               runnable
+  #19 = Utf8               Ljava/lang/Runnable;
+  #20 = Utf8               SourceFile
+  #21 = Utf8               JavaApp.java
+  #22 = NameAndType        #7:#8          // "<init>":()V
+  #23 = Utf8               JavaApp$1
+  #24 = Utf8               JavaApp
+  #25 = Utf8               java/lang/Object
+{
+  public JavaApp();
+    descriptor: ()V
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: return
+      LineNumberTable:
+        line 2: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   LJavaApp;
+
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=2, args_size=1
+         0: new           #2                  // class JavaApp$1
+         3: dup
+         4: invokespecial #3                  // Method JavaApp$1."<init>":()V
+         7: astore_1
+         8: return
+      LineNumberTable:
+        line 5: 0
+        line 11: 8
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       9     0  args   [Ljava/lang/String;
+            8       1     1 runnable   Ljava/lang/Runnable;
+}
+InnerClasses:
+  static #2;                              // class JavaApp$1
+```
+
+
+
+### 类加载阶段
+
+#### 加载
+
+- 将类的字节码载入方法区中，内部采用 C++ 的 instanceKlass 描述 Java 类，它的重要 field 有：
+
+  - _java_mirror 即 java 的类镜像，例如对 String 来说，就是 String.class，作用是把 Klass 暴露给 Java 使用
+
+  - _super 即父类
+
+  - _fields 即成员变量
+
+  - _methods 即方法
+
+  - _constants 即常量池
+
+  - _class_loader 即类加载器
+
+  - _vtable 虚方法表
+
+  - _itable 接口方法表
+
+
+
+- 如果这个类还有父类没有加载，先加载父类
+- 加载和链接可能是交替运行的
+
+
+
+**注意**
+
+- instanceKlass 这样的【元数据】是存储在方法区的（1.8后的元空间内），但_java_mirror 是存储在堆中
+- 可以通过前面介绍的 HSDB 工具查看
+
+
+
+![image-20220926222510328](D:\documents\notes\solid\Java.assets\068.jpg)
+
+
+
+#### 链接
+
+- 验证：验证类是否符合 JVM 规范，安全性检查
+
+
+用 UE 等支持二进制的编辑器修改字节码的魔数，在控制台运行
+
+```shell
+PS D:\develop\code\java\jvm\out\production\jvm> java JavaApp
+错误: 加载主类 JavaApp 时出现 LinkageError
+        java.lang.ClassFormatError: Incompatible magic value 3405691579 in class file JavaApp
+```
+
+
+
+- 准备：为 static 变量分配空间，设置默认值
+  - static 变量在 JDK 7 之前存储于 instanceKlass 末尾，从JDK 7开始，存储于 _java_mirror 末尾 
+  - static 变量分配空间和赋值是两个步骤，分配空间在准备阶段完成，赋值在初始化阶段完成
+  - 如果 static 变量是 final 的基本类型，以及字符串常量，那么编译阶段值就确定了，赋值在准备阶段完成 
+  - 如果 static 变量是 final 的，但属于引用类型，那么赋值也会在初始化阶段完成 
+
+
+
+- 解析：将常量池中的符号引用解析为直接引用
+
+```java
+package load;
+
+public class C {
+    D d = new D();
+    class D {
+
+    }
+}
+```
+
+
+
+```java
+import load.C;
+import java.io.IOException;
+
+public class JavaApp {
+    public static void main(String [] args) throws ClassNotFoundException, IOException {
+        ClassLoader classLoader = JavaApp.class.getClassLoader();
+        // classLoader 方法不会导致类的解析和初始化
+        Class<?> c = classLoader.loadClass("load.C");
+        System.in.read();
+    }
+}
+
+
+```
+
+Jps 查看 java 进程号
+
+打开 HSDB -> Tools -> Class Browser 可以找得到 load.C 找不到 load.D
+
+查看类 load.C 的常量池，发现 JVM_CONSTANT_UnresolvedClass load/C$D 未解析的一个类
+
+
+
+```java
+import load.C;
+import java.io.IOException;
+
+public class JavaApp {
+    public static void main(String [] args) throws IOException {
+        C c = new C();
+        System.in.read();
+    }
+}
+
+```
+
+打开 HSDB 查看 load.C 的常量池，发现和类 load.D 相关的常量名不再为 未解析，而是具体的内存地址。
+
+
+
+#### 初始化
+
+##### <cinit>()v 方法
+
+初始化即调用 <cinit>()v，虚拟机会保证这个类的【构造方法】的线程安全
+
+
+
+##### 发生的时机
+
+概括的说，类初始化是【懒惰的】
+
+- main 方法所在的类，总会被首先初始化 
+- 首次访问这个类的静态变量或静态方法时
+- 子类初始化，如果父类还没初始化，会引发 
+- 子类访问父类的静态变量，只会触发父类的初始化
+- Class.farName 
+- new 会导致初始化 
+
+不会导致类初始化的情况
+
+- 访问类的 static final 静态常量（基本类型和字符串）不会触发初始化 
+- 类对象 .class 不会触发初始化 
+- 创建该类的数组不会触发初始化 
+- 类加载器的loadClass方法 
+- Class.forNarne的参数2为 false 时 
+
+
+
+##### 验证
+
+```java
+package load;
+
+public class A {
+    public static int a = 0;
+    static {
+        System.out.println("a init");
+    }
+}
+
+```
+
+```java
+package load;
+
+public class B extends A {
+    public final static double b = 5.0;
+    public static boolean c = false;
+    static {
+        System.out.println("b init");
+    }
+}
+
+```
+
+```java
+import load.A;
+import load.B;
+
+public class JavaApp {
+    static {
+        System.out.println("main init");
+    }
+    public static void main(String [] args) throws ClassNotFoundException {
+        // 静态常量（基本类型和字符串）不会触发初始化
+        System.out.println(B.b);
+        // 类对象 .class 不会触发初始化
+        System.out.println(B.class);
+        // 创建该类的数组不会触发初始化
+        System.out.println(new B[0]);
+        // 不会初始化类 B，但会加载 B、A
+        ClassLoader c1 = Thread.currentThread().getContextClassLoader();
+        c1.loadClass("load.B");
+        // 不会初始化类 B，但会加载 B、A
+        ClassLoader c2 = Thread.currentThread().getContextClassLoader();
+        Class.forName("load.B",false, c2);
+
+        // 首次访问这个类的静态变量或静态方法时
+        System.out.println(A.a);
+        // 子类初始化，如果父类还没初始化，会引发
+        System.out.println(B.c);
+        // 子类访问父类的静态变量，只会触发父类的初始化
+        System.out.println(B.a);
+        // 会初始化类 B，并先初始化类 A
+        Class.forName("load.B");
+    }
+}
+```
+
+
+
+#### 练习
+
+##### 静态常量初始化
+
+从字节码分析，使用a，b，c 这三个常量是否会导致 E 初始化
+
+```java
+package load;
+
+public class E {
+    public static final int a = 10;
+    public static final String b = "hello";
+    public static final Integer c = 20;
+}
+
+import load.E;
+
+public class JavaApp {
+
+    public static void main(String [] args) {
+        System.out.println(E.a);
+        System.out.println(E.b);
+        System.out.println(E.c);
+    }
+}
+
+```
+
+可以看到 a，b 两个常量的值是确定的，常量 c 的在初始化方法中进行赋值
+
+```shell
+  public static final int a;
+    descriptor: I
+    flags: (0x0019) ACC_PUBLIC, ACC_STATIC, ACC_FINAL
+    ConstantValue: int 10
+
+  public static final java.lang.String b;
+    descriptor: Ljava/lang/String;
+    flags: (0x0019) ACC_PUBLIC, ACC_STATIC, ACC_FINAL
+    ConstantValue: String hello
+
+  public static final java.lang.Integer c;
+    descriptor: Ljava/lang/Integer;
+    flags: (0x0019) ACC_PUBLIC, ACC_STATIC, ACC_FINAL
+
+  public load.E();
+    descriptor: ()V
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: return
+      LineNumberTable:
+        line 3: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   Lload/E;
+
+  static {};
+    descriptor: ()V
+    flags: (0x0008) ACC_STATIC
+    Code:
+      stack=1, locals=0, args_size=0
+         0: bipush        20
+         2: invokestatic  #2                  // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+         5: putstatic     #3                  // Field c:Ljava/lang/Integer;
+         8: return
+      LineNumberTable:
+        line 6: 0
+}
+SourceFile: "E.java"
+
+```
+
+
+
+##### 懒惰初始化单例模式
+
+```java
+public class Singleton {
+    private Singleton(){
+
+    }
+    // 内部类中保存单例
+    private static class LazyHolder {
+        static final Singleton INSTANCE = new Singleton();
+    }
+    // 第一次调用 getInstance 方法，才会导致内部类加载和初始化其静态成员
+    public static Singleton getInstance(){
+        return LazyHolder.INSTANCE;
+    }
+}
+```
+
+以上的实现特点是：
+
+- 懒惰实例化
+- 初始化时的线程安全是有保障的
+
+
+
+### 类加载器
+
+以 JDK 8 为例
+
+| 名称                    | 加载哪的类            | 说明                          |
+| ----------------------- | --------------------- | ----------------------------- |
+| Bootstrap ClassLoader   | JAVA_HOME/jre/lib     | 无法直接访问                  |
+| Extension ClassLoader   | JAVA_HOME/jre/lib/ext | 上级为 Bootstrap，显示为 null |
+| Application ClassLoader | classpath             | 上级为 Extension              |
+| 自定义加载器            | 自定义                | 上级为 Application            |
+
+
+
+#### 启动类加载器
+
+用 Bootstrap 类加载器加载类
+
+```java
+package load;
+
+public class F {
+    static {
+        System.out.println("bootstarp F init");
+    }
+}
+
+public class JavaApp {
+
+    public static void main(String [] args) throws ClassNotFoundException {
+        Class<?> clazz = Class.forName("load.F");
+        System.out.println(clazz.getClassLoader());
+    }
+}
+
+// 输出
+// bootstarp F init
+```
+
+输出
+
+```shell
+# 在字节码输出目录执行
+java -Xbootclasspath/a:. JavaApp
+bootstarp F init
+null
+```
+
+
+
+- -Xbootclasspath 表示设置 bootclasspath
+- /a:. 表示将当前目录追加至 bootclasspath 之后
+- 可以用这个办法替换核心类
+
+  - java -Xbootclasspath:<new bootclasspath> ，完全替换掉原有加载路径
+
+  - java -Xbootclasspath/a:<追加路径> ，后追加加载路径
+
+  - java -Xbootclasspath/p:<追加路径> ，前追加加载路径
+
+
+
+#### 扩展类加载器
+
+```java
+package load;
+
+public class G {
+    static {
+        System.out.println("classpath G init");
+    }
+}
+
+public class JavaApp {
+
+    public static void main(String [] args) throws ClassNotFoundException {
+        Class<?> clazz = Class.forName("load.G");
+        System.out.println(clazz.getClassLoader());
+    }
+}
+
+// 直接运行输出
+// classpath G init
+// sun.misc.Launcher$AppClassLoader@18b4aac2
+```
+
+然后修改一下 G 类的初始化输出并打包，然后放在目录 JAVA_HOME/jre/lib/ext 下
+
+jar -cvf my.jar load\G.class
+
+```java
+package load;
+
+public class G {
+    static {
+        System.out.println("ext G init");
+    }
+}
+```
+
+再运行一次程序，输出为
+
+```shell
+ext G init
+sun.misc.Launcher$ExtClassLoader@330bedb4
+```
+
+说明加载的是扩展目录下的类，而不是自定义类。通过双亲委派模式加载了扩展目录下的 G 类。
+
+
+
+#### 线程上下文类加载器
+
+我们在使用 JDBC 时，都需要加载 Driver 驱动，不知道你有没有注意到，不写
+
+```java
+Class.forName("com.mysql.jdbs.Driver")
+```
+
+也是可以让 com.mysql.jdbc.Driver 正确加载的，你知道怎么做的吗？
+
+我们追踪一下源码：
+
+```java
+public class DriverManager {
+    // 注册驱动的集合
+    private final static CopyOnWriteArrayList<DriverInfo> registeredDrivers = new CopyOnWriteArrayList<>();
+    /**
+     * 初始化驱动
+     *
+     */
+    static {
+        loadInitialDrivers();
+        println("JDBC DriverManager initialized");
+    }
+}
+```
+
+看看 DriverManager 的类加载器
+
+```java
+System.out.println(DriverManager.class.getClassLoader());
+// null
+```
+
+输出 null，表示它的类加载器是 Bootstrap ClassLoader，会到 JAVA_HOME/jre/lib 下搜索类，但 JAVA_HOME/jre/lib 下显然没有 mysql jdbc 的 jar 包，这样问题来了，在 DriverManager 的静态代码块中，怎么能正确加载 com.mysql.jdbs.Driver 呢？
+
+继续看 loadInitialDrivers() 方法：
+
+```java
+    private static void loadInitialDrivers() {
+        String drivers;
+        try {
+            drivers = AccessController.doPrivileged(new PrivilegedAction<String>() {
+                public String run() {
+                    return System.getProperty("jdbc.drivers");
+                }
+            });
+        } catch (Exception ex) {
+            drivers = null;
+        }
+        // If the driver is packaged as a Service Provider, load it.
+        // Get all the drivers through the classloader
+        // exposed as a java.sql.Driver.class service.
+        // ServiceLoader.load() replaces the sun.misc.Providers()
+		// 1) 使用 ServiceLoader 机制加载驱动，即 SPI
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            public Void run() {
+
+                ServiceLoader<Driver> loadedDrivers = ServiceLoader.load(Driver.class);
+                Iterator<Driver> driversIterator = loadedDrivers.iterator();
+
+                /* Load these drivers, so that they can be instantiated.
+                 * It may be the case that the driver class may not be there
+                 * i.e. there may be a packaged driver with the service class
+                 * as implementation of java.sql.Driver but the actual class
+                 * may be missing. In that case a java.util.ServiceConfigurationError
+                 * will be thrown at runtime by the VM trying to locate
+                 * and load the service.
+                 *
+                 * Adding a try catch block to catch those runtime errors
+                 * if driver not available in classpath but it's
+                 * packaged as service and that service is there in classpath.
+                 */
+                try{
+                    while(driversIterator.hasNext()) {
+                        driversIterator.next();
+                    }
+                } catch(Throwable t) {
+                // Do nothing
+                }
+                return null;
+            }
+        });
+
+        println("DriverManager.initialize: jdbc.drivers = " + drivers);
+		// 2) 使用 jdbc.drivers 定义的驱动名加载驱动
+        if (drivers == null || drivers.equals("")) {
+            return;
+        }
+        String[] driversList = drivers.split(":");
+        println("number of Drivers:" + driversList.length);
+        for (String aDriver : driversList) {
+            try {
+                println("DriverManager.Initialize: loading " + aDriver);
+                // 这里的 ClassLoader.getSystemClassLoader()就是应用程序类加载器
+                Class.forName(aDriver, true,
+                        ClassLoader.getSystemClassLoader());
+            } catch (Exception ex) {
+                println("DriverManager.Initialize: load failed: " + ex);
+            }
+        }
+    }
+```
+
+这里打破了双亲委派模式，DriverManager 使用的是启动类加载器加载，与 DriverManager 相关的类也应当使用启动类加载器加载。但是这里使用了应用程序加载器加载
+
+
+
+##### ServiceLoader
+
+ServiceLoader 实现了大名鼎鼎的 Service Provider Interface (SPI)
+
+约定如下，在 jar 包的 META-INF/service 包下，以接口全限定名名为文件，文件内容是实现类名称
+
+这样就可以使用
+
+```java
+ServiceLoader<接口类型> allImpls = ServiceLoader.load(接口类型.class);
+Iterator<接口类型> iter = allImpls.iterator();
+while(iter.hasNext()){
+    iter.next();
+}
+```
+
+通过 load 方法在文件中找到实现类，体现的是【面向接口编程+解耦】的思想，在下面一些框架中运用了此思想：
+
+- JDBC
+- Servlet 初始化器
+- Spring 容器
+- Dubbo （对 SPI 进行了扩展）
+
+接着看 ServiceLoader.load 方法：
+
+```java
+public static <S> ServiceLoader<S> load(Class<S> service) {
+    // 获取线程上下文类加载器
+    ClassLoader cl = Thread.currentThread().getContextClassLoader();
+    return ServiceLoader.load(service, cl);
+}
+```
+
+线程上下文类加载器是当前线程使用的类加载器，默认就是应用程序类加载器，它内部又是由 Class.forName 调用了线程上下文类加载器完成类加载，具体代码在 ServiceLoader 的内部类 LazyIterator 中：
+
+```java
+private S nextService() {
+    if (!hasNextService())
+        throw new NoSuchElementException();
+    String cn = nextName;
+    nextName = null;
+    Class<?> c = null;
+    try {
+        c = Class.forName(cn, false, loader);
+    } catch (ClassNotFoundException x) {
+        fail(service,
+             "Provider " + cn + " not found");
+    }
+    if (!service.isAssignableFrom(c)) {
+        fail(service,
+             "Provider " + cn  + " not a subtype");
+    }
+    try {
+        S p = service.cast(c.newInstance());
+        providers.put(cn, p);
+        return p;
+    } catch (Throwable x) {
+        fail(service,
+             "Provider " + cn + " could not be instantiated",
+             x);
+    }
+    throw new Error();          // This cannot happen
+}
+```
+
+
+
+#### 自定义类加载器
+
+##### 什么时候需要自定义类加载器 
+
+- 想加载非classpath随意路径中的类文件
+- 都是通过接口来使用实现，希望解藕时，常用在框架设计
+- 这些类希望予以隔离，不同应用的同名类都可以加载，不冲突，常见于tomcat容器
+
+
+
+##### 步骤
+
+- 继承ClassLoader父类 
+- 要遵从双亲委派机制，重写 findclass 方法
+  - 注意不是重写 IoadClass 方法．否则不会走双亲委派机制
+- 读取类文件的字节码
+- 调用父类的 defineClass 方法来加载类
+- 使用者调用该类加载器的 IoadClass 方法
+
+##### 示例
+
+###### 准备
+
+准备好两个类文件放入 C:\Users\young\Desktop\temp\files\class 它实现了 java.util.Map 接口
+
+```java
+import java.util.AbstractMap;
+import java.util.Map;
+import java.util.Set;
+
+public class MapImpl1 extends AbstractMap implements Map {
+
+    static {
+        System.out.println("MapImpl1 init");
+    }
+
+    @Override
+    public Set<Entry> entrySet() {
+        return null;
+    }
+}
+
+import java.util.AbstractMap;
+import java.util.Map;
+import java.util.Set;
+
+public class MapImpl2 extends AbstractMap implements Map {
+
+    static {
+        System.out.println("MapImpl2 init");
+    }
+
+    @Override
+    public Set<Entry> entrySet() {
+        return null;
+    }
+}
+
+```
+
+###### 编译
+
+```shell
+C:\Users\young\Desktop\temp\files\class>E:\Applications\Portable\Oracle\JDK\8u301\bin\javac MapImpl1.java
+
+C:\Users\young\Desktop\temp\files\class>E:\Applications\Portable\Oracle\JDK\8u301\bin\javac MapImpl2.java
+```
+
+
+
+###### 定义类加载器
+
+```java
+package load;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
+public class MyClassLoader extends ClassLoader{
+    @Override
+    protected Class<?> findClass(String name) throws ClassNotFoundException {
+        String path = "C:\\Users\\young\\Desktop\\temp\\files\\class\\"+name+".class";
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        try {
+            Files.copy(Paths.get(path), os);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new ClassNotFoundException("类文件未找到", e);
+        }
+        byte[] bytes = os.toByteArray();
+        return defineClass(name, bytes, 0, bytes.length);
+    }
+}
+
+```
+
+
+
+###### 检验
+
+```java
+import load.MyClassLoader;
+
+public class JavaApp {
+
+    public static void main(String [] args) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+        MyClassLoader classLoader = new MyClassLoader();
+        Class<?> c1 = classLoader.loadClass("MapImpl1");
+        Class<?> c2 = classLoader.loadClass("MapImpl1");
+        // 加载过一次之后不会重复加载同一个类
+        System.out.println(c1 == c2);
+        MyClassLoader classLoader2 = new MyClassLoader();
+        Class<?> c3 = classLoader2.loadClass("MapImpl1");
+        // 包名相同且类加载器为同一个对象才认为是完全一致的
+        System.out.println(c1 == c3);
+        // 打印初始化信息
+        c1.newInstance();
+    }
+}
+
+```
+
+
+
+#### 双亲委派模式
+
+所谓的双亲委派，就是指调用类加载器的 loadClass 方法时，查找类的规则。
+
+双亲委派模式是指一个类在收到类加载请求后不会尝试自己加载这个类，而是把该类加载请求向上委派给其父类加载器去完成，其父类加载器在接收到该类加载请求后又会将其委派给自己的父类，以此类推，这样所有的类加载请求都被向上委派到启动类加载器中。若父类加载器在接收到类加载请求后发现自己也无法加载该类（通常原因是该类的Class文件在父类的类加载路径中不存在），则父类会将该信息反馈给子类并向下委派子类加载器加载该类，直到该类被成功加载，若找不到该类，则JVM会抛出ClassNotFoud异常。
+
+**这里的双亲，翻译为上级似乎更为合适，因为它们并没有继承关系**
+
+
+
+##### 源码分析
+
+查看抽象类 `ClassLoader 的 `loadClass` 方法
+
+```java
+    /**
+     * Loads the class with the specified <a href="#name">binary name</a>.  The
+     * default implementation of this method searches for classes in the
+     * following order:
+     *
+     * <ol>
+     *
+     *   <li><p> Invoke {@link #findLoadedClass(String)} to check if the class
+     *   has already been loaded.  </p></li>
+     *
+     *   <li><p> Invoke the {@link #loadClass(String) <tt>loadClass</tt>} method
+     *   on the parent class loader.  If the parent is <tt>null</tt> the class
+     *   loader built-in to the virtual machine is used, instead.  </p></li>
+     *
+     *   <li><p> Invoke the {@link #findClass(String)} method to find the
+     *   class.  </p></li>
+     *
+     * </ol>
+     *
+     * <p> If the class was found using the above steps, and the
+     * <tt>resolve</tt> flag is true, this method will then invoke the {@link
+     * #resolveClass(Class)} method on the resulting <tt>Class</tt> object.
+     *
+     * <p> Subclasses of <tt>ClassLoader</tt> are encouraged to override {@link
+     * #findClass(String)}, rather than this method.  </p>
+     *
+     * <p> Unless overridden, this method synchronizes on the result of
+     * {@link #getClassLoadingLock <tt>getClassLoadingLock</tt>} method
+     * during the entire class loading process.
+     *
+     * @param  name
+     *         The <a href="#name">binary name</a> of the class
+     *
+     * @param  resolve
+     *         If <tt>true</tt> then resolve the class
+     *
+     * @return  The resulting <tt>Class</tt> object
+     *
+     * @throws  ClassNotFoundException
+     *          If the class could not be found
+     */
+    protected Class<?> loadClass(String name, boolean resolve)
+        throws ClassNotFoundException
+    {
+        synchronized (getClassLoadingLock(name)) {
+            // 1.检查该类是否已经加载
+            Class<?> c = findLoadedClass(name);
+            if (c == null) {
+                long t0 = System.nanoTime();
+                try {
+                    if (parent != null) {
+                        // 2.有上级的话，委派上级 loadClass
+                        c = parent.loadClass(name, false);
+                    } else {
+                        // 3.如果没有上级了 (ExtClassLoader), 则委派 BootstrapClassLoader
+                        c = findBootstrapClassOrNull(name);
+                    }
+                } catch (ClassNotFoundException e) {
+                    // 非空上级类加载器如果没有找到该类会抛出 ClassNotFoundException 异常
+                }
+
+                if (c == null) {
+                    // 4.每一层都找不到，调用 findClass 方法（每个类加载器自己扩展）来加载
+                    long t1 = System.nanoTime();
+                    c = findClass(name);
+
+                    // 记录耗时
+                    sun.misc.PerfCounter.getParentDelegationTime().addTime(t1 - t0);
+                    sun.misc.PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);
+                    sun.misc.PerfCounter.getFindClasses().increment();
+                }
+            }
+            if (resolve) {
+                resolveClass(c);
+            }
+            return c;
+        }
+    }
+```
+
+
+
+## 内存模型（JMM）
+
+很多人将【java 内存结构】与【java 内存模型】傻傻分不清，【java 内存模型】是 Java Memory Model（JMM）的意思。
+
+关于它的权威解释，[请参考](https://download.oracle.com/otn-pub/jcp/memory_model-1.0-pfd-spec-oth-JSpec/memory_model-1_0-pfd-spec.pdf) 
+
+简单的说，JMM 定义了一套在多线程读写共享数据时（成员变量、数组）时，对数据的可见性、有序性和原子性的规则保障。
+
+
+
+### java 内存模型
+
+
+
+#### 原子性
+
+
+
+#### 问题分析
+
+
+
+#### 解决方法（synchronized）
+
+synchronized（同步关键字）
+
+- 一把锁只能同时被一个线程获取，没有获得锁的线程只能等待
+- 同步代码块锁的锁对象为自己指定的锁对象
+- 同步方法锁默认锁对象为 this，当前方法的实例对象
+- 锁对象是 *.class 以及 synchronized 修饰的是 static 方法的时候，所有对象公用同一把锁
+- synchronized修饰的方法，无论方法正常执行完毕还是抛出异常，都会释放锁
+
+语法
+
+```java
+// 同步代码块
+synchronized(对象){
+    // 要作为原子操作的代码
+}
+
+// 同步方法
+修饰符 synchronized 返回值 方法名(参数);
+public synchronized void method()
+public static synchronized void method();
+
+```
+
+
+
+用 synchronized 解决并发问题：
+
+```java
+public class JavaApp {
+    static int i = 0;
+    static Object obj = new Object();
+
+    public static void main(String[]args) throws InterruptedException {
+        Thread t1 = new Thread(() -> {
+           for(int j = 0; j < 5000; j++){
+               synchronized (obj){
+                   i++;
+               }
+           }
+        });
+
+        Thread t2 = new Thread(() -> {
+            for(int j = 0; j < 5000; j++){
+                synchronized (obj){
+                    i--;
+                }
+            }
+        });
+
+        t1.start();
+        t2.start();
+
+        t1.join();
+        t2.join();
+        System.out.println(i);
+    }
+}
+```
+
+
+
+#### 线程同步原理
+
+每个 Java 对象都可以关联一个 Monitor 对象，如果使用 synchronized 给对象加锁（重量级锁）之后，该对象头的 Mark Word 中就被设置指向Monitor对象的指针。
+
+Monitor 结构如下
+
+![](D:\documents\notes\solid\Java.assets\069.png)
+
+
+
+- 刚开始 Monitor 中 Owner 为 null
+
+- 当 Thread-2 执行 synchronized(obj) 就会将 Monitor 的所有者 Owner 置为 Thread-2，Monitor中只能有一个 Owner
+- 在 Thread-2 上锁的过程中，如果 Thread-3，Thread-4，Thread-5 也来执行 synchronized(obj)，就会进入EntryList，此时线程状态变为BLOCKED状态
+- Thread-2 执行完同步代码块的内容，然后唤醒 EntryList 中等待的线程来竞争锁，竞争是非公平的（synchronized是非公平锁）
+- WaitSet 中的 Thread-0，Thread-1 是之前获得过锁的线程，此时的状态是 WAITING 状态，后面讲wait-notify 时会分析
+
+> 注意
+>
+> synchronized 必须是进入同一个对象的 monitor 才有上述的效果
+>
+> 不加 synchronized 的对象不会关联 monitor ，不遵从以上规则
+
+
+
+#### 加锁和释放锁的原理
+
+Monitorenter 和Monitorexit 指令，会让对象在执行，使其锁计数器加1或者减1。每一个对象在同一时间只与一个 monitor (锁)相关联，而一个 monitor 在同一时间只能被一个线程获得，一个对象在尝试获得与这个对象相关联的 Monitor 锁的所有权的时候，monitorenter 指令会发生如下3中情况之一：
+
+- monitor 计数器为0，意味着目前还没有被获得，那这个线程就会立刻获得然后把锁计数器+1，一旦+1，别的线程再想获取，就需要等待
+- 如果这个 monitor 已经拿到了这个锁的所有权，又重入了这把锁，那锁计数器就会累加，变成2，并且随着重入的次数，会一直累加
+- 这把锁已经被别的线程获取了，等待锁释放
+
+Monitorexit 指令：释放对于 monitor 的所有权，释放过程很简单，就是讲 monitor 的计数器减1，如果减完以后，计数器不是0，则代表刚才是重入进来的，当前线程还继续持有这把锁的所有权，如果计数器变成0，则代表当前线程不再拥有该 monitor 的所有权，即释放锁。
+
+**可重入原理：加锁次数计数器**
+
+锁的重入性，即在同一锁程中，线程不需要再次获取同一把锁。
+
+synchronized 先天具有重入性。每个对象拥有一个计数器，当线程获取该对象锁后，计数器就会加一，释放锁后就会将计数器减一。
+
+
+
+
+
+### 可见性
+
+#### 退不出的循环
+
+
+
+main 线程对变量 run 的修改对于线程 t 不可见，导致线程 t 无法停止。
+
+```java
+public class JavaApp {
+    static boolean run = true;
+
+    public static void main(String[]args) throws InterruptedException {
+        Thread t = new Thread(() -> {
+           while(run){
+
+           }
+        });
+        t.start();
+
+        Thread.sleep(1000);
+        run = false;
+    }
+}
+```
+
+
+
+为什么呢？
+
+1.初始状态，t 线程刚开始从主内存读取了 run 的值到工作内存。
+
+![image-20221024225345509](D:\documents\notes\solid\Java.assets\070.png)
+
+2.因为 t 线程要频繁从主内存中读取 run 的值，JIT 编译器会将 run 的值缓存到自己工作内存中的高速缓存中，减少对主存中 run 的访问，提高效率。
+
+![image-20221024225442836](D:\documents\notes\solid\Java.assets\071.png)
+
+3.1秒之后，main 线程修改了 run 的值，并同步至内存，而 t 是从自己工作内存中的高速缓存中读取这个变量的值，结果永远是旧值
+
+![image-20221024225753674](D:\documents\notes\solid\Java.assets\072.png)
+
+
+
+#### 解决方法（volatile）
+
+volatile（易变关键字）
+
+它可以用来修饰成员变量和静态变量，它可以避免线程从自己的工作缓存中查找变量的值，必须到主存中获取它的值，线程操作 volatile 变量都是直接操作主存。
+
+
+
+#### 可见性
+
+前面的例子体现的实际就是可见性，它保证的是在多个线程之间，一个线程对 volatile 变量的修改对另一个线程的可见，不能保证原子性，仅用在一个写线程，多个读线程的情况：
+
+上例从字节码理解是这样的：
+
+```java
+getstatic	run	// 线程 t 获取 run true
+getstatic	run	// 线程 t 获取 run true
+getstatic	run	// 线程 t 获取 run true
+getstatic	run	// 线程 t 获取 run true
+getstatic	run	// 线程 main 修改 run 为 false
+getstatic	run	// 线程 t 获取 run false
+```
+
+比较一下之前我们将线程安全是举的例子：两个线程一个 i++ 一个 i--
+
+```java
+// 假设 i 的初始值为 0 
+getstatic	i // 线程 1-获取静态变量 i 的值，线程内 i = 0
+getstatic	i // 线程 2-获取静态变量 i 的值，线程内 i = 0
+iconst_1	  // 线程 1-准备常量 1
+iadd		  // 线程 1-自增 线程内 i = 1;
+putstatic	i // 线程 1-将修改后的值存入静态变量 i，静态变量 i = 1
+iconst_1	  // 线程 2-准备常量 1
+iadd		  // 线程 2-自减 线程内 i = -1;
+putstatic	i // 线程 2-将修改后的值存入静态变量 i，静态变量 i = -1
+```
+
+#### 
+
+#### 注意
+
+synchronized 语句块既可以保证代码块的原子性，也同时保证代码块内变量的可见性。但缺点是 synchronized 是属于重量级操作，性能相对更低
+
+如果在前面示例的死循环中加入 System.out.println(）会泼现即使不加 vointile 修饰符，线程t也能正确看到对 run 变量的修改了，想一想为什么？
+
+> println() 方法内使用了 synchronized
+
+
+
+### 有序性
+
+#### 诡异的结果
+
+```java
+public class Actor{
+    int num = 0;
+
+    boolean ready = false;
+
+    public int actor1(){
+        if (ready) {
+            return num + num;
+        } else {
+            return 1;
+        }
+    }
+
+    public void actor2(){
+        num = 2;
+        ready = true;
+    }
+}
+```
+
+actor1()、actor2()分别使用两个线程调用，actor1() 可能会什么值？
+
+情况 1：线程 1 先执行，这时 ready = false，所以进入 else 分支，结果为 1
+
+情况 2：线程 2 先执行 num = 2，但没来得及执行 ready = false，线程 1 执行，还是进入 else 分支，结果为 1 
+
+情况 3：线程 2 执行到 ready = true，线程 1 执行，这回进入 if 分支，结果为 4（这时候 num = 2 已经执行）
+
+情况 4：线程 2 执行到 ready = true，线程 1 执行，这回进入 if 分支，结果为 0（这时候 num = 2 还未执行）
+
+情况 4 叫做指令重排，是 JIT 编译器在运行时的一些优化，这个现象需要通过大量测试才能复现
+
+
+
+借助并发压测工具 jcstress
+
+创建一个 jcstress 骨架项目
+
+```xml
+<dependency>
+    <groupId>org.openjdk.jcstress</groupId>
+    <artifactId>jcstress-java-test-archetype</artifactId>
+    <version>0.15</version>
+</dependency>
+```
+
+编写如下测试类
+
+```java
+@JCStressTest
+@Outcome(id = {"1", "4"}, expect = Expect.ACCEPTABLE, desc = "ok")
+@Outcome(id = {"0"}, expect = Expect.ACCEPTABLE_INTERESTING, desc = "!!!!")
+@State
+public class ConcurrentTest{
+    int num = 0;
+
+    boolean ready = false;
+
+    @Actor
+    public void actor1(I_Result r){
+        if (ready) {
+            r.r1 = num + num;
+        } else {
+            r.r1 = 1;
+        }
+    }
+
+    @Actor
+    public void actor2(){
+        num = 2;
+        ready = true;
+    }
+}
+```
+
+
+
+先执行 `mvn clean install`
+
+打包完成后执行 `E:\Applications\Portable\Oracle\JDK\8u301\bin\java -jar .\target\jcstress.jar`
+
+
+
+
+
+#### 解决方法（volatile）
+
+volatile 修饰变量后可以实现禁止指令重排序！
+
+java 编译器会在生成指令系列时在适当的位置会插入内存屏障指令来禁止特定类型的处理器重排序。 为了实现 volatile 的内存语义，JMM 会限制特定类型的编译器和处理器重排序，JMM会针对编译器制定 volatile 重排序规则表：
+
+![](D:\documents\notes\solid\Java.assets\073.png)
+
+
+
+需要注意的是：volatile 写是在前面和后面分别插入内存屏障，而 volatile 读操作是在后面插入两个内存屏障。
+
+volatile 写
+
+![](D:\documents\notes\solid\Java.assets\074.jpeg)
+
+volatile 读
+
+![](D:\documents\notes\solid\Java.assets\075.jpeg)
+
+
+
+#### 有序性理解
+
+在同一个线程内，JVM 会在不影响正确性的前提下，可以调整语句的执行顺序，思考下面一段代码
+
+```java
+static int i;
+static int j;
+
+// 在某个线程内执行如下赋值操作
+i = ...; // 较为耗时的操作
+j = ...;
+```
+
+可以看到，至于是先执行 i，还是先执行 j，对最终的结果不会产生影响。所以，上面代码真正执行时，既可以是
+
+```java
+i = ...; // 较为耗时的操作
+j = ...;
+```
+
+也可以是
+
+```java
+j = ...;
+i = ...; // 较为耗时的操作
+```
+
+这种特性称之为【指令重排】，多线程下【指令重排】会影响正确性，例如著名的 double-checked locking 模式实现单例
+
+```java
+public final class Singleton {
+    private Singleton() {}
+    private static Singleton INSTANCE = null;
+    public static Singleton getInstance(){
+        if(null == INSTANCE){
+            synchronized (Singleton.class) {
+                if(null == INSTANCE){
+                    INSTANCE = new Singleton();
+                }
+            }
+        }
+        return INSTANCE;
+    }
+}
+
+```
+
+以上的实现特点是：
+
+懒惰实例化
+
+首次使用 getInstance() 才使用 synchronized 加锁，后续使用时无需加锁
+
+但在多线程环境下，上面的代码是有问题的，`INSTANCE = new Singleton();` 对应的字节码为：
+
+```shell
+19: new           #3                  // class app/Singleton
+22: dup
+23: invokespecial #4                  // Method "<init>":()V
+26: putstatic     #2                  // Field INSTANCE:Lapp/Singleton;
+```
+
+其中 23 26两个字节码的顺序不是固定的，也许 JVM 会优化为：先将引用地址赋值给 INSTANCE 静态变量后，再执行构造方法，如果两个线程t1，t2 按如下时间顺序执行：
+
+```java
+时间1 t1 线程执行到 INSTANCE = new Singleton();
+时间2 t1 线程分配空间，为 Singleton 对象生成了引用地址（19）
+时间3 t1 线程将引用地址赋值给 INSTANCE，这时，INSTANCE != null（26）
+时间4 t2 线程进入 getInstance() 方法，发现 INSTANCE != null（synchronied 块外），直接返回 INSTANCE
+时间5 t1 线程执行 Singleton 的构造方法（23）
+```
+
+这时 t1 还未完全将构造方法执行完毕，如果在构造方法中要执行很多初始化操作，那么 t2 拿到的将是一个未初始化完毕的单例
+
+对 INSTANCE 使用 volatile 修饰即可，可以禁用指令重排，但要注意在 JDK 5 以上的版本的 volatile 才会真正有效
+
+
+
+#### happens-before
+
+happens-before 规定了哪些写操作对其它线程的读操作可见，它是可见性与有序性的一套规则总结：
+
+线程解锁 m 之前对变量的写，对于接下来对 m 加锁的其它线程对该变量的读可见
+
+```java
+public class JavaApp {
+    static int x;
+    static Object m = new Object();
+    public static void main(String[]args) {
+        new Thread(() ->{
+            synchronized (m) {
+                x = 10;
+            }
+        }, "t1").start();
+        new Thread(() ->{
+            synchronized (m) {
+                System.out.println(x);
+            }
+        }, "t2").start();
+    }
+}
+```
+
+线程对 volatile 变量的写，对接下来其它线程对该变量的读可见
+
+```java
+public class JavaApp {
+    volatile static int x;
+    public static void main(String[]args) {
+        new Thread(() ->{
+            x = 10;
+        }, "t1").start();
+        new Thread(() ->{
+            System.out.println(x);
+        }, "t2").start();
+    }
+}
+```
+
+线程 start 前对变量的写，对该线程 start 后对该变量的读可见
+
+```java
+public class JavaApp {
+    static int x;
+    public static void main(String[]args) {
+        x = 10;
+        new Thread(() ->{
+            System.out.println(x);
+        }, "t2").start();
+    }
+}
+```
+
+线程结束前对变量的写，对其它线程得知它结束后的读可见（比如其它线程调用 t1.isAlive() 或 t1.join() 等待它结束）
+
+```java
+public class JavaApp {
+    static int x;
+    public static void main(String[]args) throws InterruptedException {
+        Thread t1 = new Thread(() ->{
+            x = 10;
+        }, "t1");
+        t1.start();
+
+        t1.join();
+        System.out.println(x);
+    }
+}
+```
+
+线程 t1 打断 t2（interrupt）前对变量的写，对于其它线程得知 t2 被打断后对变量的读可见（通过 t2.interrupted 或 t2.isInterrupted）
+
+```java
+public class JavaApp {
+    static int x;
+    public static void main(String[]args) {
+        Thread t2 = new Thread(() ->{
+            while (true){
+                if(Thread.currentThread().isInterrupted()){
+                    System.out.println(x);
+                    break;
+                }
+            }
+        }, "t2");
+        t2.start();
+
+        new Thread(() ->{
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            x = 10;
+            t2.interrupt();
+        }, "t1").start();
+
+        while (!t2.isInterrupted()){
+            Thread.yield();
+        }
+        System.out.println(x);
+    }
+}
+```
+
+对变量默认值（0，false，null）的写，对其它线程对该变量的读可见
+
+具有传递性，如果 x hb -> y 并且 y hb -> z 那么有 x hb -> z
+
+> 变量都是指成员变量或静态成员变量
+>
+> 参考[](https://download.oraele.com/otn-pub/jcp/memory_model-1.0-pfd-spec-oth-JSpec/memory model-1_0-pfd-spec?AuthParam=1562811549_4d4994cbd5b59d964cd2907ea22ca08b) 第 17 页
+
+### CAS 与原子类
+
+
+
+#### CAS
+
+CAS 即 Compare And Swap，它体现的一种乐观锁的思想，比如多个线程要对一个共享 `int` 变量执行 `+1` 操作：
+
+```java
+while(true){
+    int 旧值 = 共享变量; // 比如拿到了当前值 0
+    int 结果 = 旧值 + 1; // 在旧值 0 的基础上增加 1，正确结果是 1
+    /**
+     * 这时候如果别的线程把共享变量修改成 5，本线程的正确结果 1 就作废了，这时候
+     * compareAndSwap 返回 false，重新尝试，直到
+     * compareAndSwap 返回 true，表示本线程做修改的同时，别的线程没有干扰
+     */
+    if(compareAndSwap(旧值,结果)){
+        // 成功，退出循环
+    }
+}
+```
+
+获取共享变量时，为了保证该变量的可见性，需要使用voIflIe修饰。结合 CAS 和 volatile 可以实现无锁并发，适用于竞争不激烈、多核CPU的场景下。 
+
+- 因为没有使用 synchronized，所以线程不会陷入阻塞，这是效率提升的因素之一 
+- 但如果竟争激烈，可以想到重试必然频繁发生，反而效率会受影响
+
+CAS底层依赖于一个 Unsafe 类来直接调用操作系统底层的 CAS 指令，下面是直接使用 Unsafe 对象进行线程安全保的一个例子 
+
+```java
+public class JavaApp {
+    public static void main(String[]args) throws InterruptedException {
+        DataContainer dc = new DataContainer();
+        int count = 5;
+        Thread t1 = new Thread(() -> {
+           for(int i = 0; i < count; i++){
+               dc.increase();
+           }
+        });
+        t1.start();
+        t1.join();
+        System.out.println(dc.getData());
+    }
+}
+
+class DataContainer{
+    private volatile int data;
+    static final Unsafe unsafe;
+    static final long DATA_OFFSET;
+
+    static {
+        try{
+            Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
+            theUnsafe.setAccessible(true);
+            unsafe = (Unsafe) theUnsafe.get(null);
+        } catch (NoSuchFieldException | IllegalAccessException e){
+            throw new Error(e);
+        }
+        try{
+            // data 属性在 DataContainer 对象中的偏移量，用于 unsafe 直接访问该属性
+            DATA_OFFSET = unsafe.objectFieldOffset(DataContainer.class.getDeclaredField("data"));
+        } catch (NoSuchFieldException e) {
+            throw new Error(e);
+        }
+    }
+
+    public void increase(){
+        int oldValue;
+        while (true){
+            oldValue = data;
+            if(unsafe.compareAndSwapInt(this, DATA_OFFSET, oldValue, oldValue + 1)){
+                return ;
+            }
+        }
+    }
+
+    public void decrease(){
+        int oldValue;
+        while (true){
+            oldValue = data;
+            if(unsafe.compareAndSwapInt(this, DATA_OFFSET, oldValue, oldValue - 1)){
+                return ;
+            }
+        }
+    }
+
+    public int getData(){
+        return data;
+    }
+}
+
+```
+
+
+
+#### 乐观锁与悲观锁
+
+- CAS 是基于乐观锁的思想：最乐观的估计，不怕别的线程来修改共享变量，就算改了也没关系，我吃亏点再重试呗。 
+- synchronized 是基于悲观锁的思想：最悲观的估计，得防看其它线程来修改共亨变量，我上了锁你们都别想改，我改完了解开锁，你们才有机会 。
+
+
+
+
+
+#### 原子操作类
+
+juc（java.util.concurrent）中提供了原子操作类，可以提供线程安全的操作，例如：AtomicInteger、AtomicBoolean 等，它们底层就是采用 CAS 技术 + volatile 来实现的。
+
+可以使用 AtomicInteger 改写之前的例子：
+
+```java
+public class JavaApp {
+    private static AtomicInteger i = new AtomicInteger(0);
+    public static void main(String[]args) throws InterruptedException {
+        DataContainer dc = new DataContainer();
+        Thread t1 = new Thread(() -> {
+           for(int i = 0; i < 5000; i++){
+               i.getAndIncrease();
+           }
+        });
+         Thread t2 = new Thread(() -> {
+           for(int i = 0; i < 5000; i++){
+               i.getAndDecrease();
+           }
+        });
+        t1.start();
+        t2.start();
+        System.out.println(dc.getData());
+    }
+}
+```
+
+
+
+
+
+### synchronized 优化
+
+Java HetSpot 虚拟机中每个对象都有对象头（包括 class 指针和 Mark Ward）。 Mark Ward 平时存储这个对象的哈希码、分代年龄，当加锁时，这些信息就根据倩况被替换为标记位、线程锁记录指针、重量级锁指针、线程 ID 等内容 。
+
+#### 轻量级锁
+
+如果一个对象虽然有多线程访问但多线程访问的时间是错开的（也就是没有竞争），那么可以使用轻量级锁来优化。这就好比： 
+
+学生（线程 A 用课本占座上了半节课，出门了（CPU时间到）回来一看发现课本没变，说明没有竟争，继续上他的课。
+
+如果这期间有其它学生（线程 B）来了，会告知（线移 A）有并发访问，线程 A 随即升级为重量级锁，进入重量级锁的流程。
+
+而重量级锁就不是那么用课本占座那么简单了，可以想象线程 A 走之前把座位用一个铁栅栏围起来，假设有两个方法同步块，利用同一个对象加锁
+
+```java
+public class JavaApp {
+    private static Object object = new Object();
+    public static void main(String[]args) {
+
+    }
+    public static void method1(){
+        synchronized (object){
+            method2();
+        }
+    }
+    public static void method2(){
+        synchronized (object){
+
+        }
+    }
+}
+```
+
+每个线程都的栈帧都会包含一个锁记录的结构，内部可以存储锁定对象的 Mark Word
+
+| 线程 1                                           | 对象 Mark Word                | 线程 2                                           |
+| ------------------------------------------------ | ----------------------------- | ------------------------------------------------ |
+| 访问同步块 A，把 Mark Word 赋值到线程 1 的锁记录 | 01（无锁）                    | -                                                |
+| CAS 修改 Mark Word 为线程 1 锁记录地址           | 01（无锁）                    | -                                                |
+| 成功（加锁）                                     | 00（轻量锁）线程 1 锁记录地址 | -                                                |
+| 执行同步块 A                                     | 00（轻量锁）线程 1 锁记录地址 | -                                                |
+| 访问同步块 B，把 Mark Word 复制到线程 1 的锁记录 | 00（轻量锁）线程 1 锁记录地址 | -                                                |
+| CAS 修改 Mark Word 为线程 1 锁记录地址           | 00（轻量锁）线程 1 锁记录地址 | -                                                |
+| 失败（发现是自己的锁）                           | 00（轻量锁）线程 1 锁记录地址 | -                                                |
+| 锁重入                                           | 00（轻量锁）线程 1 锁记录地址 | -                                                |
+| 执行同步块 B                                     | 00（轻量锁）线程 1 锁记录地址 | -                                                |
+| 同步块 B 执行完毕                                | 00（轻量锁）线程 1 锁记录地址 | -                                                |
+| 同步块 A 执行完毕                                | 00（轻量锁）线程 1 锁记录地址 | -                                                |
+| 成功（解锁）                                     | 01（无锁）                    | -                                                |
+| -                                                | 01（无锁）                    | 访问同步块 A，把 Mark Word 赋值到线程 2 的锁记录 |
+| -                                                | 01（无锁）                    | CAS 修改 Mark Word 为线程 2 锁记录地址           |
+| -                                                | 00（轻量锁）线程 2 锁记录地址 | 成功（加锁）                                     |
+| ...                                              | ...                           | ...                                              |
+
+
+
+#### 锁膨胀
+
+如果再尝试加轻量级锁的过程中，CAS 操作无法成功，这时一种情况就是有其它线程为此对象加上了轻量级锁（有竞争），这时需要进行锁膨胀，将轻量级锁变为重量级锁。
+
+```java
+public class JavaApp {
+    private static Object object = new Object();
+    public static void main(String[]args) {
+
+    }
+    public static void method1(){
+        synchronized (object){
+            method2();
+        }
+    }
+}
+
+```
+
+
+
+| 线程 1                                           | 对象 Mark Word                                           | 线程 2                                         |
+| ------------------------------------------------ | -------------------------------------------------------- | ---------------------------------------------- |
+| 访问同步块 A，把 Mark Word 赋值到线程 1 的锁记录 | 01（无锁）                                               | -                                              |
+| CAS 修改 Mark Word 为线程 1 锁记录地址           | 01（无锁）                                               | -                                              |
+| 成功（加锁）                                     | 00（轻量锁）线程 1 锁记录地址                            | -                                              |
+| 执行同步块                                       | 00（轻量锁）线程 1 锁记录地址                            | -                                              |
+| 执行同步块                                       | 00（轻量锁）线程 1 锁记录地址                            | 访问同步块，把 Mark Word 赋值到线程 2 的锁记录 |
+| 执行同步块                                       | 00（轻量锁）线程 1 锁记录地址                            | CAS 修改 Mark Word 为线程 2 锁记录地址         |
+| 执行同步块                                       | 00（轻量锁）线程 1 锁记录地址                            | 失败（发现别人已经占了锁）                     |
+| 执行同步块                                       | 00（轻量锁）线程 1 锁记录地址                            | CAS 修改 Mark Word 为重量级锁                  |
+| 执行同步块                                       | 10（重量锁）重量锁指针（用于唤醒那些竞争重量级锁的线程） | 阻塞中                                         |
+| 执行完毕                                         | 10（重量锁）重量锁指针                                   | 阻塞中                                         |
+| 失败（解锁）                                     | 10（重量锁）重量锁指针                                   | 阻塞中                                         |
+| 释放重量锁，唤起阻塞线程竞争                     | 10（重量锁）                                             | 阻塞中                                         |
+| -                                                | 10（重量锁）                                             | 竞争重量锁                                     |
+| -                                                | 10（重量锁）                                             | 成功（加锁）                                   |
+| ...                                              | ...                                                      | ...                                            |
+
+
+
+#### 重量锁
+
+重量级锁竟争的时候，还可以使用自旋来进行优化，如果当前线程自旋成功（即这时候持锁线程已经退出了同步块，释放了锁），这时当前线程就可以避免阻塞。
+
+在 Java 6 之后自旋锁是自适应的，比如对象刚刚的一次自旋操作成功过，那么认为这次自旋成功的可能性会高，就多自旋几次；反之，就少自旋甚至不自旋，总之，比较智能。
+
+- 自旋会占用 CPU 时间，单核 CPU 自旋就是浪费，多核 CPU 自旋才能发挥优势。 
+- 好比等红灯时汽车是不是熄火，不熄火相当于自旋（等待时间短了划算），熄火了相当于阻塞（等待时间长了划算）
+- Java 7 之后不能控制是否开启自旋功能
+
+
+
+自旋重试成功的情况
+
+| 线程 1（CPU 1 上）       | 对象 Mark Word         | 线程 2（CPU 2 上）       |
+| ------------------------ | ---------------------- | ------------------------ |
+| -                        | 10（重量锁）           | -                        |
+| 访问同步块，获取 monitor | 10（重量锁）重量锁指针 | -                        |
+| 成功（加锁）             | 10（重量锁）重量锁指针 | -                        |
+| 执行同步块               | 10（重量锁）重量锁指针 | -                        |
+| 执行同步块               | 10（重量锁）重量锁指针 | 访问同步块，获取 monitor |
+| 执行同步块               | 10（重量锁）重量锁指针 | 自旋重试                 |
+| 执行完毕                 | 10（重量锁）重量锁指针 | 自旋重试                 |
+| 成功（解锁）             | 01（无锁）             | 自旋重试                 |
+| -                        | 10（重量锁）重量锁指针 | 成功（加锁）             |
+| -                        | 10（重量锁）重量锁指针 | 执行同步块               |
+| -                        | ...                    | ...                      |
+
+自旋重试失败的情况
+
+| 线程 1（CPU 1 上）       | 对象 Mark Word         | 线程 2（CPU 2 上）       |
+| ------------------------ | ---------------------- | ------------------------ |
+| -                        | 10（重量锁）           | -                        |
+| 访问同步块，获取 monitor | 10（重量锁）重量锁指针 | -                        |
+| 成功（加锁）             | 10（重量锁）重量锁指针 | -                        |
+| 执行同步块               | 10（重量锁）重量锁指针 | -                        |
+| 执行同步块               | 10（重量锁）重量锁指针 | 访问同步块，获取 monitor |
+| 执行同步块               | 10（重量锁）重量锁指针 | 自旋重试                 |
+| 执行同步块               | 10（重量锁）重量锁指针 | 自旋重试                 |
+| 执行同步块               | 10（重量锁）重量锁指针 | 自旋重试                 |
+| 执行同步块               | 10（重量锁）重量锁指针 | 阻塞                     |
+| ...                      | ...                    | ...                      |
+
+
+
+#### 偏向锁
+
+轻量级锁在没有竞争时（就自己这个线程），每次重入仍然需要执行 CAS 操作。Java 6 中引入了偏向锁来做进一步优化：只有第一次使用 CAS 将线程 ID 设置到对象的 Merk Word 头，之后发现这个线程 ID 是自己的就表示没有竞争，不用重新 CAS。
+
+- 撤销偏向锁需要将持锁线程升级为轻量级锁，这个过程中所有线程需要暂停（STW）
+- 访问对象的 hashCode 也会撤销偏向锁
+- 如果对象虽然被多个线程访问，但没有竞争，这时偏向了线程 T1 的对象仍有机会重新偏向 T2，重偏向会重置对象的 Thread ID
+- 撤销偏向和重偏向都是批量进行的，以类为单位
+- 如果撤销偏向到达某个阈值，整个类的所有对象都会变为不可偏向的
+- 可以主动使用 -XX：-UseBiasedLocking 禁用偏向锁
+
+可以参考这篇 [论文](https://www.oracle.com/technetwork/java/biasedlocking-oopsia2006-wp-149958.pdf)
+
+假设有两个同步块，利用同一个对象加锁
+
+```java
+public class JavaApp {
+    private static Object object = new Object();
+    public static void main(String[]args) {
+
+    }
+    public static void method1(){
+        synchronized (object){
+            method2();
+        }
+    }
+    public static void method2(){
+        synchronized (object){
+
+        }
+    }
+}
+```
+
+
+
+| 线程 1                                       | 对象 Mark Word                  |
+| -------------------------------------------- | ------------------------------- |
+| 访问同步块 A，检查 Mark Word 中是否有线程 ID | 101 （无锁可偏向）              |
+| 尝试加偏向锁                                 | 101 （无锁可偏向）对象 hashCode |
+| 成功                                         | 101 （无锁可偏向）线程 ID       |
+| 执行同步块 A                                 | 101 （无锁可偏向）线程 ID       |
+| 访问同步块 B，检查 Mark Word 中是否有线程 ID | 101 （无锁可偏向）线程 ID       |
+| 是自己的线程 ID，锁是自己的，无需做更多操作  | 101 （无锁可偏向）线程 ID       |
+| 执行同步块 B                                 | 101 （无锁可偏向）线程 ID       |
+| 执行完毕                                     | 101 （无锁可偏向）对象 hashCode |
+
+
+
+
+
+#### 其它优化
+
+
+
+##### 减少上锁时间
+
+同步代码块尽量短。
+
+
+
+##### 减少锁的粒度
+
+将一个锁拆分为多个锁提高并发度，例如：
+
+- ConcurrentHashMap
+- LongAdder 分为 base 和 cells 两部分．没有并发争用的时候或者是 cells 数组正在初始化的时候，会使用 CAS 来累加值到 base．有并发争用，会初始化 cells 数组，数组有多少个 cell，就允许有多少线程并行修改，最后将数组中每个 cell 累加，再加上 base 就是最终的值
+- LinkedBlockiugQueue 入队和出队使用不同的锁，相对于 LinkedBlockiugArray 只有一个锁效率要高 
+
+
+
+##### 锁粗化
+
+多次循环进入同步块不如同步块内多次循环
+
+另外 JVM 可能会做如下优化，把多次 append 的加锁操作粗化为一次（因为都是对同一个对象加锁，没必要重入多次）
+
+```java
+new StringBuffer().append("a").append("b").append("c");
+```
+
+
+
+##### 锁消除
+
+JVM 会进行代码的逃逸分析，例如某个加锁对象是方法内局部变量，不会被其它线程所访问到，这时候就会被即时编译器忽略掉所有同步操作。
+
+
+
+##### 读写分离
+
+CopyOnWriteArrayList
+
+CopyOnWriteSet
+
+参考
+
+https://wiki.openjdk.java.net/display/HotSpot/Synchronization
+
+http://luojinping.com/2015/07/09/java锁优化/
+
+https://www.infoq.cn/article/java-se-16-synchronized
+
+https://www.jianshu.com/p/9932047a89be
+
+https://www.cnblogs.com/sheeva/p/6366782.html
+
+
+
+
+
 # Java
 
 [java启动jar包引入外部配置文件_jar包加载外部配置文件_飘零未归人的博客-CSDN博客](https://blog.csdn.net/qq_34484062/article/details/128021066)
@@ -11,11 +8269,488 @@ java -jar ./test.jar -Dspring.config.additional-location=../config/application-m
 
 
 
+## 多线程
+
+### 相关概念
+
+#### 进程
+
+​		进程是程序运行和资源分配的基本单位，一个程序至少有一个进程，一个进程至少有一个线程。进程在执行过程中拥有独立的内存单元，而多个线程共享内存资源，减少切换次数，从而效率更高。线程是进程的一个实体，是cpu调度和分派的基本单位，是比程序更小的能独立运行的基本单位。同一进程中的多个线程之间可以并发执行。
+
+
+
+#### 线程
+
+​		线程是操作系统调度的最小单元，也叫轻量级进程。它被包含在进程之中，是进程中的实际运作单位。同一进程可以创建多个线程。
+
+​		一个进程中可以有多个线程，多个线程共享进程的**堆**和**方法区 (JDK1.8 之后的元空间)**资源，但是每个线程有自己的**程序计数器**、**虚拟机栈** 和 **本地方法栈**。
+
+
+
+#### 并发
+
+​		当有多个线程在操作时,如果系统只有一个CPU,则它根本不可能真正同时进行一个以上的线程，它只能把CPU运行时间划分成若干个时间段,再将时间 段分配给各个线程执行，在一个时间段的线程代码运行时，其它线程处于挂起状。这种方式我们称之为并发(Concurrent)。
+
+
+
+#### 并行
+
+​		当系统有一个以上CPU时,则线程的操作有可能非并发。当一个CPU执行一个线程时，另一个CPU可以执行另一个线程，两个线程互不抢占CPU资源，可以同时进行，这种方式我们称之为并行(Parallel)。
+
+
+
+#### 线程的生命周期和状态
+
+​																*获得同步锁									等待同步锁*
+
+​																*阻塞IO方法返回							调用IO阻塞方法*
+
+​																*调用notify()方法							调用wait()方法*
+
+​																*调用join()的线程终止					调用join()方法*
+
+​																*sleep()时间到								调用sleep()方法*
+
+​															<-------------  **阻塞状态(Blocked)**	<-------------
+
+​								     	  				|							*获得CPU使用权*					|
+
+​								*start()*				|							-------------------->   				 |
+
+**新建状态(New)**	----------->   **就绪状态(Runnable)**                       			**运行状态(Running)**	----------->   **死亡状态(Terminated)**
+
+​																						<--------------------											*run()执行完*
+
+​																						*失去CPU使用权*											*Exception或Error*
+
+
+
+#### 上下文切换
+
+​		线程在执行过程中会有自己的运行条件和状态（也称上下文），比如上文所说到过的程序计数器，栈信息等。当出现如下情况的时候，线程会从占用 CPU 状态中退出。
+
+- 主动让出 CPU，比如调用了 `sleep()`, `wait()` 等。
+- 时间片用完，因为操作系统要防止一个线程或者进程长时间占用CPU导致其他线程或者进程饿死。
+- 调用了阻塞类型的系统中断，比如请求 IO，线程被阻塞。
+- 被终止或结束运行
+
+这其中前三种都会发生线程切换，线程切换意味着需要保存当前线程的上下文，留待线程下次占用 CPU 的时候恢复现场。并加载下一个将要占用 CPU 的线程上下文。这就是所谓的 **上下文切换**。
+
+​		上下文切换是现代操作系统的基本功能，因其每次需要保存信息恢复信息，这将会占用 CPU，内存等系统资源进行处理，也就意味着效率会有一定损耗，如果频繁切换就会造成整体效率低下。
+
+
+
+#### 死锁及避免死锁
+
+​		死锁是指两个或两个以上的进程在执行过程中，由于竞争资源或者由于彼此通信而造成的一种阻塞的现象，若无外力作用，它们都将无法推进下去。此时称系统处于死锁状态或系统产生了死锁，这些永远在互相等待的进程称为死锁进程。
+
+产生死锁必须具备以下四个条件：
+
+1. 互斥条件：该资源任意一个时刻只由一个线程占用。
+2. 请求与保持条件：一个进程因请求资源而阻塞时，对已获得的资源保持不放。
+3. 不剥夺条件:线程已获得的资源在未使用完之前不能被其他线程强行剥夺，只有自己使用完毕后才释放资源。
+4. 循环等待条件:若干进程之间形成一种头尾相接的循环等待资源关系。
+
+**如何预防死锁？** 
+
+破坏死锁的产生的必要条件即可：
+
+1. **破坏请求与保持条件** ：一次性申请所有的资源。
+2. **破坏不剥夺条件** ：占用部分资源的线程进一步申请其他资源时，如果申请不到，可以主动释放它占有的资源。
+3. **破坏循环等待条件** ：靠按序申请资源来预防。按某一顺序申请资源，释放资源则反序释放。破坏循环等待条件。
+
+**如何避免死锁？**
+
+避免死锁就是在资源分配时，借助于算法（比如银行家算法）对资源分配进行计算评估，使其进入安全状态。
+
+
+
+#### 线程的 run()和 start()有什么区别？
+
+​		每个线程都是通过某个特定Thread对象所对应的方法run()来完成其操作的，方法run()称为线程体。通过调用Thread类的start()方法来启动一个线程。
+
+​		start()方法来启动一个线程，真正实现了多线程运行。这时无需等待run方法体代码执行完毕，可以直接继续执行下面的代码； 这时此线程是处于就绪状态， 并没有运行。 然后通过此Thread类调用方法run()来完成其运行状态， 这里方法run()称为线程体，它包含了要执行的这个线程的内容， Run方法运行结束， 此线程终止。然后CPU再调度其它线程。
+
+​		run()方法是在本线程里的，只是线程里的一个函数,而不是多线程的。 如果直接调用run(),其实就相当于是调用了一个普通函数而已，直接待用run()方法必须等待run()方法执行完毕才能执行下面的代码，所以执行路径还是只有一条，根本就没有线程的特征，所以在多线程执行时要使用start()方法而不是run()方法。
+
+
+
+#### sleep() 和 wait() 有什么区别？
+
+​		sleep()：方法是线程类（Thread）的静态方法，让调用线程进入睡眠状态，让出执行机会给其他线程，等到休眠时间结束后，线程进入就绪状态和其他线程一起竞争cpu的执行时间。因为sleep() 是static静态的方法，他不能改变对象的机锁，当一个synchronized块中调用了sleep() 方法，线程虽然进入休眠，但是对象的机锁没有被释放，其他线程依然无法访问这个对象。
+
+​		wait()：wait()是Object的方法，当一个线程执行到wait方法时，它就进入到一个和该对象相关的等待池，同时释放对象的机锁，使得其他线程能够访问，可以通过notify，notifyAll方法来唤醒等待的线程。
+
+
+
+####  Runnable 和 Callable 有什么区别？
+
+Runnable接口中的run()方法的返回值是void，它做的事情只是纯粹地去执行run()方法中的代码而已；
+Callable接口中的call()方法是有返回值的，是一个泛型，和Future、FutureTask配合可以用来获取异步执行的结果。
+
+
+
+### 创建线程的方式
+
+#### Thread
+
+```java
+public class TestThread {
+    public static void main(String[]args){
+        MyThread myThread=new MyThread();
+        myThread.start();
+    }
+}
+
+class MyThread extends Thread{
+    public void run(){
+        System.out.println("MyThread类的run()方法在运行");
+    }
+}
+```
+
+
+
+#### Runnable
+
+```java
+public class TestThread {
+    public static void main(String[]args){
+        Thread thread=new Thread(new MyThread());
+        thread.start();
+    }
+}
+
+class MyThread implements Runnable{
+    public void run(){
+        System.out.println("MyThread类的run()方法在运行");
+    }
+}
+```
+
+实现Runnbale接口相对于继承Thread类来说，有如下显著好处：
+
+- 适合多个相同程序代码的线程去处理同一个资源的情况，把线程同程序代码、数据有效分离，很好地体现了面向对象的设计思想。
+- 可以避免由于Java的单继承带来的局限性。在开发中经常碰到这样一种情况，就是使用一个已经继承了某一个类的子类创建线程，由于一个类不能同时有两个父类，所以不能用继承Thread类的方式，那么就只能采用Runnable接口的方式。
+
+
+
+#### Callable(Future、FutureTask)
+
+https://www.cnblogs.com/dolphin0520/p/3949310.html
+
+```java
+public class TestThread {
+    public static void main(String[]args) throws ExecutionException, InterruptedException {
+        ExecutorService executor = Executors.newCachedThreadPool();
+        MyThread myThread = new MyThread();
+        Future<Integer> result = executor.submit(myThread);
+        executor.shutdown();
+        System.out.println("myThread返回"+result.get());
+    }
+}
+
+class MyThread implements Callable<Integer> {
+    public Integer call(){
+        System.out.println("MyThread类的call()方法在运行");
+        Random random=new Random();
+        return random.nextInt();
+    }
+}
+```
+
+
+
+### 线程池
+
+#### **线程池的优势**
+
+- 降低系统资源消耗，通过重用已存在的线程，降低线程创建和销毁造成的消耗；
+- 提高系统响应速度，当有任务到达时，通过复用已存在的线程，无需等待新线程的创建便能立即执行；
+- 方便线程并发数的管控。因为线程若是无限制的创建，可能会导致内存占用过多而产生OOM，并且会造成cpu过度切换（cpu切换线程是有时间成本的（需要保持当前执行线程的现场，并恢复要执行线程的现场））
+- 提供更强大的功能，延时定时线程池。
+
+
+
+```java
+public ThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue) {
+    this(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue,
+         Executors.defaultThreadFactory(), defaultHandler);
+}
+```
+
+
+
+#### **Java 通过 Executors 提供四种线程池**
+
+| 方法                    | corePoolSize | maximumPoolSize   | keepAliveTime | unit                  | workQueue           |
+| ----------------------- | ------------ | ----------------- | ------------- | --------------------- | ------------------- |
+| newSingleThreadExecutor | 1            | 1                 | 0             | TimeUnit.MILLISECONDS | LinkedBlockingQueue |
+| newFixedThreadPool      | nThreads     | nThreads          | 0             | TimeUnit.MILLISECONDS | LinkedBlockingQueue |
+| newScheduledThreadPool  | corePoolSize | Integer.MAX_VALUE | 0             | TimeUnit.NANOSECONDS  | DelayedWorkQueue    |
+| newCachedThreadPool     | 0            | Integer.MAX_VALUE | 60s           | TimeUnit.SECONDS      | SynchronousQueue    |
+
+
+
+```java
+public class RunTask implements Runnable{
+	private String msg="";
+	public RunTask(String msg) {
+		this.msg=msg;
+	}
+	public void run() {
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		System.out.println("线程名称："+Thread.currentThread().getName()+","+msg);
+	}
+}
+
+public class CallTask implements Callable<String>{
+	private String msg="";
+	public CallTask(String msg) {
+		this.msg=msg;
+	}
+	public String call() {
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		return "线程名称："+Thread.currentThread().getName()+","+msg;
+	}
+}
+```
+
+
+
+#### newSingleThreadExecutor 
+
+- 创建一个单线程化的线程池，它只会用唯一的工作线程来执行任务，保证所有任务按照指定顺序(FIFO, LIFO, 优先级)执行。当该线程正繁忙时，对于新任务会进入阻塞队列中(无界的阻塞队列)
+
+- 适用：一个任务一个任务执行的场景
+
+  ```java
+  public void testSingleThreadExecutor() throws InterruptedException, ExecutionException {
+  	ExecutorService singleThreadPool = Executors.newSingleThreadExecutor();
+      for (int i = 0; i < 10; i++) {
+  //  	singleThreadPool.execute(new RunTask("任务: "+i));
+      	Future<String> result=(Future<String>) singleThreadPool.submit(new CallTask("任务: "+i));
+  		System.out.println(result.get());
+      }
+      singleThreadPool.shutdown();
+  }
+  
+  //创建一个单线程化的线程池，它只会用唯一的工作线程来执行任务，每秒输出一个
+  //线程名称：pool-1-thread-1,任务: 0
+  //线程名称：pool-1-thread-1,任务: 1
+  //线程名称：pool-1-thread-1,任务: 2
+  //线程名称：pool-1-thread-1,任务: 3
+  //线程名称：pool-1-thread-1,任务: 4
+  //线程名称：pool-1-thread-1,任务: 5
+  //线程名称：pool-1-thread-1,任务: 6
+  //线程名称：pool-1-thread-1,任务: 7
+  //线程名称：pool-1-thread-1,任务: 8
+  //线程名称：pool-1-thread-1,任务: 9
+  ```
+
+#### newFixedThreadPool 
+
+- 创建可容纳固定数量线程的池子，每个线程的存活时间是无限的，当池子满了就不在添加线程了；如果池中的所有线程均在繁忙状态，对于新任务会进入阻塞队列中(无界的阻塞队列)
+
+- 适用：执行长期的任务，性能好很多
+
+```java
+public void testFixedThreadPool() throws InterruptedException, ExecutionException {
+		ExecutorService fixedThreadPool = Executors.newFixedThreadPool(3);
+		for (int i = 0; i < 10; i++) {
+//			fixedThreadPool.execute(new RunTask("任务: "+i));
+			Future<String> result=(Future<String>) fixedThreadPool.submit(new CallTask("任务: "+i));
+			System.out.println(result.get());
+		}
+		fixedThreadPool.shutdown();
+}
+
+//因为线程池大小为3，每个任务sleep 1秒，所以每1秒打印3个输出
+//线程名称：pool-1-thread-1,任务: 0
+//线程名称：pool-1-thread-3,任务: 2
+//线程名称：pool-1-thread-2,任务: 1
+//线程名称：pool-1-thread-3,任务: 4
+//线程名称：pool-1-thread-1,任务: 3
+//线程名称：pool-1-thread-2,任务: 5
+//线程名称：pool-1-thread-1,任务: 7
+//线程名称：pool-1-thread-3,任务: 6
+//线程名称：pool-1-thread-2,任务: 8
+//线程名称：pool-1-thread-1,任务: 9
+```
+
+
+
+#### newScheduledThreadPool 
+
+- 创建一个固定大小的线程池，线程池内线程存活时间无限制，线程池可以支持定时及周期性任务执行，如果所有线程均处于繁忙状态，对于新任务会进入DelayedWorkQueue队列中，这是一种按照超时时间排序的队列结构
+
+- 适用：周期性执行任务的场景
+
+```java
+public void testScheduledThreadPool() throws InterruptedException, ExecutionException {
+	ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(5);
+	scheduledThreadPool.schedule(new RunTask("任务: 3秒后执行"), 3, TimeUnit.SECONDS);
+	scheduledThreadPool.scheduleAtFixedRate(new RunTask("任务: 延迟2秒后每3秒执行一次"), 2, 3, TimeUnit.SECONDS);
+	for (int i = 0; i < 10; i++) {
+		Future<String> result=(Future<String>) scheduledThreadPool.submit(new CallTask("普通任务: "+i));
+		System.out.println(result.get());
+	}
+	scheduledThreadPool.shutdown();
+}
+
+//线程名称：pool-1-thread-2,普通任务: 0
+//线程名称：pool-1-thread-1,普通任务: 1
+//线程名称：pool-1-thread-3,任务: 延迟2秒后每3秒执行一次
+//线程名称：pool-1-thread-4,普通任务: 2
+//线程名称：pool-1-thread-2,任务: 3秒后执行
+//线程名称：pool-1-thread-5,普通任务: 3
+//线程名称：pool-1-thread-1,普通任务: 4
+//线程名称：pool-1-thread-3,任务: 延迟2秒后每3秒执行一次
+//线程名称：pool-1-thread-2,普通任务: 5
+//线程名称：pool-1-thread-4,普通任务: 6
+//线程名称：pool-1-thread-3,普通任务: 7
+//线程名称：pool-1-thread-5,任务: 延迟2秒后每3秒执行一次
+//线程名称：pool-1-thread-2,普通任务: 8
+//线程名称：pool-1-thread-1,普通任务: 9
+```
+
+
+
+#### newCachedThreadPool
+
+- 当有新任务到来，则插入到 SynchronousQueue 中，由于 SynchronousQueue 是同步队列，因此会在池中寻找可用线程来执行，若有可以线程则执行，若没有可用线程则创建一个线程来执行该任务；若池中线程空闲时间超过指定大小，则该线程会被销毁
+
+- 适用：执行很多短期异步的小程序或者负载较轻的服务器
+
+```java
+public void testCachedThreadPool() throws InterruptedException, ExecutionException {
+	ExecutorService cachedThreadPool = Executors.newCachedThreadPool();
+	for (int i = 0; i < 10; i++) {
+//			cachedThreadPool.execute(new RunTask("任务: "+i));
+		Future<String> result=(Future<String>) cachedThreadPool.submit(new CallTask("任务: "+i));
+		System.out.println(result.get());
+	}
+	cachedThreadPool.shutdown();
+}
+
+//线程名称：pool-1-thread-1,任务: 0
+//线程名称：pool-1-thread-1,任务: 1
+//线程名称：pool-1-thread-1,任务: 2
+//线程名称：pool-1-thread-1,任务: 3
+//线程名称：pool-1-thread-1,任务: 4
+//线程名称：pool-1-thread-1,任务: 5
+//线程名称：pool-1-thread-1,任务: 6
+//线程名称：pool-1-thread-1,任务: 7
+//线程名称：pool-1-thread-1,任务: 8
+//线程名称：pool-1-thread-1,任务: 9
+```
+
+
+
+#### 手动创建线程池
+
+
+
+
+
+
+
 ## 集合
+
+### 概述
+
+
+
+![](D:\documents\notes\solid\Java.assets\076.jpg)
+
+![](D:\documents\notes\solid\Java.assets\077-178892435315081.jpg)
+
+
+
+
+
+| 集合              | 初始大小 | 加载因子 | 扩容 | 线程安全？ |
+| ----------------- | -------- | -------- | ---- | ---------- |
+| HashSet           | 16       | 0.75     | 1    | 不安全     |
+| TreeSet           |          |          |      |            |
+| LinkedHashSet     |          |          |      |            |
+| ArrayList         | 10       | 1        | 0.5  | 不安全     |
+| Vector            | 10       | 1        | 1    | 安全       |
+| LinkedList        |          |          |      | 不安全     |
+| HashMap           | 16       | 0.75     | 1    | 不安全     |
+| TreeMap           |          |          |      |            |
+| LinkedHashMap     |          |          |      |            |
+| ConcurrentHashMap |          |          |      | 安全       |
+| HashTable         |          |          |      | 安全       |
+
+
 
 
 
 ### List
+
+
+
+#### 相关概念
+
+##### ArrayList 和 LinkedList 的线程安全处理
+
+​		ArrayList是线程不安全的，因此在并发编程时，经常会使用Collections.synchronizedList与CopyOnWriteArrayList来替代ArrayList，接下来对这两种list进行性能的比较。其中Collections.synchronizedList在更新操作中使用了同步锁，而CopyOnWriteArrayList在更新操作中不仅使用了可重入锁，而且还需要进行数组的复制。
+
+方法一:List<String> list = Collections.synchronizedList(new LinkedList<String>());
+
+方法二:将LinkedList全部换成ConcurrentLinkedQueue；
+
+
+
+##### ArrayList 是如何扩容的？
+
+​		如果通过无参构造的话，初始数组容量为 0 ，当真正对数组进行添加时，才真正分配容量。每次按照 1.5 倍（位运算）的比率通过 copeOf 的方式扩容。
+
+在 JKD6 中实现是，如果通过无参构造的话，初始数组容量为10，每次通过 copeOf 的方式扩容后容量为原来的 1.5 倍。
+
+
+
+##### Array 和 ArrayList 有何区别？什么时候更适合用 Array？
+
+Array 可以容纳基本类型和对象，而 ArrayList 只能容纳对象。
+
+Array 是指定大小的，而 ArrayList 大小是固定的，可自动扩容。
+
+Array 没有提供 ArrayList 那么多功能，比如 addAll、removeAll 和 iterator 等。
+
+
+
+#### ArrayList
+
+​		ArrayList 是最常用的 List 实现类，内部是通过数组实现的，它允许对元素进行快速随机访问。数组的缺点是每个元素之间不能有间隔，当数组大小不满足时需要增加存储能力，就要将已经有数组的数据复制到新的存储空间中。当从 ArrayList 的中间位置插入或者删除元素时，需要对数组进行复制、移动、代价比较高。因此，它适合随机查找和遍历，不适合插入和删除。排列有序，可重复，容量不够的时候，当前容量*1.5+1。
+
+
+
+#### Vector
+
+​		Vector 与 ArrayList 一样，也是通过数组实现的，不同的是它支持线程的同步，即某一时刻只有一个线程能够写 Vector，避免多线程同时写而引起的不一致性，但实现同步需要很高的花费，因此，访问它比访问 ArrayList 慢。默认扩展一倍容量。
+
+
+
+#### LinkedList
+
+​		LinkedList 是用链表结构存储数据的，很适合数据的动态插入和删除，随机访问和遍历速度比较慢。另外，他还提供了 List 接口中没有定义的方法，专门用于操作表头和表尾元素，可以当作堆栈、队列和双向队列使用。底层使用双向循环链表数据结构。线程不安全。
+
+
+
+#### CopyOnWriteArrayList
+
+​		CopyOnWriteArrayList : 写时加锁，当添加一个元素的时候，将原来的容器进行copy，复制出一个新的容器，然后在新的容器里面写，写完之后再将原容器的引用指向新的容器，而读的时候是读旧容器的数据，所以可以进行并发的读，但这是一种弱一致性的策略。
+使用场景：CopyOnWriteArrayList适合使用在读操作远远大于写操作的场景里，比如缓存。
 
 
 
@@ -113,7 +8848,197 @@ public static List<ChildDataVO> convertToArray(List<ParentDataVO> parentList) {
 
 
 
+
+
+### Set
+
+
+
+#### HashSet（Hash **表）**
+
+​		哈希表边存放的是哈希值。HashSet 存储元素的顺序并不是按照存入时的顺序（和 List 显然不同） 而是按照哈希值来存的所以取数据也是按照哈希值取得。元素的哈希值是通过元素的hashcode 方法来获取的, HashSet 首先判断两个元素的哈希值，如果哈希值一样，接着会比较equals 方法 如果 equls 结果为 true ，HashSet 就视为同一个元素。如果 equals 为 false 就不是同一个元素。
+
+哈希值相同 equals 为 false 的元素是怎么存储呢,就是在同样的哈希值下顺延（可以认为哈希值相同的元素放在一个哈希桶中）。也就是哈希一样的存一列。如图 1 表示 hashCode 值不相同的情况；图 2 表示 hashCode 值相同，但 equals 不相同的情况。
+
+HashSet 通过 hashCode 值来确定元素在内存中的位置。一个 hashCode 位置上可以存放多个元素。
+
+
+
+#### TreeSet（二叉树）
+
+1. TreeSet()是使用二叉树的原理对新 add()的对象按照指定的顺序排序（升序、降序），每增
+
+加一个对象都会进行排序，将对象插入的二叉树指定的位置。
+
+2. Integer 和 String 对象都可以进行默认的 TreeSet 排序，而自定义类的对象是不可以的，自己定义的类必须实现 Comparable 接口，并且覆写相应的 compareTo()函数，才可以正常使用。
+
+3. 在覆写 compare()函数时，要返回相应的值才能使 TreeSet 按照一定的规则来排序
+
+4. 比较此对象与指定对象的顺序。如果该对象小于、等于或大于指定对象，则分别返回负整数、零或正整数。
+
+   
+
+#### LinkHashSet（HashSet+LinkedHashMap）
+
+​		对于 LinkedHashSet 而言，它继承与 HashSet、又基于 LinkedHashMap 来实现的。LinkedHashSet 底层使用 LinkedHashMap 来保存所有元素，它继承与 HashSet，其所有的方法操作上又与 HashSet 相同，因此 LinkedHashSet 的实现上非常简单，只提供了四个构造方法，并通过传递一个标识参数，调用父类的构造器，底层构造一个 LinkedHashMap 来实现，在相关操作上与父类 HashSet 的操作相同，直接调用父类 HashSet 的方法即可。
+
+
+
 ### Map
+
+#### 相关概念
+
+##### hashmap的工作原理是什么？
+
+​		HashMap是基于hashing的原理，我们使用put(key, value)存储对象到HashMap中，使用get(key)从HashMap中获取对象。当我们给put()方法传递键和值时，我们先对键调用hashCode()方法，计算并返回的hashCode是用于找到Map数组的bucket位置来储存Node 对象。这里关键点在于指出，HashMap是在bucket中储存键对象和值对象，作为Map.Node 。
+
+以下是具体的put过程（JDK1.8版）
+
+1.对Key求Hash值，然后再计算下标
+
+2.如果没有碰撞，直接放入桶中（碰撞的意思是计算得到的Hash值相同，需要放到同一个bucket中）
+
+3.如果碰撞了，则调用equals() 比较value，相同则替换旧值，不同则以链表的方式链接到后面
+
+4.如果链表长度超过阀值( TREEIFY THRESHOLD==8)，就把链表转成红黑树，链表长度低于6，就把红黑树转回链表
+
+5.如果桶满了(容量16*加载因子0.75)，就需要 resize（扩容2倍后重排）
+
+以下是具体get过程(考虑特殊情况如果两个键的hashcode相同，你如何获取值对象？)
+
+当我们调用get()方法，HashMap会使用键对象的hashcode找到bucket位置，找到bucket位置之后，会调用keys.equals()方法去找到链表中正确的节点，最终找到要找的值对象。
+
+
+
+##### 拉链法导致的链表过深问题为什么不用二叉查找树代替，而选择红黑树？为什么不一直使用红黑树？
+
+​		之所以选择红黑树是为了解决二叉查找树的缺陷，二叉查找树在特殊情况下会变成一条线性结构（这就跟原来使用链表结构一样了，造成很深的问题），遍历查找会非常慢。而红黑树在插入新数据后可能需要通过左旋，右旋、变色这些操作来保持平衡，引入红黑树就是为了查找数据快，解决链表查询深度的问题，我们知道红黑树属于平衡二叉树，但是为了保持“平衡”是需要付出代价的，但是该代价所损耗的资源要比遍历线性链表要少，所以当长度大于8的时候，会使用红黑树，如果链表长度很短的话，根本不需要引入红黑树，引入反而会慢。
+
+
+
+#####  解决 hash 碰撞还有那些办法？
+
+**开放定址法**
+
+​		当冲突发生时，使用某种探查技术在散列表中形成一个探查(测)序列。沿此序列逐个单元地查找，直到找到给定的地址。按照形成探查序列的方法不同，可将开放定址法区分为线性探查法、二次探查法、双重散列法等。
+
+
+
+**再哈希法**
+
+Hi = RHi（key），i=1,2,...k
+
+RHi均是不同的哈希函数，即在同义词产生地址冲突时计算另一个哈希函数地址，直到不发生冲突为止。这种方法不易产生聚集，但是增加了计算时间。
+
+缺点：增加了计算时间。
+
+
+
+**建立一个公共溢出区**
+
+​		假设哈希函数的值域为[0,m-1]，则设向量HashTable[0...m-1]为基本表，每个分量存放一个记录，另设立向量OverTable[0....v]为溢出表。所有关键字和基本表中关键字为同义词的记录，不管他们由哈希函数得到的哈希地址是什么，一旦发生冲突，都填入溢出表。简单地说就是搞个新表存冲突的元素。
+
+
+
+**链地址法（拉链法）**
+
+​		将所有关键字为同义词的记录存储在同一线性链表中，也就是把冲突位置的元素构造成链表。
+
+
+
+##### HashMap 的负载因子初始值为什么是 0.75?
+
+​		比如说当前的容器容量是16，负载因子是0.75,16*0.75=12，也就是说，当容量达到了12的时候就会进行扩容操作。当负载因子是1.0的时候，也就意味着，只有当数组的8个值（这个图表示了8个）全部填充了，才会发生扩容。这就带来了很大的问题，因为Hash冲突时避免不了的。当负载因子是1.0的时候，意味着会出现大量的Hash的冲突，底层的红黑树变得异常复杂。对于查询效率极其不利。这种情况就是牺牲了时间来保证空间的利用率。因此一句话总结就是负载因子过大，虽然空间利用率上去了，但是时间效率降低了。
+
+​		负载因子是0.5的时候，这也就意味着，当数组中的元素达到了一半就开始扩容，既然填充的元素少了，Hash冲突也会减少，那么底层的链表长度或者是红黑树的高度就会降低。查询效率就会增加。但是，这时候空间利用率就会大大的降低，原本存储1M的数据，现在就意味着需要2M的空间。一句话总结就是负载因子太小，虽然时间效率提升了，但是空间利用率降低了。大致意思就是说负载因子是0.75的时候，空间利用率比较高，而且避免了相当多的Hash冲突，使得底层的链表或者是红黑树的高度比较低，提升了空间效率。
+
+
+
+##### Comparable **和** Comparator 的区别?
+
+如果在定义类时，就实现了Comparable接口，直接在里面重写compareTo()方法，如果没实现，后面在业务开发中需要有比较排序的功能，就再单独写一个类实现Comparator接口，在里面重写compare()方法，然后这个类需要作为参数传入到工具类Collections.sort和Arrays.sort方法中。最主要的区别就是一个一开始就实现，一个是后期实现。
+
+
+
+#### HashMap（数组+链表+红黑树）
+
+​		HashMap 根据键的 HashCode 值存储数据，大多数情况下可以直接定位到它的值，因而具有很快的访问速度，但遍历顺序却是不确定的。 HashMap 最多只允许一条记录的键为 null，允许多条记录的值为 null。HashMap 非线程安全，即任一时刻可以有多个线程同时写 HashMap，可能会导致数据的不一致。如果需要满足线程安全，可以用 Collections 的 synchronizedMap 方法使HashMap 具有线程安全的能力，或者使用 ConcurrentHashMap。
+
+
+
+##### java7 的 hashmap 实现
+
+![](D:\documents\notes\solid\Java.assets\5.jpg)
+
+
+
+​		大方向上，HashMap 里面是一个数组，然后数组中每个元素是一个单向链表。上图中，每个绿色的实体是嵌套类 Entry 的实例，Entry 包含四个属性：key, value, hash 值和用于单向链表的 next。
+
+\1. capacity：当前数组容量，始终保持 2^n，可以扩容，扩容后数组大小为当前的 2 倍。
+
+\2. loadFactor：负载因子，默认为 0.75。
+
+\3. threshold：扩容的阈值，等于 capacity * loadFactor
+
+##### java8 的 hashmap 实现
+
+​		Java8 对 HashMap 进行了一些修改，最大的不同就是利用了红黑树，所以其由 数组+链表+红黑树 组成。根据 Java7 HashMap 的介绍，我们知道，查找的时候，根据 hash 值我们能够快速定位到数组的具体下标，但是之后的话，需要顺着链表一个个比较下去才能找到我们需要的，时间复杂度取决于链表的长度，为 O(n)。为了降低这部分的开销，在 Java8 中，当链表中的元素超过了 8 个以后，会将链表转换为红黑树，在这些位置进行查找的时候可以降低时间复杂度为 O(logN)。
+
+![](D:\documents\notes\solid\Java.assets\4.jpg)
+
+
+
+#### ConcurrentHashMap
+
+##### java7 实现
+
+Segment 段
+
+​		ConcurrentHashMap 和 HashMap 思路是差不多的，但是因为它支持并发操作，所以要复杂一些。整个 ConcurrentHashMap 由一个个 Segment 组成，Segment 代表”部分“或”一段“的
+
+意思，所以很多地方都会将其描述为分段锁。注意，行文中，我很多地方用了“槽”来代表一个segment。
+
+线程安全（Segment 继承 ReentrantLock 加锁）
+
+简单理解就是，ConcurrentHashMap 是一个 Segment 数组，Segment 通过继承ReentrantLock 来进行加锁，所以每次需要加锁的操作锁住的是一个 segment，这样只要保证每个 Segment 是线程安全的，也就实现了全局的线程安全。
+
+![](D:\documents\notes\solid\Java.assets\3.jpg)
+
+
+
+并行度（默认 16）
+
+concurrencyLevel：并行级别、并发数、Segment 数，怎么翻译不重要，理解它。默认是 16，也就是说 ConcurrentHashMap 有 16 个 Segments，所以理论上，这个时候，最多可以同时支持 16 个线程并发写，只要它们的操作分别分布在不同的 Segment 上。这个值可以在初始化的时候设置为其他值，但是一旦初始化以后，它是不可以扩容的。再具体到每个 Segment 内部，其实每个 Segment 很像之前介绍的 HashMap，不过它要保证线程安全，所以处理起来要麻烦些。
+
+
+
+##### java8 实现
+
+​		Java8 对 ConcurrentHashMap 进行了比较大的改动,Java8 也引入了红黑树。通过对链表的头加锁实现。
+
+![](D:\documents\notes\solid\Java.assets\4.jpg)
+
+
+
+#### HashTable（线程安全）
+
+​		Hashtable 是遗留类，很多映射的常用功能与 HashMap 类似，不同的是它承自 Dictionary 类，并且是线程安全的，任一时间只有一个线程能写 Hashtable，并发性不如 ConcurrentHashMap，因为 ConcurrentHashMap 引入了分段锁。Hashtable 不建议在新代码中使用，不需要线程安全的场合可以用 HashMap 替换，需要线程安全的场合可以用 ConcurrentHashMap 替换。
+
+
+
+#### TreeMap（可排序）
+
+​		TreeMap 实现 SortedMap 接口，能够把它保存的记录根据键排序，默认是按键值的升序排序，也可以指定排序的比较器，当用 Iterator 遍历 TreeMap 时，得到的记录是排过序的。如果使用排序的映射，建议使用 TreeMap。在使用 TreeMap 时，key 必须实现 Comparable 接口或者在构造 TreeMap 传入自定义的。Comparator，否则会在运行时抛出 java.lang.ClassCastException 类型的异常。
+
+
+
+#### LinkHashMap（记录插入顺序）
+
+​		LinkedHashMap 是 HashMap 的一个子类，保存了记录的插入顺序，在用 Iterator 遍历。LinkedHashMap 时，先得到的记录肯定是先插入的，也可以在构造时带参数，按照访问次序排序。
+
+
+
+
 
 #### 键值对
 
@@ -163,9 +9088,50 @@ public class FixedSizeMapExample {
 }
 ```
 
+### 集合操作
+
+#### List 转 Map
+
+```java
+public Map<Long, String> getIdNameMap(List<User> users) {
+    return accounts.stream().collect(Collectors.toMap(User::getId, User::getUserName));
+}
+//第二种：将id和实体Bean做为K,V account -> account是一个返回本身的lambda表达式，后面的使用Function接口中的一个默认方法代替，使整个方法更简洁优雅。
+public Map<Long, Account> getIdAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(Collectors.toMap(Account::getId, account -> account));
+}
+public Map<Long, Account> getIdAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(Collectors.toMap(Account::getId, Function.identity()));
+}
+//第三种： key存在重复记录时处理,如果使用第一种方法会出错，所以这里只是简单的使用后者覆盖前者来解决key重复问题
+public Map<String, Account> getNameAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(Collectors.toMap(Account::getUsername, Function.identity(), (key1, key2) -> key2));
+}
+//第四种： 使用某个具体的Map类来保存，如保存时使用LinkedHashMap
+public Map<String, Account> getNameAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(Collectors.toMap(Account::getUsername, Function.identity(), (key1, key2) -> key2, LinkedHashMap::new));
+}
+```
 
 
-### 深层次的集合类型取值
+
+#### List 转 Map 当value值为空时会报空指针异常解决方案
+
+```java
+//解决方案一，使用Optional类处理null
+public Map<String, String> getNameAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(Collectors.toMap(s -> Optional.ofNullable(s.getUsername()).orElse(null), s -> Optional.ofNullable(s.getPassword()).orElse("unknown"), (key1, key2) -> key2, HashMap::new));
+}
+
+//解决方案二，直接使用collect()方法进行规约操作
+public Map<String, String> getNameAccountMap(List<Account> accounts) {
+    return accounts.stream().collect(HashMap::new, (map, item) -> map.put(item.getUsername(), item.getPassword()), HashMap::putAll);
+}
+```
+
+
+
+#### 深层次的集合类型取值
 
 ```java
     /**
@@ -1579,6 +10545,14 @@ public class LogTest {
 
 ## 反射
 
+### 相关概念
+
+#### 反射中，Class.forName 和 ClassLoader 区别
+
+ Class.forName(className)方法，**在loadClass后必须初始化**。比较下我们前面准备jvm加载类的知识，我们可以清晰的看到在执行过此方法后，目标对象的 static块代码已经被执行，static参数也已经被初始化。
+
+ClassLoader.loadClass(className)方法，该参数表示**目标对象被装载后不进行链接**，这就意味这**不会去执行该类静态块中间的内**容。因此2者的区别就显而易见了。
+
 
 
 ### 获取父类类型
@@ -1651,6 +10625,101 @@ Class<?> poClazz = (Class)types[1];
 |                            | DATETIMEOFFSET              |      |
 |                            | TIME_WITH_TIMEZONE          |      |
 |                            | TIMESTAMP_WITH_TIMEZONE     |      |
+
+
+
+## euqals、hashCode
+
+### equals
+
+`==` 用于判断类型值是否相等的，比如 int,，float 等，也可以用来判断两个对象的引用地址是否相同（两个引用指向同一个对象）
+
+`equals` 用于判断两个对象的值是否相等
+
+`instanceof` 判断一个类是否是一个类或者该类子类的实例
+
+`this.getClass() == obj.getClass();`比较目标和当前类必须为同一类的时候需要使用
+
+```java
+public class MyKey {
+    private String name;
+    private Boolean sex;
+//    省略getter setter toString
+
+//    注意：@Override注解必须加上否则IDE会帮我们检查是否重写了父类方法，否则可能实现的是重载方法。导致后面运行出错找不到问题的所在。
+    @Override
+    public boolean equals(Object obj){
+//        自反性（reflective）：对于任何非null的引用值必须满足x.equals(x)必须为true
+        if(this==obj){
+            return true;
+        }
+//        对于任何非null的引用值x，x.equals(null)一定返回false
+        if(null==obj){
+            return false;
+        }
+//        对称性（symmetric）：对于任何非null的引用值x,y。当且仅当x.equals(y)为true的时候，y.equals(x)一定为true。
+//        传递性（transitive）：对于任何非null的引用值x,y,z。当且仅当x.equals(y)为true的时候且y.equals(z)为true，x.equals(z)一定为true。
+
+//        检查对象类型是否合法、否则后面类型转换可能会出错
+        if(!(obj instanceof MyKey)){
+            return false;
+        }
+        MyKey other=(MyKey)obj;
+//        return ((this.name==other.name||null!=this.name&&this.name.equals(other.name))&&(this.sex==other.sex||null!=this.sex&&this.sex.equals(other.sex)));
+        //使用jdk提供的工具类
+        return ((Objects.equals(this.name, other.name))&&(Objects.equals(this.sex, other.sex)));
+    }
+}
+```
+
+
+
+### hashCode
+
+hashCode 散列码计算（来自：Effective Java）
+
+1. 把某个非零的常数值，比如 17，保存在一个名为 result 的 int 类型的变量中。
+2. 对于对象中每个关键域`f`(指`equals`方法中涉及的每个域)，完成以下步骤：
+   1. 为该域计算`int`类型的散列码c：
+      1. 如果该域是`boolean`类型，则计算(`f?1:0`)。
+      2. 如果该域是`byte`，`char`，`short`或者int类型，则计算`(int)f`。
+      3. 如果该域是`long`类型，则计算`(int)(f^(f>>>32))`。
+      4. 如果该域是`float`类型，则计算`Float.floatToIntBits(f)`。
+      5. 如果该域是`double`类型，则计算`Double.doubleToLongBits(f)`，然后按照步骤 2.1.3，为得到的`long`类型值计算散列值。
+      6. 如果该域是一个对象引用，并且该类的`equals`方法通过递归地调用`equals`的方式来比较这个域，则同样为这个域递归地调用`hashCode`。如果需要更复杂的比较，则为这个域计算一个范式`(canonical representation)`，然后针对这个范式调用`hashCode`。如果这个域的值为`null`，则返回`0`(其他常数也行)。
+      7. 如果该域是一个数组，则要把每一个元素当做单独的域来处理。也就是说，递归地应用上述规则，对每个重要的元素计算一个散列码，然后根据步骤 2.2 中的做法把这些散列值组合起来。如果数组域中的每个元素都很重要，可以利用发行版本**1.5**中增加的其中一个`Arrays.hashCode`方法。
+   2. 按照下面的公式，把步骤2.1中计算得到的散列码`c`合并到`result`中：`result = 31 * result + c`; //此处`31`是个奇素数，并且有个很好的特性，即用移位和减法来代替乘法，可以得到更好的性能：`31*i == (i<<5) - i， 现代JVM能自动完成此优化。
+3. 返回`result`
+4. 检验并测试该`hashCode`实现是否符合通用约定。
+
+```java
+    @Override
+    public int hashCode() {
+        int result = 17;
+        result = 31 * result + mInt;
+        result = 31 * result + (mBoolean ? 1 : 0);
+        result = 31 * result + Float.floatToIntBits(mFloat);
+        result = 31 * result + (int)(mLong ^ (mLong >>> 32));
+        long mDoubleTemp = Double.doubleToLongBits(mDouble);
+        result =31 * result + (int)(mDoubleTemp ^ (mDoubleTemp >>> 32));
+        result = 31 * result + (mString == null ? 0 : mMsgContain.hashCode());
+        result = 31 * result + (mObj == null ? 0 : mObj.hashCode());
+        return result;
+    }
+```
+
+
+
+## Jackson
+
+```java
+// json 字符串转 List
+List<Obj> result = objectMapper.readValue(jsonStr, objectMapper.getTypeFactory().constructParametricType(List.class, Obj.class));
+```
+
+
+
+
 
 
 
@@ -1760,11 +10829,11836 @@ public class JDBCUtils {
 
 
 
+
+
 # Spring
 
+## 容器与 bean
+
+### 容器接口
 
 
-# SpringMVC
+
+
+
+
+
+#### BeanFactory
+
+```java
+public interface BeanFactory {
+    String FACTORY_BEAN_PREFIX = "&";
+    Object getBean(String var1) throws BeansException;
+    <T> T getBean(String var1, Class<T> var2) throws BeansException;
+    Object getBean(String var1, Object... var2) throws BeansException;
+    <T> T getBean(Class<T> var1) throws BeansException;
+    <T> T getBean(Class<T> var1, Object... var2) throws BeansException;
+    <T> ObjectProvider<T> getBeanProvider(Class<T> var1);
+    <T> ObjectProvider<T> getBeanProvider(ResolvableType var1);
+    boolean containsBean(String var1);
+    boolean isSingleton(String var1) throws NoSuchBeanDefinitionException;
+    boolean isPrototype(String var1) throws NoSuchBeanDefinitionException;
+    boolean isTypeMatch(String var1, ResolvableType var2) throws NoSuchBeanDefinitionException;
+    boolean isTypeMatch(String var1, Class<?> var2) throws NoSuchBeanDefinitionException;
+    @Nullable
+    Class<?> getType(String var1) throws NoSuchBeanDefinitionException;
+    @Nullable
+    Class<?> getType(String var1, boolean var2) throws NoSuchBeanDefinitionException;
+    String[] getAliases(String var1);
+}
+
+```
+
+
+
+- BeanFactory 是 Spring 的核心容器
+
+- BeanFactory 是 ApplicationContext 的父接口
+
+
+- 提供 getBean、isSingleton 等基本方法
+- 它的实现类提供了控制反转、基本的依赖注入、直至 Bean 的生命周期的各种功能
+- 它的成员变量 singletonObjects，内部包含了所有的单例 bean
+
+
+
+通过反射获取 singletonObjects
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) throws IllegalAccessException, NoSuchFieldException {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+        // 成员变量 singletonObjects 在 DefaultListableBeanFactory 的父类 DefaultSingletonBeanRegistry
+        Field singletonObjects = DefaultSingletonBeanRegistry.class.getDeclaredField("singletonObjects");
+        singletonObjects.setAccessible(true);
+        ConfigurableBeanFactory beanFactory = context.getBeanFactory();
+        Map<String, Object> map = (Map<String, Object>) singletonObjects.get(beanFactory);
+        map.forEach((k,v)->{
+            System.out.println(k + "=" + v);
+        });
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+##### 实现类
+
+* beanFactory 可以通过 registerBeanDefinition 注册一个 bean definition 对象
+  * 我们平时使用的配置类、xml、组件扫描等方式都是生成 bean definition 对象注册到 beanFactory 当中
+  * bean definition 描述了这个 bean 的创建蓝图：scope 是什么、用构造还是工厂创建、初始化销毁方法是什么，等等
+* beanFactory 需要手动调用 beanFactory 后处理器对它做增强
+  * 例如通过解析 @Bean、@ComponentScan 等注解，来补充一些 bean definition
+* beanFactory 需要手动添加 bean 后处理器，以便对后续 bean 的创建过程提供增强
+  * 例如 @Autowired，@Resource 等注解的解析都是 bean 后处理器完成的
+  * bean 后处理的添加顺序会对解析结果有影响，见视频中同时加 @Autowired，@Resource 的例子
+* beanFactory 需要手动调用方法来初始化单例
+* beanFactory 需要额外设置才能解析 ${} 与 #{}
+
+###### DefaultListableBeanFactory
+
+![image-20230201220656418](D:\documents\notes\solid\Java.assets\334.png)
+
+
+
+```java
+public class TestBeanFactory {
+
+    public static void main(String[] args){
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+        // 添加 bean 的定义(class, scoap, 初始化, 销毁)
+        AbstractBeanDefinition beanDefinition = BeanDefinitionBuilder
+                .genericBeanDefinition(Config.class)
+                .setScope("singleton").getBeanDefinition();
+        beanFactory.registerBeanDefinition("config" ,beanDefinition);
+
+//        for(String name:beanFactory.getBeanDefinitionNames()){
+//            System.out.println(name);
+//        }
+
+        // 此时还需要解析注解
+        // 接下来给 BeanFactory 注册常用后处理器
+        // 后处理器用于解析注解
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(beanFactory);
+
+//        for(String name:beanFactory.getBeanDefinitionNames()){
+//            System.out.println(name);
+//        }
+
+        // internalConfigurationAnnotationProcessor BeanFactory 后处理器，解析 @Configuration、@Bean 等注解的后处理器
+        // internalAutowiredAnnotationProcessor Bean 后处理器，解析 @Autowire 注解
+        // internalCommonAnnotationProcessor Bean 后处理器，解析 @Resource 等 JavaEE 注解
+        // internalEventListenerProcessor
+        // internalEventListenerFactory
+
+        // BeanFactoryPostProcessor 为上面 BeanFactory 后处理器的共同父类
+        beanFactory.getBeansOfType(BeanFactoryPostProcessor.class).values().forEach(beanFactoryPostProcessor -> {
+            // 执行 BeanFactory 后处理器解析注解，并将他们加入 BeanFactory
+            beanFactoryPostProcessor.postProcessBeanFactory(beanFactory);
+        });
+        // BeanPostProcessor 为上面 Bean 后处理器的共同父类
+        beanFactory.getBeansOfType(BeanPostProcessor.class).values().forEach(beanPostProcessor -> {
+            // 执行 Bean 后处理器解析注解，并将他们加入 BeanFactory
+            beanFactory.addBeanPostProcessor(beanPostProcessor);
+        });
+
+        for(String name:beanFactory.getBeanDefinitionNames()){
+            System.out.println(name);
+        }
+
+        // 配置 BeanFactory 提前创建 Bean，不要懒加载 Bean
+        beanFactory.preInstantiateSingletons();
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+        // null
+        System.out.println(beanFactory.getBean(Bean1.class).getBean2());
+
+        /**
+         * BeanFactory 不会做的事
+         *      1.不会主动调用 BeanFactory 后处理器
+         *      2.不会主动添加 Bean 后处理器
+         *      3.不会主动初始化单例
+         *      4.不会解析 BeanFactory 还不会解析 ${} 与 #{}
+         * Bean 后处理器会有排序的逻辑
+         */
+
+    }
+
+    @Configuration
+    static class Config{
+        @Bean
+        public Bean1 bean1(){
+            return new Bean1();
+        }
+
+        @Bean
+        public Bean2 bean2(){
+            return new Bean2();
+        }
+    }
+
+    static class Bean1{
+        private static final Logger log = LoggerFactory.getLogger(Bean1.class);
+
+        @Autowired
+        private Bean2 bean2;
+
+        public Bean1() {
+            log.debug("构造 Bean1()");
+        }
+
+        public Bean2 getBean2(){
+            return bean2;
+        }
+    }
+
+    static class Bean2{
+        private static final Logger log = LoggerFactory.getLogger(Bean2.class);
+
+        public Bean2() {
+            log.debug("构造 Bean2()");
+        }
+    }
+}
+```
+
+
+
+###### 后处理器的顺序
+
+1. 实现了 PriorityOrdered 接口的优先级最高
+2. 实现了 Ordered 接口与加了 @Order 注解的平级, 按数字升序
+3. 其它的排在最后
+
+```java
+public class TestBeanFactory {
+
+    public static void main(String[] args){
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+
+        AbstractBeanDefinition beanDefinition = BeanDefinitionBuilder
+                .genericBeanDefinition(Config.class)
+                .setScope("singleton").getBeanDefinition();
+        beanFactory.registerBeanDefinition("config" ,beanDefinition);
+
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(beanFactory);
+
+        beanFactory.getBeansOfType(BeanFactoryPostProcessor.class).values().forEach(beanFactoryPostProcessor -> {
+            beanFactoryPostProcessor.postProcessBeanFactory(beanFactory);
+        });
+        beanFactory.getBeansOfType(BeanPostProcessor.class).values().forEach(beanPostProcessor -> {
+            beanFactory.addBeanPostProcessor(beanPostProcessor);
+        });
+
+        for(String name:beanFactory.getBeanDefinitionNames()){
+            System.out.println(name);
+        }
+
+        System.out.println(beanFactory.getBean(Bean1.class).getInter());
+    }
+
+    @Configuration
+    static class Config{
+        @Bean
+        public Bean1 bean1(){
+            return new Bean1();
+        }
+
+        @Bean
+        public Bean2 bean2(){
+            return new Bean2();
+        }
+
+        @Bean
+        public Bean3 bean3(){
+            return new Bean3();
+        }
+    }
+
+    interface Inter{}
+
+    static class Bean1{
+        private static final Logger log = LoggerFactory.getLogger(Bean1.class);
+
+        // @Autowired 先根据类型匹配，再根据名字匹配
+        @Autowired
+        @Resource(name = "bean3")
+        private Inter bean2;
+
+        public Bean1() {
+            log.debug("构造 Bean1()");
+        }
+
+        public Inter getInter(){
+            return bean2;
+        }
+    }
+
+    static class Bean2 implements Inter{
+        private static final Logger log = LoggerFactory.getLogger(Bean2.class);
+
+        public Bean2() {
+            log.debug("构造 Bean2()");
+        }
+    }
+
+    static class Bean3 implements Inter{
+        private static final Logger log = LoggerFactory.getLogger(Bean3.class);
+
+        public Bean3() {
+            log.debug("构造 Bean3()");
+        }
+    }
+}
+
+```
+
+
+
+在方法 `AnnotationConfigUtils.registerAnnotationConfigProcessors(beanFactory);` 中设置了比较器 `beanFactory.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);`
+
+在后处理器中会有`getOrder()`方法来返回后处理器的排序值
+
+看一下源码中的 order 可以看到 Autowired 的 order 比 Common 中的 order 大
+
+```java
+public class CommonAnnotationBeanPostProcessor
+    public CommonAnnotationBeanPostProcessor() {
+        this.setOrder(2147483644);
+        ...
+    }
+}
+```
+
+
+
+```java
+public class AutowiredAnnotationBeanPostProcessor {
+    ...
+    private int order = 2147483645;
+    ...
+}
+```
+
+
+
+#### ApplicationContext
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        /**
+         * ConfigurableApplicationContext 继承了 ApplicationContext 
+         */
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+    }
+
+}
+```
+
+![image-20230201220656417](D:\documents\notes\solid\Java.assets\333.png)
+
+
+
+
+
+##### 组合了 BeanFactory 
+
+```java
+public Object getBean(String name) throws BeansException {
+    this.assertBeanFactoryActive();
+    return this.getBeanFactory().getBean(name);
+}
+```
+
+
+
+##### 扩展了 BeanFactory 
+
+- 国际化（MessageSource）
+- 通配符方式获取一组 Resource 资源（ResourcePatternResolver）
+- 事件发布与监听（ApplicationEventPublisher）
+- 整合 Environment 环境（EnvironmentCapable）
+
+
+
+###### MessageSource
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+        System.out.println(context.getMessage("hi", null, Locale.CHINA));
+        System.out.println(context.getMessage("hi", null, Locale.ENGLISH));
+        System.out.println(context.getMessage("hi", null, Locale.JAPANESE));
+    }
+
+}
+```
+
+
+
+messages.properties
+
+```properties
+
+```
+
+messages_zh.properties
+
+```properties
+hi=你好
+```
+
+messages_en.properties
+
+```properties
+hi=Hello
+```
+
+messages_ja.properties
+
+```properties
+hi=こんにちは
+```
+
+
+
+###### ResourcePatternResolver
+
+获取资源
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) throws IOException {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+        Resource[] resources = context.getResources("classpath:application*.properties");
+        for(Resource resource:resources){
+            System.out.println(resource);
+        }
+    }
+
+}
+```
+
+
+
+###### ApplicationEventPublisher
+
+可以用于解耦
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+        context.publishEvent(new UserRegisteredEvent(context));
+    }
+
+}
+```
+
+```java
+/**
+ * 事件发布器
+ */
+public class UserRegisteredEvent extends ApplicationEvent {
+    /**
+     * 时间发送者
+     */
+    public UserRegisteredEvent(Object source) {
+        super(source);
+    }
+}
+
+```
+
+```java
+/**
+ * 事件监听器
+ */
+@Component
+public class Component1 {
+
+    @EventListener
+    public void listener (UserRegisteredEvent event){
+        System.out.println(event);
+    }
+}
+
+```
+
+
+
+###### EnvironmentCapable
+
+获取环境变量、配置信息
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+        System.out.println(context.getEnvironment().getProperty("java_home"));
+        System.out.println(context.getEnvironment().getProperty("server.port"));
+    }
+
+}
+```
+
+
+
+##### 实现类
+
+
+
+Spring 的发展历史较为悠久，因此很多资料还在讲解它较旧的实现，这里出于怀旧的原因，把它们都列出来，供大家参考
+
+* DefaultListableBeanFactory，是 BeanFactory 最重要的实现，像**控制反转**和**依赖注入**功能，都是它来实现
+* ClassPathXmlApplicationContext，从类路径查找 XML 配置文件，创建容器（旧）
+* FileSystemXmlApplicationContext，从磁盘路径查找 XML 配置文件，创建容器（旧）
+* XmlWebApplicationContext，传统 SSM 整合时，基于 XML 配置文件的容器（旧）
+* AnnotationConfigWebApplicationContext，传统 SSM 整合时，基于 java 配置类的容器（旧）
+* AnnotationConfigApplicationContext，Spring boot 中非 web 环境容器（新）
+* AnnotationConfigServletWebServerApplicationContext，Spring boot 中 servlet web 环境容器（新）
+* AnnotationConfigReactiveWebServerApplicationContext，Spring boot 中 reactive web 环境容器（新）
+
+另外要注意的是，后面这些带有 ApplicationContext 的类都是 ApplicationContext 接口的实现，但它们是**组合**了 DefaultListableBeanFactory 的功能，并非继承而来
+
+
+
+###### ClassPathXmlApplicationContext
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        classPathXmlApplicationContext();
+
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+        // 读取配置并将 bean 存入 beanFactory
+        XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(beanFactory);
+        reader.loadBeanDefinitions(new ClassPathResource("test/classPathXml.xml"));
+        for(String name:beanFactory.getBeanDefinitionNames()){
+            System.out.println(name);
+        }
+    }
+
+    /**
+     * 较为经典的容器，基于 classpath 下 xml 格式的配置文件来创建
+     */
+    private static void classPathXmlApplicationContext(){
+        ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("test/classPathXml.xml");
+        for(String name:context.getBeanDefinitionNames()){
+            System.out.println(name);
+        }
+        System.out.println(context.getBean(Bean2.class).getBean1());
+    }
+}
+```
+
+
+
+###### FileSystemXmlApplicationContext
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        fileSystemXmlApplicationContext();
+
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+        // 读取配置并将 bean 存入 beanFactory
+        XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(beanFactory);
+        reader.loadBeanDefinitions(new FileSystemResource("src\\main\\resources\\test\\classPathXml.xml"));
+        for(String name:beanFactory.getBeanDefinitionNames()){
+            System.out.println(name);
+        }
+    }
+
+    /**
+     * 基于磁盘路径下 xml 格式的配置文件来创建
+     */
+    private static void fileSystemXmlApplicationContext(){
+        // 相对目录 src\main\resources\test\classPathXml.xml
+        FileSystemXmlApplicationContext context = new FileSystemXmlApplicationContext("D:\\develop\\code\\java\\uums\\src\\main\\resources\\test\\classPathXml.xml");
+        for(String name:context.getBeanDefinitionNames()){
+            System.out.println(name);
+        }
+        System.out.println(context.getBean(Bean2.class).getBean1());
+    }
+}
+```
+
+
+
+###### AnnotationConfigApplicationContext
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        annotationConfigApplicationContext();
+    }
+ 
+        /**
+     * 较为经典的容器，基于 java 配置类来创建
+     */
+    private static void annotationConfigApplicationContext(){
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Config.class);
+        for(String name:context.getBeanDefinitionNames()){
+            System.out.println(name);
+        }
+        System.out.println(context.getBean(Bean2.class).getBean1());
+    }
+}
+```
+
+
+
+```java
+@Configuration
+public class Config {
+    @Bean
+    public Bean1 bean1(){
+        return new Bean1();
+    }
+
+    @Bean
+    public Bean2 bean2(Bean1 bean1){
+        Bean2 bean2 = new Bean2();
+        bean2.setBean1(bean1);
+        return bean2;
+    }
+}
+```
+
+
+
+```java
+public class Bean1 {
+}
+```
+
+
+
+```java
+public class Bean2 {
+    private Bean1 bean1;
+
+    public Bean1 getBean1() {
+        return bean1;
+    }
+
+    public void setBean1(Bean1 bean1) {
+        this.bean1 = bean1;
+    }
+}
+```
+
+
+
+###### AnnotationConfigServletWebServerApplicationContext
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        annotationConfigServletWebServerApplicationContext();
+    }
+    
+    /**
+     * 较为经典的容器，基于 java 配置类来创建，用于 web 环境
+     */
+    private static void annotationConfigServletWebServerApplicationContext(){
+        AnnotationConfigServletWebServerApplicationContext context = new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+        for(String name:context.getBeanDefinitionNames()){
+            System.out.println(name);
+        }
+//      http://localhost:8080/hello
+    }
+}
+```
+
+
+
+```java
+@Configuration
+public class WebConfig {
+    @Bean
+    public ServletWebServerFactory servletWebServerFactory(){
+        return new TomcatServletWebServerFactory();
+    }
+
+    @Bean
+    public DispatcherServlet dispatcherServlet(){
+        return new DispatcherServlet();
+    }
+
+    /**
+     * 注册 servlet 到 tomcat 服务器
+     */
+    @Bean
+    public DispatcherServletRegistrationBean dispatcherServletRegistrationBean(DispatcherServlet dispatcherServlet){
+        return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+    }
+
+    /**
+     * 控制器
+     */
+    @Bean("/hello")
+    public Controller controller(){
+        return (httpServletRequest, httpServletResponse) -> {
+            httpServletResponse.getWriter().println("hello world");
+            return null;
+        };
+    }
+}
+```
+
+
+
+#### 事件解耦
+
+
+
+
+
+### Bean 的生命周期
+
+一个受 Spring 管理的 bean，生命周期主要阶段有
+
+1. 创建：根据 bean 的构造方法或者工厂方法来创建 bean 实例对象
+2. 依赖注入：根据 @Autowired，@Value 或其它一些手段，为 bean 的成员变量填充值、建立关系
+3. 初始化：回调各种 Aware 接口，调用对象的各种初始化方法
+4. 销毁：在容器关闭时，会销毁所有单例对象（即调用它们的销毁方法）
+   * prototype 对象也能够销毁，不过需要容器这边主动调用
+
+一些资料会提到，生命周期中还有一类 bean 后处理器：BeanPostProcessor，会在 bean 的初始化的前后，提供一些扩展逻辑。但这种说法是不完整的，见下面的演示
+
+
+
+```mermaid
+graph LR
+
+创建 --> 依赖注入
+依赖注入 --> 初始化
+初始化 --> 可用
+可用 --> 销毁
+```
+
+创建前后的增强
+
+* postProcessBeforeInstantiation
+  * 这里返回的对象若不为 null 会替换掉原本的 bean，并且仅会走 postProcessAfterInitialization 流程
+* postProcessAfterInstantiation
+  * 这里如果返回 false 会跳过依赖注入阶段
+
+依赖注入前的增强
+
+* postProcessProperties
+  * 如 @Autowired、@Value、@Resource 
+
+初始化前后的增强
+
+* postProcessBeforeInitialization
+  * 这里返回的对象会替换掉原本的 bean
+  * 如 @PostConstruct、@ConfigurationProperties
+* postProcessAfterInitialization 
+  * 这里返回的对象会替换掉原本的 bean
+  * 如代理增强
+
+销毁之前的增强
+
+* postProcessBeforeDestruction
+  * 如 @PreDestroy 
+
+
+
+1. Spring bean 生命周期各个阶段
+2. 模板设计模式, 指大流程已经固定好了, 通过接口回调（bean 后处理器）在一些关键点前后提供扩展
+
+
+
+#### MyBeanPostProcessor
+
+```java
+@Component
+public class MyBeanPostProcessor implements InstantiationAwareBeanPostProcessor, DestructionAwareBeanPostProcessor {
+
+    @Override
+    public void postProcessBeforeDestruction(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean"))
+            System.out.println("<<<<<< 销毁之前执行, 如 @PreDestroy");
+    }
+
+    @Override
+    public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean"))
+            System.out.println("<<<<<< 实例化之前执行, 这里返回的对象会替换掉原本的 bean");
+        return null;
+    }
+
+    @Override
+    public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean")) {
+            System.out.println("<<<<<< 实例化之后执行, 这里如果返回 false 会跳过依赖注入阶段");
+//            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean"))
+            System.out.println("<<<<<< 依赖注入阶段执行, 如 @Autowired、@Value、@Resource");
+        return pvs;
+    }
+
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean"))
+            System.out.println("<<<<<< 初始化之前执行, 这里返回的对象会替换掉原本的 bean, 如 @PostConstruct、@ConfigurationProperties");
+        return bean;
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean"))
+            System.out.println("<<<<<< 初始化之后执行, 这里返回的对象会替换掉原本的 bean, 如代理增强");
+        return bean;
+    }
+}
+```
+
+
+
+#### LifeCycleBean
+
+```java
+@Component
+public class LifeCycleBean {
+
+    public LifeCycleBean(){
+        System.out.println("构造");
+    }
+
+    /**
+     * String 类型使用 @Autowired 不会进行注入，使用 @Value 进行注入
+     */
+    @Autowired
+    public void autowired(@Value("${Path}") String value){
+        System.out.printf("依赖注入：%s\n", value);
+    }
+
+    @PostConstruct
+    public void init(){
+        System.out.println("初始化");
+    }
+
+    @PreDestroy
+    public void destroy(){
+        System.out.println("销毁");
+    }
+
+}
+
+```
+
+
+
+#### Application
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+//        context.addBeanFactoryPostProcessor();
+        context.close();
+    }
+
+
+}
+```
+
+
+
+### Bean 后处理器
+
+#### 作用
+
+为 Bean 生命周期各个阶段提供扩展
+
+
+
+#### 常见的后处理器
+
+1. @Autowired 等注解的解析属于 bean 生命周期阶段（依赖注入, 初始化）的扩展功能，这些扩展功能由 bean 后处理器来完成
+2. 每个后处理器各自增强什么功能
+   * AutowiredAnnotationBeanPostProcessor 解析 @Autowired 与 @Value
+   * CommonAnnotationBeanPostProcessor 解析 @Resource、@PostConstruct、@PreDestroy
+   * ConfigurationPropertiesBindingPostProcessor 解析 @ConfigurationProperties
+3. 另外 ContextAnnotationAutowireCandidateResolver 负责获取 @Value 的值，解析 @Qualifier、泛型、@Lazy 等
+
+##### Bean1
+
+```java
+public class Bean1 {
+    private static final Logger log = LoggerFactory.getLogger(Bean1.class);
+
+    private Bean2 bean2;
+
+    @Autowired
+    public void setBean2(Bean2 bean2) {
+        log.debug("@Autowired 生效: {}", bean2);
+        this.bean2 = bean2;
+    }
+
+    @Autowired
+    private Bean3 bean3;
+
+    @Resource
+    public void setBean3(Bean3 bean3) {
+        log.debug("@Resource 生效: {}", bean3);
+        this.bean3 = bean3;
+    }
+
+    private String home;
+
+    @Autowired
+    public void setHome(@Value("${JAVA_HOME}") String home) {
+        log.debug("@Value 生效: {}", home);
+        this.home = home;
+    }
+
+    @PostConstruct
+    public void init() {
+        log.debug("@PostConstruct 生效");
+    }
+
+    @PreDestroy
+    public void destroy() {
+        log.debug("@PreDestroy 生效");
+    }
+
+    @Override
+    public String toString() {
+        return "Bean1{" +
+               "bean2=" + bean2 +
+               ", bean3=" + bean3 +
+               ", home='" + home + '\'' +
+               '}';
+    }
+}
+
+```
+
+
+
+##### Bean2
+
+```java
+public class Bean2 {
+}
+
+```
+
+
+
+##### Bean3
+
+```java
+public class Bean3 {
+}
+
+```
+
+
+
+##### Bean4
+
+```java
+/*
+    java.home=
+    java.version=
+ */
+@ConfigurationProperties(prefix = "java")
+public class Bean4 {
+
+    private String home;
+
+    private String version;
+
+    public String getHome() {
+        return home;
+    }
+
+    public void setHome(String home) {
+        this.home = home;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    @Override
+    public String toString() {
+        return "Bean4{" +
+               "home='" + home + '\'' +
+               ", version='" + version + '\'' +
+               '}';
+    }
+}
+
+```
+
+
+
+##### Application
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        // GenericApplicationContext 是一个【干净】的容器，没有添加额外的处理器
+        GenericApplicationContext context = new GenericApplicationContext();
+
+        // 用原始方法注册三个 bean
+        context.registerBean("bean1", Bean1.class);
+        context.registerBean("bean2", Bean2.class);
+        context.registerBean("bean3", Bean3.class);
+        context.registerBean("bean4", Bean4.class);
+
+        context.getDefaultListableBeanFactory().setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());
+        context.registerBean(AutowiredAnnotationBeanPostProcessor.class); // @Autowired @Value
+
+        context.registerBean(CommonAnnotationBeanPostProcessor.class); // @Resource @PostConstruct @PreDestroy
+
+        ConfigurationPropertiesBindingPostProcessor.register(context.getDefaultListableBeanFactory()); // @ConfigurationProperties
+
+        // 初始化容器
+        context.refresh(); // 执行beanFactory后处理器, 添加bean后处理器, 初始化所有单例
+
+        System.out.println(context.getBean(Bean1.class));
+        System.out.println(context.getBean(Bean4.class));
+
+        // 销毁容器
+        context.close();
+
+        /*
+            学到了什么
+                a. @Autowired 等注解的解析属于 bean 生命周期阶段(依赖注入, 初始化)的扩展功能
+                b. 这些扩展功能由 bean 后处理器来完成
+         */
+    }
+
+}
+```
+
+
+
+#### @Autowired Bean 后处理器执行分析
+
+1. AutowiredAnnotationBeanPostProcessor.findAutowiringMetadata 用来获取某个 bean 上加了 @Value @Autowired 的成员变量，方法参数的信息，表示为 InjectionMetadata
+2. InjectionMetadata 可以完成依赖注入
+3. InjectionMetadata 内部根据成员变量，方法参数封装为 DependencyDescriptor 类型
+4. 有了 DependencyDescriptor，就可以利用 beanFactory.doResolveDependency 方法进行基于类型的查找
+
+
+
+```java
+// AutowiredAnnotationBeanPostProcessor 运行分析
+public class DigInAutowired {
+    public static void main(String[] args) throws Throwable {
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+        beanFactory.registerSingleton("bean2", new Bean2()); // 此方法注册 bean 工厂不会再进行创建过程,依赖注入,初始化
+        beanFactory.registerSingleton("bean3", new Bean3());
+        beanFactory.setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver()); // @Value
+        beanFactory.addEmbeddedValueResolver(new StandardEnvironment()::resolvePlaceholders); // ${} 的解析器
+
+        // 1. 查找哪些属性、方法加了 @Autowired, 这称之为 InjectionMetadata
+        AutowiredAnnotationBeanPostProcessor processor = new AutowiredAnnotationBeanPostProcessor();
+        processor.setBeanFactory(beanFactory);
+
+        Bean1 bean1 = new Bean1();
+//        System.out.println(bean1);
+//        processor.postProcessProperties(null, bean1, "bean1"); // 执行依赖注入 @Autowired @Value
+//        System.out.println(bean1);
+
+        Method findAutowiringMetadata = AutowiredAnnotationBeanPostProcessor.class.getDeclaredMethod("findAutowiringMetadata", String.class, Class.class, PropertyValues.class);
+        findAutowiringMetadata.setAccessible(true);
+        InjectionMetadata metadata = (InjectionMetadata) findAutowiringMetadata.invoke(processor, "bean1", Bean1.class, null);// 获取 Bean1 上加了 @Value @Autowired 的成员变量，方法参数信息
+        System.out.println(metadata);
+
+//         2. 调用 InjectionMetadata 来进行依赖注入, 注入时按类型查找值
+        metadata.inject(bean1, "bean1", null);
+        System.out.println(bean1);
+
+        // metadata.inject 执行流程，如何按类型查找值
+//        成员变量
+//        Field bean3 = Bean1.class.getDeclaredField("bean3");
+//        DependencyDescriptor dd1 = new DependencyDescriptor(bean3, false);
+//        Object o = beanFactory.doResolveDependency(dd1, null, null, null);
+//        System.out.println(o);
+//
+//        方法参数
+//        Method setBean2 = Bean1.class.getDeclaredMethod("setBean2", Bean2.class);
+//        DependencyDescriptor dd2 =
+//                new DependencyDescriptor(new MethodParameter(setBean2, 0), true);
+//        Object o1 = beanFactory.doResolveDependency(dd2, null, null, null);
+//        System.out.println(o1);
+//
+//        值注入
+//        Method setHome = Bean1.class.getDeclaredMethod("setHome", String.class);
+//        DependencyDescriptor dd3 = new DependencyDescriptor(new MethodParameter(setHome, 0), true);
+//        Object o2 = beanFactory.doResolveDependency(dd3, null, null, null);
+//        System.out.println(o2);
+
+    }
+}
+
+```
+
+
+
+### BeanFactory 后处理器
+
+#### 作用
+
+为 BeanFactory 提供扩展
+
+
+
+#### 常见的后处理器
+
+
+
+* ConfigurationClassPostProcessor 可以解析
+  * @ComponentScan
+  * @Bean
+  * @Import
+  * @ImportResource
+* MapperScannerConfigurer 可以解析
+  * Mapper 接口
+
+
+
+1. @ComponentScan, @Bean, @Mapper 等注解的解析属于核心容器（即 BeanFactory）的扩展功能
+2. 这些扩展功能由不同的 BeanFactory 后处理器来完成，其实主要就是补充了一些 bean 定义
+
+
+
+##### 示例
+
+###### Config
+
+```java
+@Configuration
+@ComponentScan(basePackages = "cn.example.uums.test.a05.component")
+public class Config {
+    @Bean
+    public Bean1 bean1() {
+        return new Bean1();
+    }
+
+    @Bean
+    public SqlSessionFactoryBean sqlSessionFactoryBean(DataSource dataSource) {
+        SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
+        sqlSessionFactoryBean.setDataSource(dataSource);
+        return sqlSessionFactoryBean;
+    }
+
+    @Bean(initMethod = "init")
+    public DruidDataSource dataSource() {
+        DruidDataSource dataSource = new DruidDataSource();
+        dataSource.setUrl("jdbc:mysql://192.168.31.100:3306/test");
+        dataSource.setUsername("root");
+        dataSource.setPassword("mysql");
+        return dataSource;
+    }
+}
+```
+
+###### Bean1
+
+```java
+public class Bean1 {
+
+    private static final Logger log = LoggerFactory.getLogger(Bean1.class);
+
+    public Bean1() {
+        log.debug("我被 Spring 管理啦");
+    }
+}
+
+```
+
+###### Bean2
+
+```java
+@Component
+public class Bean2 {
+
+    private static final Logger log = LoggerFactory.getLogger(Bean2.class);
+
+    public Bean2() {
+        log.debug("我被 Spring 管理啦");
+    }
+}
+```
+
+###### Bean3
+
+```java
+@Controller
+public class Bean3 {
+
+    private static final Logger log = LoggerFactory.getLogger(Bean3.class);
+
+    public Bean3() {
+        log.debug("我被 Spring 管理啦");
+    }
+}
+```
+
+###### Mapper1
+
+```java
+@Mapper
+public interface Mapper1 {
+}
+```
+
+###### Mapper2
+
+```java
+@Mapper
+public interface Mapper2 {
+}
+```
+
+###### Application
+
+```java
+public class Application {
+    public static void main(String[] args) throws IOException {
+
+        // GenericApplicationContext 是一个【干净】的容器
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+        context.registerBean(ConfigurationClassPostProcessor.class); // @ComponentScan @Bean @Import @ImportResource
+        context.registerBean(MapperScannerConfigurer.class, bd -> { // @MapperScanner
+            bd.getPropertyValues().add("basePackage", "cn.example.uums.test.a05.mapper");
+        });
+
+        // 初始化容器
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+
+        // 销毁容器
+        context.close();
+    }
+}
+
+```
+
+
+
+##### ConfigurationClassPostProcessor
+
+1. Spring 操作元数据的工具类 CachingMetadataReaderFactory
+2. 通过注解元数据（AnnotationMetadata）获取直接或间接标注的注解信息
+3. 通过类元数据（ClassMetadata）获取类名，AnnotationBeanNameGenerator 生成 bean 名
+4. 解析元数据是基于 ASM 技术
+
+
+
+###### 实现原理
+
+```java
+public class Application {
+    public static void main(String[] args) throws IOException {
+
+        // GenericApplicationContext 是一个【干净】的容器
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+        // 后处理器 ConfigurationClassPostProcessor 原理示例
+        CachingMetadataReaderFactory metadataReaderFactory = new CachingMetadataReaderFactory();
+        AnnotationBeanNameGenerator beanNameGenerator = new AnnotationBeanNameGenerator();
+        if(Config.class.isAnnotationPresent(ComponentScan.class)){
+            ComponentScan componentScan = Config.class.getAnnotation(ComponentScan.class);
+            for (String basePackage : componentScan.basePackages()) {
+                System.out.println(basePackage);
+                // cn.example.uums.test.a05.component classpath*:cn/example/uums/test/a05/component/**/*.class
+                String path = "classpath*:".concat(basePackage.replace('.','/')).concat("/**/*.class");
+                System.out.println(path);
+                Resource[] resources = context.getResources(path);
+                for(Resource resource:resources){
+//                    System.out.println(resource);
+                    MetadataReader reader = metadataReaderFactory.getMetadataReader(resource);
+                    System.out.println("类名:"+reader.getClassMetadata().getClassName());
+                    System.out.println("Component:"+reader.getAnnotationMetadata().hasAnnotation(Component.class.getName()));
+                    System.out.println("Component 派生:"+reader.getAnnotationMetadata().hasMetaAnnotation(Component.class.getName()));
+                    if(reader.getAnnotationMetadata().hasAnnotation(Component.class.getName())
+                    || reader.getAnnotationMetadata().hasMetaAnnotation(Component.class.getName())){
+                        AbstractBeanDefinition abd = BeanDefinitionBuilder.genericBeanDefinition(reader.getClassMetadata().getClassName()).getBeanDefinition();
+                        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+                        String beanName = beanNameGenerator.generateBeanName(abd, beanFactory);
+                        beanFactory.registerBeanDefinition(beanName, abd);
+                    }
+                }
+            }
+        }
+        // 初始化容器
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+        // 销毁容器
+        context.close();
+    }
+}
+```
+
+
+
+###### 自定义后处理器
+
+```java
+public class ComponentScanPostProcessor implements BeanDefinitionRegistryPostProcessor {
+
+    // context.refresh(); 调用时会回调该方法
+    @Override
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry beanFactory) throws BeansException {
+        // 后处理器 ConfigurationClassPostProcessor 原理示例
+        CachingMetadataReaderFactory metadataReaderFactory = new CachingMetadataReaderFactory();
+        AnnotationBeanNameGenerator beanNameGenerator = new AnnotationBeanNameGenerator();
+        if(Config.class.isAnnotationPresent(ComponentScan.class)){
+            ComponentScan componentScan = Config.class.getAnnotation(ComponentScan.class);
+            for (String basePackage : componentScan.basePackages()) {
+                System.out.println(basePackage);
+                // cn.example.uums.test.a05.component classpath*:cn/example/uums/test/a05/component/**/*.class
+                String path = "classpath*:".concat(basePackage.replace('.','/')).concat("/**/*.class");
+                System.out.println(path);
+                try{
+                    Resource[] resources = new PathMatchingResourcePatternResolver().getResources(path);
+                    for(Resource resource:resources){
+//                    System.out.println(resource);
+                        MetadataReader reader = metadataReaderFactory.getMetadataReader(resource);
+                        System.out.println("类名:"+reader.getClassMetadata().getClassName());
+                        System.out.println("Component:"+reader.getAnnotationMetadata().hasAnnotation(Component.class.getName()));
+                        System.out.println("Component 派生:"+reader.getAnnotationMetadata().hasMetaAnnotation(Component.class.getName()));
+                        if(reader.getAnnotationMetadata().hasAnnotation(Component.class.getName())
+                                || reader.getAnnotationMetadata().hasMetaAnnotation(Component.class.getName())){
+                            AbstractBeanDefinition abd = BeanDefinitionBuilder.genericBeanDefinition(reader.getClassMetadata().getClassName()).getBeanDefinition();
+                            String beanName = beanNameGenerator.generateBeanName(abd, beanFactory);
+                            beanFactory.registerBeanDefinition(beanName, abd);
+
+                        }
+                    }
+                } catch (IOException e){
+                    e.printStackTrace();
+                }
+
+            }
+        }
+
+    }
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory configurableListableBeanFactory) throws BeansException {
+
+    }
+}
+
+```
+
+```java
+public class Application {
+    public static void main(String[] args) throws IOException {
+
+        // GenericApplicationContext 是一个【干净】的容器
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+
+        context.registerBean(ComponentScanPostProcessor.class); // 解析 @ComponentScan
+
+        // 初始化容器
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+
+        // 销毁容器
+        context.close();
+
+    }
+}
+```
+
+
+
+#### @Bean 实现
+
+##### 实现原理
+
+```java
+public class Application {
+
+    public static void main(String[] args) throws IOException {
+
+        // GenericApplicationContext 是一个【干净】的容器
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+        // 后处理器 ConfigurationClassPostProcessor 原理示例
+        CachingMetadataReaderFactory metadataReaderFactory = new CachingMetadataReaderFactory();
+        AnnotationBeanNameGenerator beanNameGenerator = new AnnotationBeanNameGenerator();
+        MetadataReader reader = metadataReaderFactory.getMetadataReader(new ClassPathResource("cn/example/uums/test/a05/Config.class"));
+        Set<MethodMetadata> methodMetadataSet = reader.getAnnotationMetadata().getAnnotatedMethods(Bean.class.getName());
+        for(MethodMetadata methodMetadata:methodMetadataSet){
+            System.out.println(methodMetadata.getMethodName());
+            String initMethod = methodMetadata.getAnnotationAttributes(Bean.class.getName()).get("initMethod").toString();
+
+            BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition()
+                    .setFactoryMethodOnBean(methodMetadata.getMethodName(), "config")
+                    // 配置自动装配模式，需要参数的方法能自动装配,构造方法/工厂方法选择 AUTOWIRE_CONSTRUCTOR
+                    .setAutowireMode(AbstractBeanDefinition.AUTOWIRE_CONSTRUCTOR);
+            if(null != initMethod){
+                builder.setInitMethodName(initMethod);
+            }
+
+            AbstractBeanDefinition abd = builder.getBeanDefinition();
+            DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+            String beanName = methodMetadata.getMethodName();
+            beanFactory.registerBeanDefinition(beanName, abd);
+        }
+
+        // 初始化容器
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+
+        // 销毁容器
+        context.close();
+
+    }
+}
+```
+
+
+
+##### 自定义后处理器
+
+```java
+public class BeanPostProcessor implements BeanDefinitionRegistryPostProcessor {
+    @Override
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry beanFactory) throws BeansException {
+        CachingMetadataReaderFactory metadataReaderFactory = new CachingMetadataReaderFactory();
+        MetadataReader reader = null;
+        try {
+            reader = metadataReaderFactory.getMetadataReader(new ClassPathResource("cn/example/uums/test/a05/Config.class"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Set<MethodMetadata> methodMetadataSet = reader.getAnnotationMetadata().getAnnotatedMethods(Bean.class.getName());
+        for(MethodMetadata methodMetadata:methodMetadataSet){
+            System.out.println(methodMetadata.getMethodName());
+            String initMethod = methodMetadata.getAnnotationAttributes(Bean.class.getName()).get("initMethod").toString();
+
+            BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition()
+                    .setFactoryMethodOnBean(methodMetadata.getMethodName(), "config")
+                    // 配置自动装配模式，需要参数的方法能自动装配,构造方法/工厂方法选择 AUTOWIRE_CONSTRUCTOR
+                    .setAutowireMode(AbstractBeanDefinition.AUTOWIRE_CONSTRUCTOR);
+            if(null != initMethod){
+                builder.setInitMethodName(initMethod);
+            }
+
+            AbstractBeanDefinition abd = builder.getBeanDefinition();
+            String beanName = methodMetadata.getMethodName();
+            beanFactory.registerBeanDefinition(beanName, abd);
+        }
+    }
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory configurableListableBeanFactory) throws BeansException {
+
+    }
+}
+```
+
+```java
+public class Application {
+    public static void main(String[] args) throws IOException {
+
+        // GenericApplicationContext 是一个【干净】的容器
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+        // 后处理器 ConfigurationClassPostProcessor 原理示例
+
+        context.registerBean(BeanPostProcessor.class); // 解析 @Bean
+
+        // 初始化容器
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+
+        // 销毁容器
+        context.close();
+
+    }
+}
+```
+
+
+
+#### Mapper 实现
+
+
+
+##### 自定义后处理器
+
+1. Mapper 接口被 Spring 管理的本质：实际是被作为 MapperFactoryBean 注册到容器中
+2. Spring 的诡异做法，根据接口生成的 BeanDefinition 仅为根据接口名生成 bean 名
+
+```java
+public class MapperPostProcessor implements BeanDefinitionRegistryPostProcessor {
+
+    @Override
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry beanFactory) throws BeansException {
+        try {
+            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+            Resource[] resources = resolver.getResources("classpath:cn/example/uums/test/a05/mapper/**/*.class");
+            AnnotationBeanNameGenerator generator = new AnnotationBeanNameGenerator();
+            CachingMetadataReaderFactory factory = new CachingMetadataReaderFactory();
+            for (Resource resource : resources) {
+                MetadataReader reader = factory.getMetadataReader(resource);
+                ClassMetadata classMetadata = reader.getClassMetadata();
+                if (classMetadata.isInterface()) {
+                    AbstractBeanDefinition bd = BeanDefinitionBuilder.genericBeanDefinition(MapperFactoryBean.class)
+                            .addConstructorArgValue(classMetadata.getClassName())
+                            .setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE)
+                            .getBeanDefinition();
+                    String name = generator.generateBeanName(
+                            BeanDefinitionBuilder.genericBeanDefinition(classMetadata.getClassName()).getBeanDefinition(),
+                            beanFactory);
+                    beanFactory.registerBeanDefinition(name, bd);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+
+    }
+}
+```
+
+
+
+```java
+public class A05 {
+    private static final Logger log = LoggerFactory.getLogger(A05.class);
+
+    public static void main(String[] args) throws IOException {
+
+        // GenericApplicationContext 是一个【干净】的容器
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+        // 后处理器 MapperScannerConfigurer 原理示例
+
+        context.registerBean(BeanPostProcessor.class); // 解析 @Bean
+        context.registerBean(MapperPostProcessor.class); // 解析 Mapper 接口
+
+        // 初始化容器
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+
+        // 销毁容器
+        context.close();
+
+    }
+}
+
+```
+
+
+
+### Aware 接口
+
+#### Aware 接口及 InitializingBean 接口
+
+1. Aware 接口提供了一种【内置】 的注入手段，例如
+   * BeanNameAware 注入 bean 的名字
+   * BeanFactoryAware 注入 BeanFactory 容器
+   * ApplicationContextAware 注入 ApplicationContext 容器
+   * EmbeddedValueResolverAware 注入 ${} 解析器
+2. InitializingBean 接口提供了一种【内置】的初始化手段
+3. 对比
+   * 内置的注入和初始化不受扩展功能的影响，总会被执行
+   * 而扩展功能受某些情况影响可能会失效
+   * 因此 Spring 框架内部的类常用内置注入和初始化
+
+
+
+MyBean
+
+```java
+public class MyBean implements BeanNameAware, ApplicationContextAware, InitializingBean {
+
+    private static final Logger log = LoggerFactory.getLogger(MyBean.class);
+
+    @Override
+    public void setBeanName(String name) {
+        log.debug("当前bean " + this + " 名字叫:" + name);
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        log.debug("当前bean " + this + " 容器是:" + applicationContext);
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        log.debug("当前bean " + this + " 初始化");
+    }
+
+    @Autowired
+    public void aaa(ApplicationContext applicationContext) {
+        log.debug("当前bean " + this + " 使用@Autowired 容器是:" + applicationContext);
+    }
+
+    @PostConstruct
+    public void init() {
+        log.debug("当前bean " + this + " 使用@PostConstruct 初始化");
+    }
+}
+```
+
+
+
+Application
+
+```java
+/*
+    Aware 接口及 InitializingBean 接口
+ */
+public class Application {
+    public static void main(String[] args) {
+        /*
+            1. Aware 接口用于注入一些与容器相关信息, 例如
+                a. BeanNameAware 注入 bean 的名字
+                b. BeanFactoryAware 注入 BeanFactory 容器
+                c. ApplicationContextAware 注入 ApplicationContext 容器
+                d. EmbeddedValueResolverAware ${}
+         */
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("myBean", MyBean.class);
+        context.registerBean(AutowiredAnnotationBeanPostProcessor.class);
+
+        /*
+            2. 有同学说: b、c、d 的功能用 @Autowired 就能实现啊, 为啥还要用 Aware 接口呢
+            简单地说:
+                a. @Autowired 的解析需要用到 bean 后处理器, 属于扩展功能
+                b. 而 Aware 接口属于内置功能, 不加任何扩展, Spring 就能识别
+            某些情况下, 扩展功能会失效, 而内置功能不会失效
+         */
+
+        context.refresh(); // 1. beanFactory 后处理器,  2. 添加 bean 后处理器, 3. 初始化单例
+        context.close();
+
+        /*
+            a. Aware 接口提供了一种【内置】 的注入手段, 可以注入 BeanFactory, ApplicationContext
+            b. InitializingBean 接口提供了一种【内置】的初始化手段
+            c. 内置的注入和初始化不受扩展功能的影响, 总会被执行, 因此 Spring 框架内部的类常用它们
+         */
+    }
+}
+```
+
+
+
+#### 配置类 @Autowired 失效分析
+
+Java 配置类不包含 BeanFactoryPostProcessor 的情况
+
+```mermaid
+sequenceDiagram 
+participant ac as ApplicationContext
+participant bfpp as BeanFactoryPostProcessor
+participant bpp as BeanPostProcessor
+participant config as Java配置类
+ac ->> bfpp : 1. 执行 BeanFactoryPostProcessor
+ac ->> bpp : 2. 注册 BeanPostProcessor
+ac ->> +config : 3. 创建和初始化
+bpp ->> config : 3.1 依赖注入扩展(如 @Value 和 @Autowired)
+bpp ->> config : 3.2 初始化扩展(如 @PostConstruct)
+ac ->> config : 3.3 执行 Aware 及 InitializingBean
+config -->> -ac : 3.4 创建成功
+```
+
+Java 配置类包含 BeanFactoryPostProcessor 的情况，因此要创建其中的 BeanFactoryPostProcessor 必须提前创建 Java 配置类，而此时的 BeanPostProcessor 还未准备好，导致 @Autowired 等注解失效
+
+```mermaid
+sequenceDiagram 
+participant ac as ApplicationContext
+participant bfpp as BeanFactoryPostProcessor
+participant bpp as BeanPostProcessor
+participant config as Java配置类
+ac ->> +config : 3. 创建和初始化
+ac ->> config : 3.1 执行 Aware 及 InitializingBean
+config -->> -ac : 3.2 创建成功
+
+ac ->> bfpp : 1. 执行 BeanFactoryPostProcessor
+ac ->> bpp : 2. 注册 BeanPostProcessor
+
+
+
+```
+
+MyConfig1
+
+```java
+@Configuration
+public class MyConfig1 {
+
+    private static final Logger log = LoggerFactory.getLogger(MyConfig1.class);
+
+    @Autowired
+    public void setApplicationContext(ApplicationContext applicationContext) {
+        log.debug("注入 ApplicationContext");
+    }
+
+    @PostConstruct
+    public void init() {
+        log.debug("初始化");
+    }
+
+    @Bean //  beanFactory 后处理器
+    public BeanFactoryPostProcessor processor1() {
+        return beanFactory -> {
+            log.debug("执行 processor1");
+        };
+    }
+
+}
+```
+
+
+
+Application
+
+```java
+/*
+    Aware 接口及 InitializingBean 接口
+ */
+public class Application {
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("myConfig1", MyConfig1.class);
+        context.registerBean(AutowiredAnnotationBeanPostProcessor.class);
+        context.registerBean(CommonAnnotationBeanPostProcessor.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+
+        /*
+            你会发现用 Aware 注入 ApplicationContext 成功, 而 @Autowired 注入 ApplicationContext 失败
+         */
+
+        context.refresh(); // 1. beanFactory 后处理器,  2. 添加 bean 后处理器, 3. 初始化单例
+        context.close();
+    }
+}
+```
+
+
+
+> ***注意***
+>
+> 解决方法：
+>
+> * 用内置依赖注入和初始化取代扩展依赖注入和初始化
+> * 用静态工厂方法代替实例工厂方法，避免工厂对象提前被创建
+
+
+
+### 初始化与销毁
+
+Bean1
+
+```java
+public class Bean1 implements InitializingBean {
+    private static final Logger log = LoggerFactory.getLogger(Bean1.class);
+
+    @PostConstruct
+    public void init1() {
+        log.debug("初始化1");
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        log.debug("初始化2");
+    }
+
+    public void init3() {
+        log.debug("初始化3");
+    }
+}
+
+```
+
+Bean2
+
+```java
+public class Bean2 implements DisposableBean {
+    private static final Logger log = LoggerFactory.getLogger(Bean2.class);
+
+    @PreDestroy
+    public void destroy1() {
+        log.debug("销毁1");
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        log.debug("销毁2");
+    }
+
+    public void destroy3() {
+        log.debug("销毁3");
+    }
+}
+```
+
+Application
+
+```java
+/*
+    初始化和销毁的执行顺序
+ */
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+        context.close();
+        /*
+            学到了什么
+                a. Spring 提供了多种初始化和销毁手段
+                b. Spring 的面试有多么地卷
+         */
+    }
+
+    @Bean(initMethod = "init3")
+    public Bean1 bean1() {
+        return new Bean1();
+    }
+
+    @Bean(destroyMethod = "destroy3")
+    public Bean2 bean2() {
+        return new Bean2();
+    }
+}
+```
+
+
+
+#### 多种初始化手段
+
+Spring 提供了多种初始化手段，除了 @PostConstruct，@Bean(initMethod) 之外，还可以实现 InitializingBean 接口来进行初始化，如果同一个 bean 用了以上手段声明了 3 个初始化方法，那么它们的执行顺序是
+
+1. @PostConstruct 标注的初始化方法
+2. InitializingBean 接口的初始化方法
+3. @Bean(initMethod) 指定的初始化方法
+
+#### 执行顺序
+
+
+
+与初始化类似，Spring 也提供了多种销毁手段，执行顺序为
+
+1. @PreDestroy 标注的销毁方法
+2. DisposableBean 接口的销毁方法
+3. @Bean(destroyMethod) 指定的销毁方法
+
+
+
+### Scope 
+
+#### Scope 类型
+
+在当前版本(5.3.10)的 Spring 和 Spring Boot 程序中，支持五种 Scope
+
+* singleton，容器启动时创建（未设置延迟），容器关闭时销毁
+* prototype，每次使用时创建，不会自动销毁，需要调用 DefaultListableBeanFactory.destroyBean(bean) 销毁
+* request，每次请求用到此 bean 时创建，请求结束时销毁
+* session，每个会话用到此 bean 时创建，会话结束时销毁
+* application，web 容器用到此 bean 时创建，容器停止时销毁
+
+有些文章提到有 globalSession 这一 Scope，也是陈旧的说法，目前 Spring 中已废弃
+
+
+
+但要注意，如果在 singleton 注入其它 scope 都会有问题，解决方法有
+
+* @Lazy
+* @Scope(proxyMode = ScopedProxyMode.TARGET_CLASS)
+* ObjectFactory
+* ApplicationContext.getBean
+
+
+
+BeanForSession
+
+```java
+@Scope("session")
+@Component
+public class BeanForSession {
+    private static final Logger log = LoggerFactory.getLogger(BeanForSession.class);
+
+    @PreDestroy
+    public void destroy() {
+        log.debug("destroy");
+    }
+}
+```
+
+BeanForRequest
+
+```java
+@Scope("request")
+@Component
+public class BeanForRequest {
+    private static final Logger log = LoggerFactory.getLogger(BeanForRequest.class);
+
+    @PreDestroy
+    public void destroy() {
+        log.debug("destroy");
+    }
+
+}
+```
+
+BeanForApplication
+
+```java
+@Scope("application")
+@Component
+public class BeanForApplication {
+    private static final Logger log = LoggerFactory.getLogger(BeanForApplication.class);
+
+    @PreDestroy
+    public void destroy() {
+        log.debug("destroy");
+    }
+}
+```
+
+MyController
+
+```java
+@RestController
+public class MyController {
+
+    @Lazy
+    @Autowired
+    private BeanForRequest beanForRequest;
+
+    @Lazy
+    @Autowired
+    private BeanForSession beanForSession;
+
+    @Lazy
+    @Autowired
+    private BeanForApplication beanForApplication;
+
+    @GetMapping(value = "/test", produces = "text/html")
+    public String test(HttpServletRequest request, HttpSession session) {
+        ServletContext sc = request.getServletContext();
+        String sb = "<ul>" +
+                    "<li>" + "request scope:" + beanForRequest + "</li>" +
+                    "<li>" + "session scope:" + beanForSession + "</li>" +
+                    "<li>" + "application scope:" + beanForApplication + "</li>" +
+                    "</ul>";
+        return sb;
+    }
+
+}
+```
+
+Application
+
+```java
+/*
+    singleton, prototype, request, session, application
+
+    jdk >= 9 如果反射调用 jdk 中方法
+    jdk <= 8 不会有问题
+
+    演示 request, session, application 作用域
+    打开不同的浏览器, 刷新 http://localhost:8080/test 即可查看效果
+    如果 jdk > 8, 运行时请添加 --add-opens java.base/java.lang=ALL-UNNAMED
+ */
+@SpringBootApplication
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(A08.class, args);
+        /*
+            学到了什么
+                a. 有几种 scope
+                b. 在 singleton 中使用其它几种 scope 的方法
+                c. 其它 scope 的销毁
+                    1. 可以将通过 server.servlet.session.timeout=10s 观察 session bean 的销毁
+                    2. ServletContextScope 销毁机制疑似实现有误
+         */
+    }
+}
+```
+
+* 打开不同的浏览器, 刷新 http://localhost:8080/test 即可查看效果
+* 如果 jdk > 8, 运行时请添加 --add-opens java.base/java.lang=ALL-UNNAMED
+
+
+
+1. 有几种 scope
+2. 在 singleton 中使用其它几种 scope 的方法
+3. 其它 scope 的销毁时机
+   * 可以将通过 server.servlet.session.timeout=30s 观察 session bean 的销毁
+   * ServletContextScope 销毁机制疑似实现有误
+
+
+
+#### singleton 注入其它 scope 失效
+
+以单例注入多例为例
+
+有一个单例对象 E
+
+```java
+@Component
+public class E {
+    private static final Logger log = LoggerFactory.getLogger(E.class);
+
+    private F f;
+
+    public E() {
+        log.info("E()");
+    }
+
+    @Autowired
+    public void setF(F f) {
+        this.f = f;
+        log.info("setF(F f) {}", f.getClass());
+    }
+
+    public F getF() {
+        return f;
+    }
+}
+```
+
+要注入的对象 F 期望是多例
+
+```java
+@Component
+@Scope("prototype")
+public class F {
+    private static final Logger log = LoggerFactory.getLogger(F.class);
+
+    public F() {
+        log.info("F()");
+    }
+}
+```
+
+测试
+
+```java
+E e = context.getBean(E.class);
+F f1 = e.getF();
+F f2 = e.getF();
+System.out.println(f1);
+System.out.println(f2);
+```
+
+输出
+
+```
+com.itheima.demo.cycle.F@6622fc65
+com.itheima.demo.cycle.F@6622fc65
+```
+
+发现它们是同一个对象，而不是期望的多例对象
+
+
+
+对于单例对象来讲，依赖注入仅发生了一次，后续再没有用到多例的 F，因此 E 用的始终是第一次依赖注入的 F
+
+```mermaid
+graph LR
+
+e1(e 创建)
+e2(e set 注入 f)
+
+f1(f 创建)
+
+e1-->f1-->e2
+
+```
+
+解决
+
+* 仍然使用 @Lazy 生成代理
+* 代理对象虽然还是同一个，但当每次**使用代理对象的任意方法**时，由代理创建新的 f 对象
+
+```mermaid
+graph LR
+
+e1(e 创建)
+e2(e set 注入 f代理)
+
+f1(f 创建)
+f2(f 创建)
+f3(f 创建)
+
+e1-->e2
+e2--使用f方法-->f1
+e2--使用f方法-->f2
+e2--使用f方法-->f3
+
+```
+
+```java
+@Component
+public class E {
+
+    @Autowired
+    @Lazy
+    public void setF(F f) {
+        this.f = f;
+        log.info("setF(F f) {}", f.getClass());
+    }
+
+    // ...
+}
+```
+
+> ***注意***
+>
+> * @Lazy 加在也可以加在成员变量上，但加在 set 方法上的目的是可以观察输出，加在成员变量上就不行了
+> * @Autowired 加在 set 方法的目的类似
+
+输出
+
+```
+E: setF(F f) class com.itheima.demo.cycle.F$$EnhancerBySpringCGLIB$$8b54f2bc
+F: F()
+com.itheima.demo.cycle.F@3a6f2de3
+F: F()
+com.itheima.demo.cycle.F@56303b57
+```
+
+从输出日志可以看到调用 setF 方法时，f 对象的类型是代理类型
+
+
+
+#### 解决失效的4种方法
+
+
+
+* 如果 jdk > 8, 运行时请添加 --add-opens java.base/java.lang=ALL-UNNAMED
+
+1. 单例注入其它 scope 的四种解决方法
+   * @Lazy
+   * @Scope(value = "prototype", proxyMode = ScopedProxyMode.TARGET_CLASS)
+   * ObjectFactory
+   * ApplicationContext
+2. 解决方法虽然不同，但理念上殊途同归: 都是推迟其它 scope bean 的获取
+
+F1
+
+```java
+@Scope("prototype")
+@Component
+public class F1 {
+}
+```
+
+F2
+
+```java
+@Scope(value = "prototype", proxyMode = ScopedProxyMode.TARGET_CLASS)
+@Component
+public class F2 {
+}
+```
+
+F3
+
+```java
+@Scope("prototype")
+@Component
+public class F3 {
+}
+```
+
+F4
+
+```java
+@Scope("prototype")
+@Component
+public class F4 {
+}
+```
+
+E
+
+```java
+@Component
+public class E {
+
+    @Lazy
+    @Autowired
+    private F1 f1;
+
+    @Autowired
+    private F2 f2;
+
+    @Autowired
+    private ObjectFactory<F3> f3;
+
+    @Autowired
+    private ApplicationContext context;
+
+    public F1 getF1() {
+        return f1;
+    }
+
+    public F2 getF2() {
+        return f2;
+    }
+
+    public F3 getF3() {
+        return f3.getObject();
+    }
+
+    public F4 getF4() {
+        return context.getBean(F4.class);
+    }
+}
+```
+
+Application
+
+```java
+@ComponentScan("cn.example.uums.test.a08.sub")
+public class Application {
+
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(A08_1.class);
+
+        E e = context.getBean(E.class);
+        log.debug("{}", e.getF1().getClass());
+        log.debug("{}", e.getF1());
+        log.debug("{}", e.getF1());
+        log.debug("{}", e.getF1());
+
+        log.debug("{}", e.getF2().getClass());
+        log.debug("{}", e.getF2());
+        log.debug("{}", e.getF2());
+        log.debug("{}", e.getF2());
+
+        log.debug("{}", e.getF3());
+        log.debug("{}", e.getF3());
+
+        log.debug("{}", e.getF4());
+        log.debug("{}", e.getF4());
+
+        context.close();
+        /*
+            学到了什么
+                a. 单例注入其它 scope 的四种解决方法
+                b. 解决方法虽然不同, 但理念上殊途同归: 都是推迟其它 scope bean 的获取
+         */
+    }
+}
+```
+
+
+
+## AOP
+
+AOP 底层实现方式之一是代理，由代理结合通知和目标，提供增强功能
+
+除此以外，aspectj 提供了两种另外的 AOP 底层实现：
+
+* 第一种是通过 ajc 编译器在**编译** class 类文件时，就把通知的增强功能，织入到目标类的字节码中
+
+* 第二种是通过 agent 在**加载**目标类时，修改目标类的字节码，织入增强功能
+* 作为对比，之前学习的代理是**运行**时生成新的字节码
+
+简单比较的话：
+
+* aspectj 在编译和加载时，修改目标字节码，性能较高
+* aspectj 因为不用代理，能突破一些技术上的限制，例如对构造、对静态方法、对 final 也能增强
+* 但 aspectj 侵入性较强，且需要学习新的 aspectj 特有语法，因此没有广泛流行
+
+
+
+### AOP - ajc 编译器
+
+1. 编译器也能修改 class 实现增强
+2. 编译器增强能突破代理仅能通过方法重写增强的限制：可以对构造方法、静态方法等实现增强
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cn.example.uums</groupId>
+    <artifactId>uums</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+
+    <!-- 引入Spring Boot依赖 -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.3.12.RELEASE</version>
+    </parent>
+    <dependencies>
+        <!-- 引入Web场景依赖启动器 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjrt</artifactId>
+        </dependency>
+
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>aspectj-maven-plugin</artifactId>
+                <version>1.14.0</version>
+                <configuration>
+                    <complianceLevel>1.8</complianceLevel>
+                    <source>8</source>
+                    <target>8</target>
+                    <showWeaveInfo>true</showWeaveInfo>
+                    <verbose>true</verbose>
+                    <Xlint>ignore</Xlint>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <!-- use this goal to weave all your main classes -->
+                            <goal>compile</goal>
+                            <!-- use this goal to weave all your test classes -->
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+```java
+@Service
+public class MyService {
+
+    public static void foo() {
+        System.out.println("foo()");
+    }
+}
+```
+
+```java
+@Aspect // 注意此切面并未被 Spring 管理
+public class MyAspect {
+
+    @Before("execution(* cn.example.uums.test.aop_01.service.MyService.foo())")
+    public void before() {
+        System.out.println("before()");
+    }
+}
+```
+
+```java
+/*
+    注意几点
+    1. 版本选择了 java 8, 因为目前的 aspectj-maven-plugin 1.14.0 最高只支持到 java 16
+    2. 一定要用 maven 的 compile 来编译, idea 不会调用 ajc 编译器
+ */
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+//        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+//        MyService service = context.getBean(MyService.class);
+//
+//        System.out.printf("service class: %s \n", service.getClass());
+//        service.foo();
+//
+//        context.close();
+
+        new MyService().foo();
+
+        /*
+            学到了什么
+            1. aop 的原理并非代理一种, 编译器也能玩出花样
+         */
+    }
+}
+```
+
+
+
+> ***注意***
+>
+> * 版本选择了 java 8, 因为目前的 aspectj-maven-plugin 1.14.0 最高只支持到 java 16
+> * 一定要用 maven 的 compile 来编译, idea 不会调用 ajc 编译器
+
+
+
+
+
+### AOP - agent 类加载
+
+1. 类加载时可以通过 agent 修改 class 实现增强
+
+```xml
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjweaver</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjrt</artifactId>
+</dependency>
+```
+
+```java
+@Service
+public class MyService {
+
+    final public void foo() {
+        System.out.println("foo()");
+        this.bar();
+    }
+
+    public void bar() {
+        System.out.println("bar()");
+    }
+}
+```
+
+```java
+@Aspect // 注意此切面并未被 Spring 管理
+public class MyAspect {
+
+    @Before("execution(* cn.example.uums.test.aop_02.service.MyService.*())")
+    public void before() {
+        System.out.println("before()");
+    }
+}
+```
+
+```java
+/*
+    注意几点
+    1. 版本选择了 java 8, 因为目前的 aspectj-maven-plugin 1.14.0 最高只支持到 java 16
+    2. 运行时需要在 VM options 里加入 -javaagent:C:/Users/manyh/.m2/repository/org/aspectj/aspectjweaver/1.9.7/aspectjweaver-1.9.7.jar
+        把其中 C:/Users/manyh/.m2/repository 改为你自己 maven 仓库起始地址
+ */
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+        MyService service = context.getBean(MyService.class);
+
+        // MyService 并非代理, 但 foo 方法也被增强了, 做增强的 java agent, 在加载类时, 修改了 class 字节码
+        System.out.printf("service class: %s \n", service.getClass());
+        service.foo();
+
+//        context.close();
+
+        /*
+            学到了什么
+            1. aop 的原理并非代理一种, agent 也能, 只要字节码变了, 行为就变了
+         */
+    }
+}
+```
+
+通过 arthas 反编译 MyAspect 类可以看到，在类加载阶段修改字节码达到增强的效果
+
+
+
+### AOP - proxy
+
+#### JDK 动态代理
+
+##### 示例
+
+```java
+public class JdkProxyDemo {
+
+    interface Foo {
+        void foo();
+    }
+
+    static final class Target implements Foo {
+        public void foo() {
+            System.out.println("target foo");
+        }
+    }
+
+    // JDK 只能针对接口代理
+    // cglib
+    public static void main(String[] param) throws IOException {
+        // 目标对象
+        Target target = new Target();
+
+        ClassLoader loader = JdkProxyDemo.class.getClassLoader(); // 用来加载在运行期间动态生成的字节码
+        Foo proxy = (Foo) Proxy.newProxyInstance(loader, new Class[]{Foo.class}, new InvocationHandler() {
+            @Override
+            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                System.out.println("before...");
+                // 目标.方法(参数)
+                // 方法.invoke(目标, 参数);
+                Object result = method.invoke(target, args);
+                System.out.println("after....");
+                return result; // 让代理也返回目标方法执行的结果
+            }
+        });
+
+        System.out.println(proxy.getClass());
+
+        proxy.foo();
+
+        System.in.read();
+    }
+}
+```
+
+运行结果
+
+```
+proxy before...
+target foo
+proxy after...
+```
+
+* JDK 动态代理要求目标**必须**实现接口，生成的代理类实现相同接口，因此代理与目标之间是平级兄弟关系
+
+
+
+##### 原理
+
+代理无非就是利用了多态、反射的知识
+
+1. 方法重写可以增强逻辑，只不过这【增强逻辑】千变万化，不能写死在代理内部
+2. 通过接口回调将【增强逻辑】置于代理类之外
+3. 配合接口方法反射（是多态调用），就可以再联动调用目标方法
+4. 会用 arthas 的 jad 工具反编译代理类
+5. 限制：代理增强是借助多态来实现，因此成员变量、静态方法、final 方法均不能通过代理实现
+
+```java
+public interface Foo {
+    void foo();
+    int bar();
+}
+```
+
+```java
+public class Target implements Foo {
+    public void foo() {
+        System.out.println("target foo");
+    }
+
+    @Override
+    public int bar() {
+        System.out.println("target bar");
+        return 100;
+    }
+}
+```
+
+```java
+public class $Proxy0 extends Proxy implements Foo {
+
+    public $Proxy0(InvocationHandler h) {
+        super(h);
+    }
+    @Override
+    public void foo() {
+        try {
+            h.invoke(this, foo, new Object[0]);
+        } catch (RuntimeException | Error e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new UndeclaredThrowableException(e);
+        }
+    }
+
+    @Override
+    public int bar() {
+        try {
+            Object result = h.invoke(this, bar, new Object[0]);
+            return (int) result;
+        } catch (RuntimeException | Error e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new UndeclaredThrowableException(e);
+        }
+    }
+
+    static Method foo;
+    static Method bar;
+    static {
+        try {
+            foo = Foo.class.getMethod("foo");
+            bar = Foo.class.getMethod("bar");
+        } catch (NoSuchMethodException e) {
+            throw new NoSuchMethodError(e.getMessage());
+        }
+    }
+}
+```
+
+```java
+public class A12 {
+
+    /*interface InvocationHandler {
+        Object invoke(Object proxy, Method method, Object[] args) throws Throwable;
+    }*/
+
+    public static void main(String[] param) {
+        Foo proxy = new $Proxy0(new InvocationHandler() {
+            @Override
+            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable{
+                // 1. 功能增强
+                System.out.println("before...");
+                // 2. 调用目标
+//                new Target().foo();
+                return method.invoke(new Target(), args);
+            }
+        });
+        proxy.foo();
+        proxy.bar();
+    }
+}
+```
+
+
+
+##### 源码
+
+使用 arthas 反编译示例的代理类字节码
+
+`jad cn.example.uums.test.a11.$Proxy0`
+
+```java
+/*
+ * Decompiled with CFR.
+ *
+ * Could not load the following classes:
+ *  cn.example.uums.test.a11.JdkProxyDemo$Foo
+ */
+package cn.example.uums.test.a11;
+
+import cn.example.uums.test.a11.JdkProxyDemo;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.lang.reflect.UndeclaredThrowableException;
+
+final class $Proxy0
+extends Proxy
+implements JdkProxyDemo.Foo {
+    private static final Method m0;
+    private static final Method m1;
+    private static final Method m2;
+    private static final Method m3;
+
+    public $Proxy0(InvocationHandler invocationHandler) {
+        super(invocationHandler);
+    }
+
+    static {
+        try {
+            m0 = Class.forName("java.lang.Object").getMethod("hashCode", new Class[0]);
+            m1 = Class.forName("java.lang.Object").getMethod("equals", Class.forName("java.lang.Object"));
+            m2 = Class.forName("java.lang.Object").getMethod("toString", new Class[0]);
+            m3 = Class.forName("cn.example.uums.test.a11.JdkProxyDemo$Foo").getMethod("foo", new Class[0]);
+            return;
+        }
+        catch (NoSuchMethodException noSuchMethodException) {
+            throw new NoSuchMethodError(noSuchMethodException.getMessage());
+        }
+        catch (ClassNotFoundException classNotFoundException) {
+            throw new NoClassDefFoundError(classNotFoundException.getMessage());
+        }
+    }
+
+    public final boolean equals(Object object) {
+        try {
+            return (Boolean)this.h.invoke(this, m1, new Object[]{object});
+        }
+        catch (Error | RuntimeException throwable) {
+            throw throwable;
+        }
+        catch (Throwable throwable) {
+            throw new UndeclaredThrowableException(throwable);
+        }
+    }
+
+    public final String toString() {
+        try {
+            return (String)this.h.invoke(this, m2, null);
+        }
+        catch (Error | RuntimeException throwable) {
+            throw throwable;
+        }
+        catch (Throwable throwable) {
+            throw new UndeclaredThrowableException(throwable);
+        }
+    }
+
+    public final int hashCode() {
+        try {
+            return (Integer)this.h.invoke(this, m0, null);
+        }
+        catch (Error | RuntimeException throwable) {
+            throw throwable;
+        }
+        catch (Throwable throwable) {
+            throw new UndeclaredThrowableException(throwable);
+        }
+    }
+
+    public final void foo() {
+        try {
+            this.h.invoke(this, m3, null);
+            return;
+        }
+        catch (Error | RuntimeException throwable) {
+            throw throwable;
+        }
+        catch (Throwable throwable) {
+            throw new UndeclaredThrowableException(throwable);
+        }
+    }
+
+    private static MethodHandles.Lookup proxyClassLookup(MethodHandles.Lookup lookup) throws IllegalAccessException {
+        if (lookup.lookupClass() == Proxy.class && lookup.hasFullPrivilegeAccess()) {
+            return MethodHandles.lookup();
+        }
+        throw new IllegalAccessException(lookup.toString());
+    }
+}
+```
+
+
+
+##### ASM
+
+JDK 代理是程序运行时直接生成代理类的字节码，生成字节码的技术叫 ASM，在 JDK 代理中，生成代理类字节码使用的是字节码指令生成的。
+
+下面展示的是使用插件生成代理类字节码
+
+idea 安装插件 ASM Bytecode Outline
+
+以原理中的代理类为例，右键 -> show Bytecode outline -> ASMified
+
+就生成了生成代理类字节码的代码。
+
+```java
+package cn.example.uums.test.a12;
+
+import java.util.*;
+
+import aj.org.objectweb.asm.*;
+
+public class $Proxy0Dump implements Opcodes {
+
+    public static byte[] dump() throws Exception {
+
+        ClassWriter cw = new ClassWriter(0);
+        FieldVisitor fv;
+        MethodVisitor mv;
+        AnnotationVisitor av0;
+
+        cw.visit(52, ACC_PUBLIC + ACC_SUPER, "cn/example/uums/test/a12/$Proxy0", null, "java/lang/reflect/Proxy", new String[]{"cn/example/uums/test/a12/Foo"});
+
+        cw.visitSource("$Proxy0.java", null);
+
+        {
+            fv = cw.visitField(ACC_STATIC, "foo", "Ljava/lang/reflect/Method;", null, null);
+            fv.visitEnd();
+        }
+        {
+            fv = cw.visitField(ACC_STATIC, "bar", "Ljava/lang/reflect/Method;", null, null);
+            fv.visitEnd();
+        }
+        {
+            mv = cw.visitMethod(ACC_PUBLIC, "<init>", "(Ljava/lang/reflect/InvocationHandler;)V", null, null);
+            mv.visitParameter("h", 0);
+            mv.visitCode();
+            Label l0 = new Label();
+            mv.visitLabel(l0);
+            mv.visitLineNumber(13, l0);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 1);
+            mv.visitMethodInsn(INVOKESPECIAL, "java/lang/reflect/Proxy", "<init>", "(Ljava/lang/reflect/InvocationHandler;)V", false);
+            Label l1 = new Label();
+            mv.visitLabel(l1);
+            mv.visitLineNumber(14, l1);
+            mv.visitInsn(RETURN);
+            Label l2 = new Label();
+            mv.visitLabel(l2);
+            mv.visitLocalVariable("this", "Lcn/example/uums/test/a12/$Proxy0;", null, l0, l2, 0);
+            mv.visitLocalVariable("h", "Ljava/lang/reflect/InvocationHandler;", null, l0, l2, 1);
+            mv.visitMaxs(2, 2);
+            mv.visitEnd();
+        }
+        {
+            mv = cw.visitMethod(ACC_PUBLIC, "foo", "()V", null, null);
+            mv.visitCode();
+            Label l0 = new Label();
+            Label l1 = new Label();
+            Label l2 = new Label();
+            mv.visitTryCatchBlock(l0, l1, l2, "java/lang/RuntimeException");
+            mv.visitTryCatchBlock(l0, l1, l2, "java/lang/Error");
+            Label l3 = new Label();
+            mv.visitTryCatchBlock(l0, l1, l3, "java/lang/Throwable");
+            mv.visitLabel(l0);
+            mv.visitLineNumber(18, l0);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, "cn/example/uums/test/a12/$Proxy0", "h", "Ljava/lang/reflect/InvocationHandler;");
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETSTATIC, "cn/example/uums/test/a12/$Proxy0", "foo", "Ljava/lang/reflect/Method;");
+            mv.visitInsn(ICONST_0);
+            mv.visitTypeInsn(ANEWARRAY, "java/lang/Object");
+            mv.visitMethodInsn(INVOKEINTERFACE, "java/lang/reflect/InvocationHandler", "invoke", "(Ljava/lang/Object;Ljava/lang/reflect/Method;[Ljava/lang/Object;)Ljava/lang/Object;", true);
+            mv.visitInsn(POP);
+            mv.visitLabel(l1);
+            mv.visitLineNumber(23, l1);
+            Label l4 = new Label();
+            mv.visitJumpInsn(GOTO, l4);
+            mv.visitLabel(l2);
+            mv.visitLineNumber(19, l2);
+            mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{"java/lang/Throwable"});
+            mv.visitVarInsn(ASTORE, 1);
+            Label l5 = new Label();
+            mv.visitLabel(l5);
+            mv.visitLineNumber(20, l5);
+            mv.visitVarInsn(ALOAD, 1);
+            mv.visitInsn(ATHROW);
+            mv.visitLabel(l3);
+            mv.visitLineNumber(21, l3);
+            mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{"java/lang/Throwable"});
+            mv.visitVarInsn(ASTORE, 1);
+            Label l6 = new Label();
+            mv.visitLabel(l6);
+            mv.visitLineNumber(22, l6);
+            mv.visitTypeInsn(NEW, "java/lang/reflect/UndeclaredThrowableException");
+            mv.visitInsn(DUP);
+            mv.visitVarInsn(ALOAD, 1);
+            mv.visitMethodInsn(INVOKESPECIAL, "java/lang/reflect/UndeclaredThrowableException", "<init>", "(Ljava/lang/Throwable;)V", false);
+            mv.visitInsn(ATHROW);
+            mv.visitLabel(l4);
+            mv.visitLineNumber(24, l4);
+            mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+            mv.visitInsn(RETURN);
+            Label l7 = new Label();
+            mv.visitLabel(l7);
+            mv.visitLocalVariable("e", "Ljava/lang/Throwable;", null, l5, l3, 1);
+            mv.visitLocalVariable("e", "Ljava/lang/Throwable;", null, l6, l4, 1);
+            mv.visitLocalVariable("this", "Lcn/example/uums/test/a12/$Proxy0;", null, l0, l7, 0);
+            mv.visitMaxs(4, 2);
+            mv.visitEnd();
+        }
+        {
+            mv = cw.visitMethod(ACC_PUBLIC, "bar", "()I", null, null);
+            mv.visitCode();
+            Label l0 = new Label();
+            Label l1 = new Label();
+            Label l2 = new Label();
+            mv.visitTryCatchBlock(l0, l1, l2, "java/lang/RuntimeException");
+            mv.visitTryCatchBlock(l0, l1, l2, "java/lang/Error");
+            Label l3 = new Label();
+            mv.visitTryCatchBlock(l0, l1, l3, "java/lang/Throwable");
+            mv.visitLabel(l0);
+            mv.visitLineNumber(29, l0);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, "cn/example/uums/test/a12/$Proxy0", "h", "Ljava/lang/reflect/InvocationHandler;");
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETSTATIC, "cn/example/uums/test/a12/$Proxy0", "bar", "Ljava/lang/reflect/Method;");
+            mv.visitInsn(ICONST_0);
+            mv.visitTypeInsn(ANEWARRAY, "java/lang/Object");
+            mv.visitMethodInsn(INVOKEINTERFACE, "java/lang/reflect/InvocationHandler", "invoke", "(Ljava/lang/Object;Ljava/lang/reflect/Method;[Ljava/lang/Object;)Ljava/lang/Object;", true);
+            mv.visitVarInsn(ASTORE, 1);
+            Label l4 = new Label();
+            mv.visitLabel(l4);
+            mv.visitLineNumber(30, l4);
+            mv.visitVarInsn(ALOAD, 1);
+            mv.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+            mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
+            mv.visitLabel(l1);
+            mv.visitInsn(IRETURN);
+            mv.visitLabel(l2);
+            mv.visitLineNumber(31, l2);
+            mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{"java/lang/Throwable"});
+            mv.visitVarInsn(ASTORE, 1);
+            Label l5 = new Label();
+            mv.visitLabel(l5);
+            mv.visitLineNumber(32, l5);
+            mv.visitVarInsn(ALOAD, 1);
+            mv.visitInsn(ATHROW);
+            mv.visitLabel(l3);
+            mv.visitLineNumber(33, l3);
+            mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{"java/lang/Throwable"});
+            mv.visitVarInsn(ASTORE, 1);
+            Label l6 = new Label();
+            mv.visitLabel(l6);
+            mv.visitLineNumber(34, l6);
+            mv.visitTypeInsn(NEW, "java/lang/reflect/UndeclaredThrowableException");
+            mv.visitInsn(DUP);
+            mv.visitVarInsn(ALOAD, 1);
+            mv.visitMethodInsn(INVOKESPECIAL, "java/lang/reflect/UndeclaredThrowableException", "<init>", "(Ljava/lang/Throwable;)V", false);
+            mv.visitInsn(ATHROW);
+            Label l7 = new Label();
+            mv.visitLabel(l7);
+            mv.visitLocalVariable("result", "Ljava/lang/Object;", null, l4, l2, 1);
+            mv.visitLocalVariable("e", "Ljava/lang/Throwable;", null, l5, l3, 1);
+            mv.visitLocalVariable("e", "Ljava/lang/Throwable;", null, l6, l7, 1);
+            mv.visitLocalVariable("this", "Lcn/example/uums/test/a12/$Proxy0;", null, l0, l7, 0);
+            mv.visitMaxs(4, 2);
+            mv.visitEnd();
+        }
+        {
+            mv = cw.visitMethod(ACC_STATIC, "<clinit>", "()V", null, null);
+            mv.visitCode();
+            Label l0 = new Label();
+            Label l1 = new Label();
+            Label l2 = new Label();
+            mv.visitTryCatchBlock(l0, l1, l2, "java/lang/NoSuchMethodException");
+            mv.visitLabel(l0);
+            mv.visitLineNumber(42, l0);
+            mv.visitLdcInsn(Type.getType("Lcn/example/uums/test/a12/Foo;"));
+            mv.visitLdcInsn("foo");
+            mv.visitInsn(ICONST_0);
+            mv.visitTypeInsn(ANEWARRAY, "java/lang/Class");
+            mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Class", "getMethod", "(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;", false);
+            mv.visitFieldInsn(PUTSTATIC, "cn/example/uums/test/a12/$Proxy0", "foo", "Ljava/lang/reflect/Method;");
+            Label l3 = new Label();
+            mv.visitLabel(l3);
+            mv.visitLineNumber(43, l3);
+            mv.visitLdcInsn(Type.getType("Lcn/example/uums/test/a12/Foo;"));
+            mv.visitLdcInsn("bar");
+            mv.visitInsn(ICONST_0);
+            mv.visitTypeInsn(ANEWARRAY, "java/lang/Class");
+            mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Class", "getMethod", "(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;", false);
+            mv.visitFieldInsn(PUTSTATIC, "cn/example/uums/test/a12/$Proxy0", "bar", "Ljava/lang/reflect/Method;");
+            mv.visitLabel(l1);
+            mv.visitLineNumber(46, l1);
+            Label l4 = new Label();
+            mv.visitJumpInsn(GOTO, l4);
+            mv.visitLabel(l2);
+            mv.visitLineNumber(44, l2);
+            mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{"java/lang/NoSuchMethodException"});
+            mv.visitVarInsn(ASTORE, 0);
+            Label l5 = new Label();
+            mv.visitLabel(l5);
+            mv.visitLineNumber(45, l5);
+            mv.visitTypeInsn(NEW, "java/lang/NoSuchMethodError");
+            mv.visitInsn(DUP);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/NoSuchMethodException", "getMessage", "()Ljava/lang/String;", false);
+            mv.visitMethodInsn(INVOKESPECIAL, "java/lang/NoSuchMethodError", "<init>", "(Ljava/lang/String;)V", false);
+            mv.visitInsn(ATHROW);
+            mv.visitLabel(l4);
+            mv.visitLineNumber(47, l4);
+            mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+            mv.visitInsn(RETURN);
+            mv.visitLocalVariable("e", "Ljava/lang/NoSuchMethodException;", null, l5, l4, 0);
+            mv.visitMaxs(3, 1);
+            mv.visitEnd();
+        }
+        cw.visitEnd();
+
+        return cw.toByteArray();
+    }
+}
+
+```
+
+将自己编写的代理类注释掉后执行测试
+
+```java
+public class A12 {
+
+    /*interface InvocationHandler {
+        Object invoke(Object proxy, Method method, Object[] args) throws Throwable;
+    }*/
+
+    public static void main(String[] param) throws Exception {
+//        Foo proxy = new $Proxy0(new InvocationHandler() {
+//            @Override
+//            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable{
+//                // 1. 功能增强
+//                System.out.println("before...");
+//                // 2. 调用目标
+////                new Target().foo();
+//                return method.invoke(new Target(), args);
+//            }
+//        });
+//        proxy.foo();
+//        proxy.bar();
+//        /*
+//            学到了什么: 代理一点都不难, 无非就是利用了多态、反射的知识
+//                1. 方法重写可以增强逻辑, 只不过这【增强逻辑】千变万化, 不能写死在代理内部
+//                2. 通过接口回调将【增强逻辑】置于代理类之外
+//                3. 配合接口方法反射(也是多态), 就可以再联动调用目标方法
+//         */
+
+        byte[] dump = $Proxy0Dump.dump();
+
+        /*FileOutputStream os = new FileOutputStream("$Proxy0.class");
+        os.write(dump, 0, dump.length);
+        os.close();*/
+
+        ClassLoader loader = new ClassLoader() {
+            @Override
+            protected Class<?> findClass(String name) throws ClassNotFoundException {
+                return super.defineClass(name, dump, 0, dump.length);
+            }
+        };
+        Class<?> proxyClass = loader.loadClass("cn.example.uums.test.a12.$Proxy0");
+
+        Constructor<?> constructor = proxyClass.getConstructor(InvocationHandler.class);
+        Foo proxy = (Foo) constructor.newInstance(new InvocationHandler() {
+            @Override
+            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                System.out.println("before...");
+                System.out.println("调用目标");
+                return null;
+            }
+        });
+
+        proxy.foo();
+    }
+}
+```
+
+
+
+#### cglib 代理
+
+##### 示例
+
+```java
+public class CglibProxyDemo {
+
+    static class Target {
+        public void foo() {
+            System.out.println("target foo");
+        }
+    }
+
+    // 代理是子类型, 目标是父类型
+    public static void main(String[] param) {
+//        Target target = new Target();
+
+        Target proxy = (Target) Enhancer.create(Target.class, (MethodInterceptor) (p, method, args, methodProxy) -> {
+            System.out.println("before...");
+//            Object result = method.invoke(target, args); // 用方法反射调用目标
+            // methodProxy 它可以避免反射调用
+//            Object result = methodProxy.invoke(target, args); // 内部没有用反射, 需要目标 （spring）
+            Object result = methodProxy.invokeSuper(p, args); // 内部没有用反射, 需要代理
+            System.out.println("after...");
+            return result;
+        });
+
+        proxy.foo();
+
+    }
+}
+```
+
+运行结果与 jdk 动态代理相同
+
+
+
+* cglib 不要求目标实现接口，它生成的代理类是目标的子类，因此代理与目标之间是子父关系
+* 限制：根据上述分析 final 类无法被 cglib 增强
+
+
+
+##### 原理
+
+和 jdk 动态代理原理差不多
+
+1. 回调的接口换了一下，InvocationHandler 改成了 MethodInterceptor
+2. 调用目标时有所改进，见下面代码片段
+   1. method.invoke 是反射调用，必须调用到足够次数才会进行优化
+   2. methodProxy.invoke 是不反射调用，它会正常（间接）调用目标对象的方法（Spring 采用）
+   3. methodProxy.invokeSuper 也是不反射调用，它会正常（间接）调用代理对象的方法，可以省略目标对象
+
+```java
+public class Target {
+    public void save() {
+        System.out.println("save()");
+    }
+
+    public void save(int i) {
+        System.out.println("save(int)");
+    }
+
+    public void save(long j) {
+        System.out.println("save(long)");
+    }
+}
+```
+
+```java
+public class Proxy extends Target {
+
+    private MethodInterceptor methodInterceptor;
+
+    public void setMethodInterceptor(MethodInterceptor methodInterceptor) {
+        this.methodInterceptor = methodInterceptor;
+    }
+
+    static Method save0;
+    static Method save1;
+    static Method save2;
+    static MethodProxy save0Proxy;
+    static MethodProxy save1Proxy;
+    static MethodProxy save2Proxy;
+    static {
+        try {
+            save0 = Target.class.getMethod("save");
+            save1 = Target.class.getMethod("save", int.class);
+            save2 = Target.class.getMethod("save", long.class);
+            // name1: 带增强功能的方法名
+            // name2: 带原始功能的方法名
+            save0Proxy = MethodProxy.create(Target.class, Proxy.class, "()V", "save", "saveSuper");
+            save1Proxy = MethodProxy.create(Target.class, Proxy.class, "(I)V", "save", "saveSuper");
+            save2Proxy = MethodProxy.create(Target.class, Proxy.class, "(J)V", "save", "saveSuper");
+        } catch (NoSuchMethodException e) {
+            throw new NoSuchMethodError(e.getMessage());
+        }
+    }
+
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 带原始功能的方法
+    public void saveSuper() {
+        super.save();
+    }
+    public void saveSuper(int i) {
+        super.save(i);
+    }
+    public void saveSuper(long j) {
+        super.save(j);
+    }
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 带增强功能的方法
+    @Override
+    public void save() {
+        try {
+            methodInterceptor.intercept(this, save0, new Object[0], save0Proxy);
+        } catch (Throwable e) {
+            throw new UndeclaredThrowableException(e);
+        }
+    }
+
+    @Override
+    public void save(int i) {
+        try {
+            methodInterceptor.intercept(this, save1, new Object[]{i}, save1Proxy);
+        } catch (Throwable e) {
+            throw new UndeclaredThrowableException(e);
+        }
+    }
+
+    @Override
+    public void save(long j) {
+        try {
+            methodInterceptor.intercept(this, save2, new Object[]{j}, save2Proxy);
+        } catch (Throwable e) {
+            throw new UndeclaredThrowableException(e);
+        }
+    }
+}
+```
+
+```java
+public class Application {
+
+    public static void main(String[] args) {
+        Proxy proxy = new Proxy();
+        Target target = new Target();
+        proxy.setMethodInterceptor(new MethodInterceptor() {
+            @Override
+            public Object intercept(Object p, Method method, Object[] args,
+                                    MethodProxy methodProxy) throws Throwable {
+                System.out.println("before...");
+//                return method.invoke(target, args); // 反射调用
+                // MethodProxy 内部使用 FastClass 避免反射调用
+//                return methodProxy.invoke(target, args); // 内部无反射, 结合目标用
+                return methodProxy.invokeSuper(p, args); // 内部无反射, 结合代理用
+            }
+        });
+
+        proxy.save();
+        proxy.save(1);
+        proxy.save(2L);
+    }
+}
+```
+
+
+
+> ***注意***
+>
+> * 调用 Object 的方法, 后两种在 jdk >= 9 时都有问题, 需要 --add-opens java.base/java.lang=ALL-UNNAMED
+
+
+
+##### MethodProxy 如何避免反射调用
+
+1. 当调用 MethodProxy 的 invoke 或 invokeSuper 方法时, 会动态生成两个代理类，这两个代理类都继承自 FastClass
+   * TargetFastClass 目标类的代理类，配合目标对象使用，直接调用目标类的方法, 避免反射 (Spring 用的这种)
+   * ProxyFastClass 代理类的代理类，配合代理对象使用，直接调用代理类的原始功能方法(saveSuper)，避免反射
+2. TargetFastClass 记录了 Target 中方法与编号的对应关系
+   - save(long) 编号 2
+   - save(int) 编号 1
+   - save() 编号 0
+   - 首先根据方法名和参数个数、类型, 用 switch 和 if 找到这些方法编号
+   - 然后再根据编号去调用目标方法, 又用了一大堆 switch 和 if, 但避免了反射
+3. ProxyFastClass 记录了 Proxy 中方法与编号的对应关系，不过 Proxy 额外提供了下面几个方法
+   * saveSuper(long) 编号 2，不增强，仅是调用 super.save(long)
+   * saveSuper(int) 编号 1，不增强, 仅是调用 super.save(int)
+   * saveSuper() 编号 0，不增强, 仅是调用 super.save()
+   * 查找方式与 TargetFastClass 类似
+4. 为什么有这么麻烦的一套东西呢？
+   * 避免反射, 提高性能, 代价是一个代理类配两个 FastClass 类, 代理类中还得增加仅调用 super 的一堆方法
+   * 用编号处理方法对应关系比较省内存, 另外, 最初获得方法顺序是不确定的, 这个过程没法固定死
+
+```java
+package org.springframework.cglib.reflect;
+
+public abstract class FastClass {
+    private Class type;
+
+	// ......
+
+    public abstract int getIndex(String var1, Class[] var2);
+
+    public abstract int getIndex(Class[] var1);
+
+    public abstract Object invoke(int var1, Object var2, Object[] var3) throws InvocationTargetException;
+
+    public abstract Object newInstance(int var1, Object[] var2) throws InvocationTargetException;
+
+    public abstract int getIndex(Signature var1);
+
+    public abstract int getMaxIndex();
+
+   // ......
+}
+```
+
+模拟两个代理类
+
+```java
+public class TargetFastClass {
+    static Signature s0 = new Signature("save", "()V");
+    static Signature s1 = new Signature("save", "(I)V");
+    static Signature s2 = new Signature("save", "(J)V");
+
+    // 获取目标方法的编号
+    /*
+        Target
+            save()              0
+            save(int)           1
+            save(long)          2
+        signature 包括方法名字、参数返回值
+     */
+    public int getIndex(Signature signature) {
+        if (s0.equals(signature)) {
+            return 0;
+        } else if (s1.equals(signature)) {
+            return 1;
+        } else if (s2.equals(signature)) {
+            return 2;
+        }
+        return -1;
+    }
+
+    // 根据方法编号, 正常调用目标对象方法
+    public Object invoke(int index, Object target, Object[] args) {
+        if (index == 0) {
+            ((Target) target).save();
+            return null;
+        } else if (index == 1) {
+            ((Target) target).save((int) args[0]);
+            return null;
+        } else if (index == 2) {
+            ((Target) target).save((long) args[0]);
+            return null;
+        } else {
+            throw new RuntimeException("无此方法");
+        }
+    }
+
+    public static void main(String[] args) {
+        TargetFastClass fastClass = new TargetFastClass();
+        int index = fastClass.getIndex(new Signature("save", "(I)V"));
+        System.out.println(index);
+        fastClass.invoke(index, new Target(), new Object[]{100});
+    }
+}
+```
+
+
+
+```java
+public class ProxyFastClass {
+    static Signature s0 = new Signature("saveSuper", "()V");
+    static Signature s1 = new Signature("saveSuper", "(I)V");
+    static Signature s2 = new Signature("saveSuper", "(J)V");
+
+    // 获取代理方法的编号
+    /*
+        Proxy
+            saveSuper()              0
+            saveSuper(int)           1
+            saveSuper(long)          2
+        signature 包括方法名字、参数返回值
+     */
+    public int getIndex(Signature signature) {
+        if (s0.equals(signature)) {
+            return 0;
+        } else if (s1.equals(signature)) {
+            return 1;
+        } else if (s2.equals(signature)) {
+            return 2;
+        }
+        return -1;
+    }
+
+    // 根据方法编号, 正常调用目标对象方法
+    public Object invoke(int index, Object proxy, Object[] args) {
+        if (index == 0) {
+            ((Proxy) proxy).saveSuper();
+            return null;
+        } else if (index == 1) {
+            ((Proxy) proxy).saveSuper((int) args[0]);
+            return null;
+        } else if (index == 2) {
+            ((Proxy) proxy).saveSuper((long) args[0]);
+            return null;
+        } else {
+            throw new RuntimeException("无此方法");
+        }
+    }
+
+    public static void main(String[] args) {
+        ProxyFastClass fastClass = new ProxyFastClass();
+        int index = fastClass.getIndex(new Signature("saveSuper", "()V"));
+        System.out.println(index);
+
+        fastClass.invoke(index, new Proxy(), new Object[0]);
+    }
+}
+```
+
+
+
+##### 与 JDK 动态代理对比
+
+
+
+### AOP -Spring
+
+#### 示例
+
+```java
+public class Target {
+    public void foo(){
+        System.out.println("target foo");
+    }
+
+    public void bar(){
+        System.out.println("target bar");
+    }
+}
+```
+
+```java
+@Aspect
+public class MyAspect {
+    @Before("execution(* foo())")
+    public void before() {
+        System.out.println("before");
+    }
+
+    @After("execution(* foo())")
+    public void after() {
+        System.out.println("after");
+    }
+}
+```
+
+```java
+@Configuration
+public class MyConfig {
+
+    // 低级 Advisor 切面
+    @Bean
+    public Advisor advisor(MethodInterceptor advice){
+        // 切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* foo())");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+        return advisor;
+    }
+
+    // 通知
+    @Bean
+    public MethodInterceptor advice(){
+        return invocation -> {
+            System.out.println("advice before...");
+            Object result = invocation.proceed(); // 调用目标
+            System.out.println("advice after...");
+            return result;
+        };
+    }
+
+    @Bean
+    public Target tagrget(){
+        return new Target();
+    }
+}
+```
+
+```java
+public class Application {
+    public static void main(String[]args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("myConfig", MyConfig.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.registerBean("myAspect", MyAspect.class);
+        context.registerBean(AnnotationAwareAspectJAutoProxyCreator.class);
+        context.refresh();
+
+        Target proxyTarget = context.getBean(Target.class);
+        proxyTarget.foo();
+        proxyTarget.bar();
+    }
+}
+
+// 输出
+// advice before...
+// before
+// target foo
+// after
+// advice after...
+// target bar
+```
+
+
+
+### JDK 代理 和 cglib 代理在 Spring 中的统一
+
+#### 示例
+
+```java
+public interface I1 {
+    void foo();
+
+    void bar();
+}
+
+public class Target1 implements I1 {
+    public void foo() {
+        System.out.println("target1 foo");
+    }
+
+    public void bar() {
+        System.out.println("target1 bar");
+    }
+}
+
+public class Target2 {
+    public void foo() {
+        System.out.println("target2 foo");
+    }
+
+    public void bar() {
+        System.out.println("target2 bar");
+    }
+}
+```
+
+```java
+public class Application {
+    public static void main(String[] args) {
+        /*
+            两个切面概念
+            aspect =
+                通知1(advice) +  切点1(pointcut)
+                通知2(advice) +  切点2(pointcut)
+                通知3(advice) +  切点3(pointcut)
+                ...
+            advisor = 更细粒度的切面，包含一个通知和切点
+         */
+
+        // 1. 备好切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* foo())");
+        // 2. 备好通知
+        MethodInterceptor advice = invocation -> {
+            System.out.println("before...");
+            Object result = invocation.proceed(); // 调用目标
+            System.out.println("after...");
+            return result;
+        };
+        // 3. 备好切面
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+
+        /*
+           4. 创建代理
+                a. proxyTargetClass = false, 目标实现了接口, 用 jdk 实现
+                b. proxyTargetClass = false,  目标没有实现接口, 用 cglib 实现
+                c. proxyTargetClass = true, 总是使用 cglib 实现
+         */
+        ProxyFactory factory = new ProxyFactory();
+        factory.addAdvisor(advisor);
+
+        Target1 target1 = new Target1();
+        factory.setTarget(target1);
+        factory.setInterfaces(target1.getClass().getInterfaces());
+        factory.setProxyTargetClass(false);
+        I1 proxy1 = (I1) factory.getProxy();
+        System.out.println(proxy1.getClass());
+        proxy1.foo();
+        proxy1.bar();
+
+        factory.setProxyTargetClass(true);
+        proxy1 = (I1) factory.getProxy();
+        System.out.println(proxy1.getClass());
+        proxy1.foo();
+        proxy1.bar();
+
+        Target2 target2 = new Target2();
+        factory.setTarget(target2);
+        factory.setInterfaces(target2.getClass().getInterfaces());
+        factory.setProxyTargetClass(false);
+        Target2 proxy2 = (Target2) factory.getProxy();
+        System.out.println(proxy2.getClass());
+        proxy2.foo();
+        proxy2.bar();
+    }
+}
+```
+
+
+
+#### 切点、通知、切面
+
+Spring 中对切点、通知、切面的抽象如下
+
+* 切点：接口 Pointcut，典型实现 AspectJExpressionPointcut
+* 通知：典型接口为 MethodInterceptor 代表环绕通知
+* 切面：Advisor，包含一个 Advice 通知，PointcutAdvisor 包含一个 Advice 通知和一个 Pointcut
+
+```mermaid
+classDiagram
+
+class Advice
+class MethodInterceptor
+class Advisor
+class PointcutAdvisor
+
+Pointcut <|-- AspectJExpressionPointcut
+Advice <|-- MethodInterceptor
+Advisor <|-- PointcutAdvisor
+PointcutAdvisor o-- "一" Pointcut
+PointcutAdvisor o-- "一" Advice
+
+<<interface>> Advice
+<<interface>> MethodInterceptor
+<<interface>> Pointcut
+<<interface>> Advisor
+<<interface>> PointcutAdvisor
+```
+
+#### 代理相关类图
+
+代理相关类图
+
+* AopProxyFactory 根据 proxyTargetClass 等设置选择 AopProxy 实现
+* AopProxy 通过 getProxy 创建代理对象
+* 图中 Proxy 都实现了 Advised 接口，能够获得关联的切面集合与目标（其实是从 ProxyFactory 取得）
+* 调用代理方法时，会借助 ProxyFactory 将通知统一转为环绕通知：MethodInterceptor
+
+```mermaid
+classDiagram
+
+Advised <|-- ProxyFactory
+ProxyFactory o-- Target
+ProxyFactory o-- "多" Advisor
+
+ProxyFactory --> AopProxyFactory : 使用
+AopProxyFactory --> AopProxy
+Advised <|-- 基于CGLIB的Proxy
+基于CGLIB的Proxy <-- ObjenesisCglibAopProxy : 创建
+AopProxy <|-- ObjenesisCglibAopProxy
+AopProxy <|-- JdkDynamicAopProxy
+基于JDK的Proxy <-- JdkDynamicAopProxy : 创建
+Advised <|-- 基于JDK的Proxy
+
+class AopProxy {
+   +getProxy() Object
+}
+
+class ProxyFactory {
+	proxyTargetClass : boolean
+}
+
+class ObjenesisCglibAopProxy {
+	advised : ProxyFactory
+}
+
+class JdkDynamicAopProxy {
+	advised : ProxyFactory
+}
+
+<<interface>> Advised
+<<interface>> AopProxyFactory
+<<interface>> AopProxy
+```
+
+
+
+#### 总结
+
+1. 底层的切点实现
+2. 底层的通知实现
+3. 底层的切面实现
+4. ProxyFactory 用来创建代理
+   * 如果指定了接口，且 proxyTargetClass = false，使用 JdkDynamicAopProxy
+   * 如果没有指定接口，或者 proxyTargetClass = true，使用 ObjenesisCglibAopProxy
+     * 例外：如果目标是接口类型或已经是 Jdk 代理，使用 JdkDynamicAopProxy
+
+> ***注意***
+>
+> * 要区分本章节提到的 MethodInterceptor(org.aopalliance.intercept)，它与之前 cglib 中用的的 MethodInterceptor 是不同的接口
+
+
+
+### 切点匹配
+
+#### 示例
+
+```java
+public class T1 {
+    @Transactional
+    public void foo() {
+    }
+    public void bar() {
+    }
+}
+
+@Transactional
+public class T2 {
+    public void foo() {
+    }
+}
+
+@Transactional
+public interface I3 {
+    void foo();
+}
+public class T3 implements I3 {
+    public void foo() {
+    }
+}
+```
+
+```java
+public class Application {
+    public static void main(String[] args) throws NoSuchMethodException {
+        // 根据方法名匹配方法
+//        AspectJExpressionPointcut pt1 = new AspectJExpressionPointcut();
+//        pt1.setExpression("execution(* bar())");
+//        System.out.println(pt1.matches(T1.class.getMethod("foo"), T1.class));
+//        System.out.println(pt1.matches(T1.class.getMethod("bar"), T1.class));
+
+        // 根据方法注解匹配方法
+//        AspectJExpressionPointcut pt2 = new AspectJExpressionPointcut();
+//        pt2.setExpression("@annotation(org.springframework.transaction.annotation.Transactional)");
+//        System.out.println(pt2.matches(T1.class.getMethod("foo"), T1.class));
+//        System.out.println(pt2.matches(T1.class.getMethod("bar"), T1.class));
+
+        // @Transactional 以上两种方法均不是事务实现的方式。
+        // 因为他们只能根据方法名或者方法上的注解匹配，
+        // 而 @Transactional 可以加在类或接口上，此时使用切点表达式无法进行匹配
+        // 下面模拟事务增强的匹配
+        StaticMethodMatcherPointcut pt3 = new StaticMethodMatcherPointcut() {
+            @Override
+            public boolean matches(Method method, Class<?> targetClass) {
+                // 检查方法上是否加了 Transactional 注解
+                MergedAnnotations annotations = MergedAnnotations.from(method);
+                if (annotations.isPresent(Transactional.class)) {
+                    return true;
+                }
+                // 查看类上是否加了 Transactional 注解
+                // 默认查找本类上的注解
+                // MergedAnnotations.SearchStrategy.TYPE_HIERARCHY 本类、父类上的注解都查找
+                annotations = MergedAnnotations.from(targetClass, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY);
+                if (annotations.isPresent(Transactional.class)) {
+                    return true;
+                }
+                return false;
+            }
+        };
+
+        System.out.println(pt3.matches(T1.class.getMethod("foo"), T1.class));
+        System.out.println(pt3.matches(T1.class.getMethod("bar"), T1.class));
+        System.out.println(pt3.matches(T2.class.getMethod("foo"), T2.class));
+        System.out.println(pt3.matches(T3.class.getMethod("foo"), T3.class));
+    }
+}
+```
+
+
+
+#### 总结
+
+1. 常见 aspectj 切点用法
+2. 底层切点实现是如何匹配的: 调用了 aspectj 的匹配方法
+3. 比较关键的是它实现了 MethodMatcher 接口, 用来执行方法的匹配
+4. aspectj 切点的局限性，实际的 @Transactional 切点实现
+
+
+
+### 代理对象的创建时机
+
+#### 示例
+
+```java
+public class Target1 {
+    public void foo() {
+
+    }
+
+    public Target1() {
+        System.out.println("Target1()");
+    }
+
+//    @Autowired
+//    public void setTarget1(Target1 target1) {
+//        System.out.println("Target2 setTarget1(target1) class is: " + target1.getClass());
+//    }
+
+    @PostConstruct
+    public void init() {
+        System.out.println("Target1 init()");
+    }
+}
+
+public class Target2 {
+    public Target2() {
+        System.out.println("Target2()");
+    }
+
+    @Autowired
+    public void setTarget1(Target1 target1) {
+        System.out.println("Target2 setTarget1(target1) class is: " + target1.getClass());
+    }
+
+    @PostConstruct
+    public void init() {
+        System.out.println("Target2 init()");
+    }
+}
+```
+
+
+
+```java
+@Configuration
+public class MyConfig {
+
+    @Bean // 解析 @Aspect、产生代理
+    public AnnotationAwareAspectJAutoProxyCreator annotationAwareAspectJAutoProxyCreator() {
+        return new AnnotationAwareAspectJAutoProxyCreator();
+    }
+
+    @Bean // 解析 @Autowired
+    public AutowiredAnnotationBeanPostProcessor autowiredAnnotationBeanPostProcessor() {
+        return new AutowiredAnnotationBeanPostProcessor();
+    }
+
+    @Bean // 解析 @PostConstruct
+    public CommonAnnotationBeanPostProcessor commonAnnotationBeanPostProcessor() {
+        return new CommonAnnotationBeanPostProcessor();
+    }
+
+    @Bean
+    public Advisor advisor(MethodInterceptor advice) {
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* foo())");
+        return new DefaultPointcutAdvisor(pointcut, advice);
+    }
+
+    @Bean
+    public MethodInterceptor advice() {
+        return (MethodInvocation invocation) -> {
+            System.out.println("before...");
+            return invocation.proceed();
+        };
+    }
+
+    @Bean
+    public Target1 target1() {
+        return new Target1();
+    }
+
+    @Bean
+    public Target2 target2() {
+        return new Target2();
+    }
+
+}
+```
+
+```java
+public class Application {
+    public static void main(String[]args){
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.registerBean(MyConfig.class);
+        context.refresh();
+        context.close();
+        // 
+        /*
+            学到了什么
+                a. 代理的创建时机
+                    1. 初始化之后 (无循环依赖时)
+                    2. 实例创建后, 依赖注入前 (有循环依赖时), 并暂存于二级缓存
+                b. 依赖注入与初始化不应该被增强, 仍应被施加于原始对象
+         */
+    }
+}
+```
+
+
+
+#### 总结
+
+创建 -> (`*`) 依赖注入 -> 初始化 (`*`)
+
+1. 代理的创建时机
+   * 初始化之后 (无循环依赖时)
+   * 实例创建后, 依赖注入前 (有循环依赖时), 并暂存于二级缓存
+2. 依赖注入与初始化不应该被增强, 仍应被施加于原始对象
+
+
+
+### 切面的顺序控制
+
+#### 示例
+
+```java
+public class Target {
+    public void foo(){
+        System.out.println("target foo");
+    }
+}
+
+// 高级 @Aspect 切面
+@Aspect
+@Order(1)
+public class Aspect1 {
+    @Before("execution(* foo())")
+    public void before(){
+        System.out.println("Aspect1 before");
+    }
+
+    @After("execution(* foo())")
+    public void after(){
+        System.out.println("Aspect1 after");
+    }
+}
+
+```
+
+```java
+@Configuration
+public class MyConfig {
+
+    // 低级 Advisor 切面
+    @Bean
+    public Advisor advisor(MethodInterceptor advice){
+        // 切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* foo())");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+        advisor.setOrder(2);
+        return advisor;
+    }
+
+    // 通知
+    @Bean
+    public MethodInterceptor advice(){
+        return invocation -> {
+            System.out.println("advice before...");
+            Object result = invocation.proceed(); // 调用目标
+            System.out.println("advice after...");
+            return result;
+        };
+    }
+
+    @Bean
+    public Target tagrget(){
+        return new Target();
+    }
+}
+```
+
+```java
+public class Application {
+    public static void main(String[]args){
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("myConfig", MyConfig.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.registerBean("aspect1", Aspect1.class);
+        context.registerBean(AnnotationAwareAspectJAutoProxyCreator.class);
+        context.refresh();
+
+        Target proxy1 = context.getBean(Target.class);
+        proxy1.foo();
+    }
+}
+```
+
+
+
+#### 总结
+
+1.默认情况下低级的 advisor 比高级的 aspect 优先级高
+
+2.可以在切面类上使用 `@Order` 注解指定该切面类所有 aspect  切面的优先级，advisor 切面可以调用 `setOrder` 方法设置。数值越小优先级越高
+
+3.`@Order`加在切面方法上是无效的
+
+### 后处理器 AnnotationAwareAspectJAutoProxyCreator
+
+该后处理器的两个作用
+
+1. 找到 Bean 中的 Advisor 切面和 Aspect 切面，并将找到的 Aspect 切面转换为 Advisor 切面
+2. 在合适的时机创建代理
+
+
+
+#### 示例
+
+```java
+public class Target {
+    public void foo(){
+        System.out.println("target foo");
+    }
+
+    public void bar(){
+        System.out.println("target bar");
+    }
+}
+```
+
+```java
+@Aspect
+public class MyAspect {
+    @Before("execution(* foo())")
+    public void before() {
+        System.out.println("before");
+    }
+
+    @After("execution(* foo())")
+    public void after() {
+        System.out.println("after");
+    }
+}
+```
+
+```java
+@Configuration
+public class MyConfig {
+
+    // 低级 Advisor 切面
+    @Bean
+    public Advisor advisor(MethodInterceptor advice){
+        // 切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* foo())");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+        return advisor;
+    }
+
+    // 通知
+    @Bean
+    public MethodInterceptor advice(){
+        return invocation -> {
+            System.out.println("advice before...");
+            Object result = invocation.proceed(); // 调用目标
+            System.out.println("advice after...");
+            return result;
+        };
+    }
+}
+```
+
+```java
+// 包名为了方便调用 protected 方法 findEligibleAdvisors、wrapIfNecessary
+package org.springframework.aop.framework.autoproxy;
+
+public class Application {
+    public static void main(String[]args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("myConfig", MyConfig.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.registerBean("myAspect", MyAspect.class);
+        context.registerBean(AnnotationAwareAspectJAutoProxyCreator.class);
+        context.refresh();
+
+        /**
+         * 第一个重要的方法 findEligibleAdvisors 找到有资格的 Advisors
+         * 1.有资格的 Advisors 一部分是低级的，可以由自己编写，如例中的 advisor
+         * 2.有资格的 Advisors 另一部分是高级的，由 AnnotationAwareAspectJAutoProxyCreator 解析 @Aspect 获得
+         */
+        AnnotationAwareAspectJAutoProxyCreator creator = context.getBean(AnnotationAwareAspectJAutoProxyCreator.class);
+        // 获得和 Target 类方法有资格的 Advisor
+        List<Advisor> advisors = creator.findEligibleAdvisors(Target.class, "target");
+        /**
+         * 获得四个切面
+         * 1.Spring 为所有 Bean 创建的切面
+         * 2. 两个 @Aspect 切面
+         * 3. 一个 低级 Advisor 切面
+         */
+        for(Advisor advisor:advisors){
+            System.out.println(advisor);
+        }
+
+        // 第二个重要的方法 wrapIfNecessary 内部调用 findEligibleAdvisors 检查对象是否有切面并创建代理
+        Target proxy = (Target) creator.wrapIfNecessary(new Target(), "target", "target");
+        System.out.println(proxy.getClass());
+        proxy.foo();
+    }
+}
+```
+
+
+
+#### 方法一：findEligibleAdvisors
+
+findEligibleAdvisors 找到有资格的 Advisors
+
+* 有资格的 Advisors 一部分是低级的，可以由自己编写，如例中的 advisor
+* 有资格的 Advisors 另一部分是高级的，由 AnnotationAwareAspectJAutoProxyCreator 解析 @Aspect 获得
+
+过程如下
+
+1. 找到所有 Advisor 切面
+2. 找到所有 Aspect 切面并转换为 Advisor 切面
+3. 找到适合当前 Bean 的所有 Advisor 切面
+
+
+
+##### 源码
+
+```java
+public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyCreator {
+    protected List<Advisor> findEligibleAdvisors(Class<?> beanClass, String beanName) {
+        /**
+         * 调用子类方法
+         * 找到所有 Advisor 切面
+         * 找到所有 Aspect 切面并转换为 Advisor 切面
+         */
+        List<Advisor> candidateAdvisors = this.findCandidateAdvisors();
+        // 找到适合当前 Bean 的所有 Advisor 切面
+        List<Advisor> eligibleAdvisors = this.findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);
+        this.extendAdvisors(eligibleAdvisors);
+        if (!eligibleAdvisors.isEmpty()) {
+            eligibleAdvisors = this.sortAdvisors(eligibleAdvisors);
+        }
+
+        return eligibleAdvisors;
+    }
+}
+```
+
+
+###### 找到所有 Advisor 切面
+
+该方法从 BeanFactory 中获取所有 Advisor 类型的对象
+
+```java
+public class BeanFactoryAdvisorRetrievalHelper {
+    public List<Advisor> findAdvisorBeans() {
+        String[] advisorNames = this.cachedAdvisorBeanNames;
+        if (advisorNames == null) {
+            advisorNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(this.beanFactory, Advisor.class, true, false);
+            this.cachedAdvisorBeanNames = advisorNames;
+        }
+
+        if (advisorNames.length == 0) {
+            return new ArrayList();
+        } else {
+            List<Advisor> advisors = new ArrayList();
+            String[] var3 = advisorNames;
+            int var4 = advisorNames.length;
+
+            for(int var5 = 0; var5 < var4; ++var5) {
+                String name = var3[var5];
+                if (this.isEligibleBean(name)) {
+                    if (this.beanFactory.isCurrentlyInCreation(name)) {
+                        if (logger.isTraceEnabled()) {
+                            logger.trace("Skipping currently created advisor '" + name + "'");
+                        }
+                    } else {
+                        try {
+                            advisors.add(this.beanFactory.getBean(name, Advisor.class));
+                        } catch (BeanCreationException var11) {
+                            Throwable rootCause = var11.getMostSpecificCause();
+                            if (rootCause instanceof BeanCurrentlyInCreationException) {
+                                BeanCreationException bce = (BeanCreationException)rootCause;
+                                String bceBeanName = bce.getBeanName();
+                                if (bceBeanName != null && this.beanFactory.isCurrentlyInCreation(bceBeanName)) {
+                                    if (logger.isTraceEnabled()) {
+                                        logger.trace("Skipping advisor '" + name + "' with dependency on currently created bean: " + var11.getMessage());
+                                    }
+                                    continue;
+                                }
+                            }
+
+                            throw var11;
+                        }
+                    }
+                }
+            }
+
+            return advisors;
+        }
+    }
+}
+```
+
+
+
+###### 找到所有 Aspect 切面并转换为 Advisor 切面
+
+1. 从 BeanFactory 中获取所有对象
+2. 判断是否为 Aspect 切面对象
+3. 如果是 Aspect 切面对象就使用 Aspect 切面方法的信息生成 Advisor 切面
+
+
+
+```java
+public class BeanFactoryAspectJAdvisorsBuilder {
+    public List<Advisor> buildAspectJAdvisors() {
+        List<String> aspectNames = this.aspectBeanNames;
+        if (aspectNames == null) {
+            synchronized(this) {
+                aspectNames = this.aspectBeanNames;
+                if (aspectNames == null) {
+                    List<Advisor> advisors = new ArrayList();
+                    List<String> aspectNames = new ArrayList();
+                    String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(this.beanFactory, Object.class, true, false);
+                    String[] var18 = beanNames;
+                    int var19 = beanNames.length;
+
+                    for(int var7 = 0; var7 < var19; ++var7) {
+                        String beanName = var18[var7];
+                        if (this.isEligibleBean(beanName)) {
+                            Class<?> beanType = this.beanFactory.getType(beanName, false);
+                            if (beanType != null && this.advisorFactory.isAspect(beanType)) {
+                                aspectNames.add(beanName);
+                                AspectMetadata amd = new AspectMetadata(beanType, beanName);
+                                if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
+                                    MetadataAwareAspectInstanceFactory factory = new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
+                                    List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
+                                    if (this.beanFactory.isSingleton(beanName)) {
+                                        this.advisorsCache.put(beanName, classAdvisors);
+                                    } else {
+                                        this.aspectFactoryCache.put(beanName, factory);
+                                    }
+
+                                    advisors.addAll(classAdvisors);
+                                } else {
+                                    if (this.beanFactory.isSingleton(beanName)) {
+                                        throw new IllegalArgumentException("Bean with name '" + beanName + "' is a singleton, but aspect instantiation model is not singleton");
+                                    }
+
+                                    MetadataAwareAspectInstanceFactory factory = new PrototypeAspectInstanceFactory(this.beanFactory, beanName);
+                                    this.aspectFactoryCache.put(beanName, factory);
+                                    advisors.addAll(this.advisorFactory.getAdvisors(factory));
+                                }
+                            }
+                        }
+                    }
+
+                    this.aspectBeanNames = aspectNames;
+                    return advisors;
+                }
+            }
+        }
+
+        if (aspectNames.isEmpty()) {
+            return Collections.emptyList();
+        } else {
+            List<Advisor> advisors = new ArrayList();
+            Iterator var3 = aspectNames.iterator();
+
+            while(var3.hasNext()) {
+                String aspectName = (String)var3.next();
+                List<Advisor> cachedAdvisors = (List)this.advisorsCache.get(aspectName);
+                if (cachedAdvisors != null) {
+                    advisors.addAll(cachedAdvisors);
+                } else {
+                    MetadataAwareAspectInstanceFactory factory = (MetadataAwareAspectInstanceFactory)this.aspectFactoryCache.get(aspectName);
+                    advisors.addAll(this.advisorFactory.getAdvisors(factory));
+                }
+            }
+
+            return advisors;
+        }
+    }
+}
+```
+
+
+
+###### 找到适合当前 Bean 的所有 Advisor 切面
+
+1. 将所有 Advisor 切面与目标 Bean 进行匹配，获取目标 Bean 的 Advisor 切面
+
+
+
+```java
+public abstract class AopUtils {
+    public static List<Advisor> findAdvisorsThatCanApply(List<Advisor> candidateAdvisors, Class<?> clazz) {
+        if (candidateAdvisors.isEmpty()) {
+            return candidateAdvisors;
+        } else {
+            List<Advisor> eligibleAdvisors = new ArrayList();
+            Iterator var3 = candidateAdvisors.iterator();
+
+            while(var3.hasNext()) {
+                Advisor candidate = (Advisor)var3.next();
+                if (candidate instanceof IntroductionAdvisor && canApply(candidate, clazz)) {
+                    eligibleAdvisors.add(candidate);
+                }
+            }
+
+            boolean hasIntroductions = !eligibleAdvisors.isEmpty();
+            Iterator var7 = candidateAdvisors.iterator();
+
+            while(var7.hasNext()) {
+                Advisor candidate = (Advisor)var7.next();
+                if (!(candidate instanceof IntroductionAdvisor) && canApply(candidate, clazz, hasIntroductions)) {
+                    eligibleAdvisors.add(candidate);
+                }
+            }
+
+            return eligibleAdvisors;
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class Target1 {
+    public void foo(){
+        System.out.println("target1 foo");
+    }
+}
+
+public class Target2 {
+    public void bar(){
+        System.out.println("target2 bar");
+    }
+}
+```
+
+```java
+@Aspect
+public class MyAspect {
+    @Before("execution(* foo())")
+    public void fooBefore() {
+        System.out.println("foo before");
+    }
+
+    @After("execution(* foo())")
+    public void fooAfter() {
+        System.out.println("foo after");
+    }
+
+    @Before("execution(* bar())")
+    public void barBefore() {
+        System.out.println("bar before");
+    }
+
+    @After("execution(* bar())")
+    public void barAfter() {
+        System.out.println("bar after");
+    }
+}
+```
+
+```java
+@Configuration
+public class MyConfig {
+
+    // 低级 Advisor 切面
+    @Bean
+    public Advisor fooAdvisor(MethodInterceptor advice){
+        // 切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* foo())");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+        return advisor;
+    }
+
+    // 低级 Advisor 切面
+    @Bean
+    public Advisor barAdvisor(MethodInterceptor advice){
+        // 切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* bar())");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+        return advisor;
+    }
+
+    // 通知
+    @Bean
+    public MethodInterceptor advice(){
+        return invocation -> {
+            System.out.println("advice before...");
+            Object result = invocation.proceed(); // 调用目标
+            System.out.println("advice after...");
+            return result;
+        };
+    }
+}
+```
+
+
+
+```java
+public class Application {
+    public static void main(String[]args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("myConfig", MyConfig.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.registerBean("myAspect", MyAspect.class);
+        context.registerBean(AnnotationAwareAspectJAutoProxyCreator.class);
+        context.refresh();
+
+        List<Advisor> candidateAdvisors = findAdvisorBeans(context.getDefaultListableBeanFactory());
+        candidateAdvisors.addAll(buildAspectJAdvisors());
+        List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, Target1.class);
+
+        System.out.println("排序");
+        AnnotationAwareOrderComparator.sort(eligibleAdvisors);
+        printAdvisor(eligibleAdvisors);
+    }
+
+    private static List<Advisor> findAdvisorBeans(DefaultListableBeanFactory beanFactory){
+        System.out.println("找到所有 Advisor 切面");
+        List<Advisor> candidateAdvisors = new ArrayList<>(beanFactory.getBeansOfType(Advisor.class).values());
+        printAdvisor(candidateAdvisors);
+        return candidateAdvisors;
+    }
+
+    private static List<Advisor> buildAspectJAdvisors(){
+        System.out.println("找到所有 Aspect 切面并转换为 Advisor 切面");
+        AspectInstanceFactory factory = new SingletonAspectInstanceFactory(new MyAspect());
+        List<Advisor> aspectAdvisors = new ArrayList<>();
+        for(Method method:MyAspect.class.getDeclaredMethods()){
+            /**
+             *   @Before 前置通知会被转换为下面原始的 AspectJMethodBeforeAdvice 形式, 该对象包含了如下信息
+             *       a. 通知代码从哪儿来
+             *       b. 切点是什么
+             *       c. 通知对象如何创建, 本例共用同一个 Aspect 对象
+             *   类似的通知还有
+             *       1. AspectJAroundAdvice (环绕通知)
+             *       2. AspectJAfterReturningAdvice
+             *       3. AspectJAfterThrowingAdvice (环绕通知)
+             *       4. AspectJAfterAdvice (环绕通知)
+             */
+            if (method.isAnnotationPresent(Before.class)) {
+                // 解析切点
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(Before.class).value());
+                // 通知类
+                // 切面
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut, new AspectJMethodBeforeAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(After.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(After.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut,  new AspectJAfterAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(AfterReturning.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(AfterReturning.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut,  new AspectJAfterReturningAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(Around.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(Around.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut, new AspectJAroundAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            }
+        }
+        printAdvisor(aspectAdvisors);
+        return aspectAdvisors;
+    }
+
+    private static List<Advisor> findAdvisorsThatCanApply(List<Advisor> candidateAdvisors, Class<?> clazz){
+        System.out.println("找到适合当前 Bean 的所有 Advisor 切面");
+        List<Advisor> eligibleAdvisors = new ArrayList<>();
+        for (Advisor advisor : candidateAdvisors) {
+            for(Method method:Target1.class.getDeclaredMethods()){
+                if(((PointcutAdvisor)advisor).getPointcut().getMethodMatcher().matches(method, clazz)){
+                    eligibleAdvisors.add(advisor);
+                    break;
+                }
+            }
+        }
+        printAdvisor(eligibleAdvisors);
+        return eligibleAdvisors;
+    }
+
+    private static void printAdvisor(List<Advisor> advisors){
+        for(Advisor advisor:advisors){
+            System.out.println(advisor);
+        }
+    }
+}
+```
+
+
+
+##### 总结
+
+1. @Before 前置通知会被转换为原始的 AspectJMethodBeforeAdvice 形式, 该对象包含了如下信息
+   1. 通知代码从哪儿来
+   2. 切点是什么(这里为啥要切点, 后面解释)
+   3. 通知对象如何创建, 本例共用同一个 Aspect 对象
+2. 类似的还有
+   1. AspectJAroundAdvice (环绕通知)
+   2. AspectJAfterReturningAdvice
+   3. AspectJAfterThrowingAdvice (环绕通知)
+   4. AspectJAfterAdvice (环绕通知)
+
+
+
+#### 方法二：wrapIfNecessary
+
+* 它内部调用 findEligibleAdvisors, 只要返回集合不空, 则表示需要创建代理
+* 它的调用时机通常在原始对象初始化后执行, 但碰到循环依赖会提前至依赖注入之前执行
+
+
+
+##### 源码
+
+```java
+public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware {
+    protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+        if (StringUtils.hasLength(beanName) && this.targetSourcedBeans.contains(beanName)) {
+            return bean;
+        } else if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
+            return bean;
+        } else if (!this.isInfrastructureClass(bean.getClass()) && !this.shouldSkip(bean.getClass(), beanName)) {
+            // 调用 findEligibleAdvisors
+            Object[] specificInterceptors = this.getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, (TargetSource)null);
+            if (specificInterceptors != DO_NOT_PROXY) {
+                this.advisedBeans.put(cacheKey, Boolean.TRUE);
+                Object proxy = this.createProxy(bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
+                this.proxyTypes.put(cacheKey, proxy.getClass());
+                return proxy;
+            } else {
+                this.advisedBeans.put(cacheKey, Boolean.FALSE);
+                return bean;
+            }
+        } else {
+            this.advisedBeans.put(cacheKey, Boolean.FALSE);
+            return bean;
+        }
+    }
+    
+    protected Object createProxy(Class<?> beanClass, @Nullable String beanName, @Nullable Object[] specificInterceptors, TargetSource targetSource) {
+        if (this.beanFactory instanceof ConfigurableListableBeanFactory) {
+            AutoProxyUtils.exposeTargetClass((ConfigurableListableBeanFactory)this.beanFactory, beanName, beanClass);
+        }
+
+        ProxyFactory proxyFactory = new ProxyFactory();
+        proxyFactory.copyFrom(this);
+        if (!proxyFactory.isProxyTargetClass()) {
+            if (this.shouldProxyTargetClass(beanClass, beanName)) {
+                proxyFactory.setProxyTargetClass(true);
+            } else {
+                this.evaluateProxyInterfaces(beanClass, proxyFactory);
+            }
+        }
+
+        Advisor[] advisors = this.buildAdvisors(beanName, specificInterceptors);
+        proxyFactory.addAdvisors(advisors);
+        proxyFactory.setTargetSource(targetSource);
+        this.customizeProxyFactory(proxyFactory);
+        proxyFactory.setFrozen(this.freezeProxy);
+        if (this.advisorsPreFiltered()) {
+            proxyFactory.setPreFiltered(true);
+        }
+
+        return proxyFactory.getProxy(this.getProxyClassLoader());
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class Target1 {
+    public void foo(){
+        System.out.println("target1 foo");
+    }
+}
+```
+
+```java
+public class Target2 {
+    public void bar(){
+        System.out.println("target2 bar");
+    }
+}
+```
+
+```java
+@Aspect
+public class MyAspect {
+    @Before("execution(* foo())")
+    public void fooBefore() {
+        System.out.println("foo before");
+    }
+
+    @After("execution(* foo())")
+    public void fooAfter() {
+        System.out.println("foo after");
+    }
+
+    @Before("execution(* bar())")
+    public void barBefore() {
+        System.out.println("bar before");
+    }
+
+    @After("execution(* bar())")
+    public void barAfter() {
+        System.out.println("bar after");
+    }
+}
+```
+
+```java
+@Configuration
+public class MyConfig {
+
+    // 低级 Advisor 切面
+    @Bean
+    public Advisor fooAdvisor(MethodInterceptor advice){
+        // 切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* foo())");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+        return advisor;
+    }
+
+    // 低级 Advisor 切面
+    @Bean
+    public Advisor barAdvisor(MethodInterceptor advice){
+        // 切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* bar())");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+        return advisor;
+    }
+
+    // 通知
+    @Bean
+    public MethodInterceptor advice(){
+        return invocation -> {
+            System.out.println("advice before...");
+            Object result = invocation.proceed(); // 调用目标
+            System.out.println("advice after...");
+            return result;
+        };
+    }
+}
+```
+
+```java
+public class Application {
+    public static void main(String[]args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("myConfig", MyConfig.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.registerBean("myAspect", MyAspect.class);
+        context.registerBean(AnnotationAwareAspectJAutoProxyCreator.class);
+        context.refresh();
+        Target1 proxy1 = (Target1) Application.wrapIfNecessary(new Target1(), context.getDefaultListableBeanFactory());
+
+        proxy1.foo();
+    }
+
+    /**
+     * 创建代理
+     *  a. proxyTargetClass = false, 目标实现了接口, 用 jdk 实现
+     *  b. proxyTargetClass = false,  目标没有实现接口, 用 cglib 实现
+     *  c. proxyTargetClass = true, 总是使用 cglib 实现
+     */
+    private static Object wrapIfNecessary(Object bean, DefaultListableBeanFactory beanFactory){
+        List<Advisor> eligibleAdvisors = Application.findEligibleAdvisors(bean.getClass(), beanFactory);
+        ProxyFactory factory = new ProxyFactory();
+        factory.addAdvice(ExposeInvocationInterceptor.INSTANCE);
+        factory.addAdvisors(eligibleAdvisors);
+
+        factory.setTarget(bean);
+        factory.setInterfaces(bean.getClass().getInterfaces());
+        factory.setProxyTargetClass(false);
+        return factory.getProxy(Thread.currentThread().getContextClassLoader());
+    }
+
+    private static List<Advisor> findEligibleAdvisors(Class<?> clazz, DefaultListableBeanFactory beanFactory){
+        List<Advisor> candidateAdvisors = findAdvisorBeans(beanFactory);
+        candidateAdvisors.addAll(buildAspectJAdvisors());
+        return findAdvisorsThatCanApply(candidateAdvisors, clazz);
+    }
+
+    private static List<Advisor> findAdvisorBeans(DefaultListableBeanFactory beanFactory){
+        System.out.println("找到所有 Advisor 切面");
+        List<Advisor> candidateAdvisors = new ArrayList<>(beanFactory.getBeansOfType(Advisor.class).values());
+        printAdvisor(candidateAdvisors);
+        return candidateAdvisors;
+    }
+
+    private static List<Advisor> buildAspectJAdvisors(){
+        System.out.println("找到所有 Aspect 切面并转换为 Advisor 切面");
+        AspectInstanceFactory factory = new SingletonAspectInstanceFactory(new MyAspect());
+        List<Advisor> aspectAdvisors = new ArrayList<>();
+        for(Method method:MyAspect.class.getDeclaredMethods()){
+            /**
+             *   @Before 前置通知会被转换为下面原始的 AspectJMethodBeforeAdvice 形式, 该对象包含了如下信息
+             *       a. 通知代码从哪儿来
+             *       b. 切点是什么
+             *       c. 通知对象如何创建, 本例共用同一个 Aspect 对象
+             *   类似的通知还有
+             *       1. AspectJAroundAdvice (环绕通知)
+             *       2. AspectJAfterReturningAdvice
+             *       3. AspectJAfterThrowingAdvice (环绕通知)
+             *       4. AspectJAfterAdvice (环绕通知)
+             */
+            if (method.isAnnotationPresent(Before.class)) {
+                // 解析切点
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(Before.class).value());
+                // 通知类
+                // 切面
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut, new AspectJMethodBeforeAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(After.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(After.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut,  new AspectJAfterAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(AfterReturning.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(AfterReturning.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut,  new AspectJAfterReturningAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(Around.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(Around.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut, new AspectJAroundAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            }
+        }
+        printAdvisor(aspectAdvisors);
+        return aspectAdvisors;
+    }
+
+    private static List<Advisor> findAdvisorsThatCanApply(List<Advisor> candidateAdvisors, Class<?> clazz){
+        System.out.println("找到适合当前 Bean 的所有 Advisor 切面");
+        List<Advisor> eligibleAdvisors = new ArrayList<>();
+        for (Advisor advisor : candidateAdvisors) {
+            for(Method method:Target1.class.getDeclaredMethods()){
+                if(((PointcutAdvisor)advisor).getPointcut().getMethodMatcher().matches(method, clazz)){
+                    eligibleAdvisors.add(advisor);
+                    break;
+                }
+            }
+        }
+        printAdvisor(eligibleAdvisors);
+        return eligibleAdvisors;
+    }
+
+    private static void printAdvisor(List<Advisor> advisors){
+        for(Advisor advisor:advisors){
+            System.out.println(advisor);
+        }
+    }
+}
+```
+
+
+
+### 静态通知调用
+
+代理对象调用流程如下（以 JDK 动态代理实现为例）
+
+* 从 ProxyFactory 获得 Target 和环绕通知链，根据他俩创建 MethodInvocation，简称 mi
+* 首次执行 mi.proceed() 发现有下一个环绕通知，调用它的 invoke(mi)
+* 进入环绕通知1，执行前增强，再次调用 mi.proceed() 发现有下一个环绕通知，调用它的 invoke(mi)
+* 进入环绕通知2，执行前增强，调用 mi.proceed() 发现没有环绕通知，调用 mi.invokeJoinPoint() 执行目标方法
+* 目标方法执行结束，将结果返回给环绕通知2，执行环绕通知2 的后增强
+* 环绕通知2继续将结果返回给环绕通知1，执行环绕通知1 的后增强
+* 环绕通知1返回最终的结果
+
+图中不同颜色对应一次环绕通知或目标的调用起始至终结
+
+```mermaid
+sequenceDiagram
+participant Proxy
+participant ih as InvocationHandler
+participant mi as MethodInvocation
+participant Factory as ProxyFactory
+participant mi1 as MethodInterceptor1
+participant mi2 as MethodInterceptor2
+participant Target
+
+Proxy ->> +ih : invoke()
+ih ->> +Factory : 获得 Target
+Factory -->> -ih : 
+ih ->> +Factory : 获得 MethodInterceptor 链
+Factory -->> -ih : 
+ih ->> +mi : 创建 mi
+mi -->> -ih : 
+rect rgb(200, 223, 255)
+ih ->> +mi : mi.proceed()
+mi ->> +mi1 : invoke(mi)
+mi1 ->> mi1 : 前增强
+rect rgb(200, 190, 255)
+mi1 ->> mi : mi.proceed()
+mi ->> +mi2 : invoke(mi)
+mi2 ->> mi2 : 前增强
+rect rgb(150, 190, 155)
+mi2 ->> mi : mi.proceed()
+mi ->> +Target : mi.invokeJoinPoint()
+Target ->> Target : 
+Target -->> -mi2 : 结果
+end
+mi2 ->> mi2 : 后增强
+mi2 -->> -mi1 : 结果
+end
+mi1 ->> mi1 : 后增强
+mi1 -->> -mi : 结果
+mi -->> -ih : 
+end
+ih -->> -Proxy : 
+```
+
+
+
+#### 通知调用过程
+
+##### 示例
+
+```java
+public class Target1{
+    public void foo(){
+        System.out.println("target1 foo");
+    }
+}
+public class Target2 {
+    public void bar(){
+        System.out.println("target2 bar");
+    }
+}
+
+```
+
+```java
+@Aspect
+public class MyAspect {
+    @Before("execution(* foo())")
+    public void fooBefore() {
+        System.out.println("foo before");
+    }
+
+    @After("execution(* foo())")
+    public void fooAfter() {
+        System.out.println("foo after");
+    }
+
+    @Before("execution(* bar())")
+    public void barBefore() {
+        System.out.println("bar before");
+    }
+
+    @After("execution(* bar())")
+    public void barAfter() {
+        System.out.println("bar after");
+    }
+}
+```
+
+```java
+@Configuration
+public class MyConfig {
+
+    // 低级 Advisor 切面
+    @Bean
+    public Advisor fooAdvisor(MethodInterceptor advice){
+        // 切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* foo())");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+        return advisor;
+    }
+
+    // 低级 Advisor 切面
+    @Bean
+    public Advisor barAdvisor(MethodInterceptor advice){
+        // 切点
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* bar())");
+        DefaultPointcutAdvisor advisor = new DefaultPointcutAdvisor(pointcut, advice);
+        return advisor;
+    }
+
+    // 通知
+    @Bean
+    public MethodInterceptor advice(){
+        return invocation -> {
+            System.out.println("advice before...");
+            Object result = invocation.proceed(); // 调用目标
+            System.out.println("advice after...");
+            return result;
+        };
+    }
+}
+```
+
+```java
+package org.springframework.aop.framework;
+
+public class Application {
+    public static void main(String[]args) throws Throwable {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("myConfig", MyConfig.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.registerBean("myAspect", MyAspect.class);
+        context.registerBean(AnnotationAwareAspectJAutoProxyCreator.class);
+        context.refresh();
+        Target1 target1 = new Target1();
+
+        List<Advisor> eligibleAdvisors = findEligibleAdvisors(target1.getClass(), context.getDefaultListableBeanFactory());
+
+        ProxyFactory factory = new ProxyFactory();
+        factory.addAdvice(ExposeInvocationInterceptor.INSTANCE);
+        factory.addAdvisors(eligibleAdvisors);
+
+        factory.setTarget(target1);
+        factory.setInterfaces(target1.getClass().getInterfaces());
+        factory.setProxyTargetClass(false);
+
+        /*
+
+            其实无论 ProxyFactory 基于哪种方式创建代理, 最后干活(调用 advice)的是一个 MethodInvocation 对象
+                a. 因为 advisor 有多个, 且一个套一个调用, 因此需要一个调用链对象, 即 MethodInvocation
+                b. MethodInvocation 要知道 advice 有哪些, 还要知道目标, 调用次序如下
+
+                将 MethodInvocation 放入当前线程
+                    |-> before1 ----------------------------------- 从当前线程获取 MethodInvocation
+                    |                                             |
+                    |   |-> before2 --------------------          | 从当前线程获取 MethodInvocation
+                    |   |                              |          |
+                    |   |   |-> target ------ 目标   advice2    advice1
+                    |   |                              |          |
+                    |   |-> after2 ---------------------          |
+                    |                                             |
+                    |-> after1 ------------------------------------
+                c. 从上图看出, 环绕通知才适合作为 advice, 因此其他 before、afterReturning 都会被转换成环绕通知
+                d. 统一转换为环绕通知, 体现的是设计模式中的适配器模式
+                    - 对外是为了方便使用要区分 before、afterReturning
+                    - 对内统一都是环绕通知, 统一用 MethodInterceptor 表示
+
+            此步获取所有执行时需要的 advice (静态)
+                a. 即统一转换为 MethodInterceptor 环绕通知, 这体现在方法名中的 Interceptors 上
+                b. 适配如下
+                  - MethodBeforeAdviceAdapter 将 @Before AspectJMethodBeforeAdvice 适配为 MethodBeforeAdviceInterceptor
+                  - AfterReturningAdviceAdapter 将 @AfterReturning AspectJAfterReturningAdvice 适配为 AfterReturningAdviceInterceptor
+         */
+
+        System.out.println("把所有通知转换为环绕通知");
+        Method method = target1.getClass().getMethod("foo");
+        List<Object> methodInterceptorList = factory.getInterceptorsAndDynamicInterceptionAdvice(method, target1.getClass());
+        for (Object o : methodInterceptorList) {
+            System.out.println(o);
+        }
+
+        System.out.println("创建并执行调用链 (环绕通知s + 目标)");
+        MethodInvocation methodInvocation = new ReflectiveMethodInvocation(
+                null, target1, method, new Object[0], target1.getClass(), methodInterceptorList
+        );
+        methodInvocation.proceed();
+
+        /*
+            学到了什么
+                a. 无参数绑定的通知如何被调用
+                b. MethodInvocation 编程技巧: 拦截器、过滤器等等实现都与此类似
+                c. 适配器模式在 Spring 中的体现
+         */
+    }
+
+    /**
+     * 创建代理
+     *  a. proxyTargetClass = false, 目标实现了接口, 用 jdk 实现
+     *  b. proxyTargetClass = false,  目标没有实现接口, 用 cglib 实现
+     *  c. proxyTargetClass = true, 总是使用 cglib 实现
+     */
+    private static Object wrapIfNecessary(Object bean, DefaultListableBeanFactory beanFactory){
+        List<Advisor> eligibleAdvisors = Application.findEligibleAdvisors(bean.getClass(), beanFactory);
+        ProxyFactory factory = new ProxyFactory();
+        // 把这个 Advice 把 MethodInvocation 放入当前线程，因为有些 advice 需要使用到 MethodInvocation
+        factory.addAdvice(ExposeInvocationInterceptor.INSTANCE);
+        factory.addAdvisors(eligibleAdvisors);
+
+        factory.setTarget(bean);
+        factory.setInterfaces(bean.getClass().getInterfaces());
+        factory.setProxyTargetClass(false);
+        return factory.getProxy(Thread.currentThread().getContextClassLoader());
+    }
+
+    private static List<Advisor> findEligibleAdvisors(Class<?> clazz, DefaultListableBeanFactory beanFactory){
+        List<Advisor> candidateAdvisors = findAdvisorBeans(beanFactory);
+        candidateAdvisors.addAll(buildAspectJAdvisors());
+        return findAdvisorsThatCanApply(candidateAdvisors, clazz);
+    }
+
+    private static List<Advisor> findAdvisorBeans(DefaultListableBeanFactory beanFactory){
+        System.out.println("找到所有 Advisor 切面");
+        List<Advisor> candidateAdvisors = new ArrayList<>(beanFactory.getBeansOfType(Advisor.class).values());
+        printAdvisor(candidateAdvisors);
+        return candidateAdvisors;
+    }
+
+    private static List<Advisor> buildAspectJAdvisors(){
+        System.out.println("找到所有 Aspect 切面并转换为 Advisor 切面");
+        AspectInstanceFactory factory = new SingletonAspectInstanceFactory(new MyAspect());
+        List<Advisor> aspectAdvisors = new ArrayList<>();
+        for(Method method:MyAspect.class.getDeclaredMethods()){
+            /**
+             *   @Before 前置通知会被转换为下面原始的 AspectJMethodBeforeAdvice 形式, 该对象包含了如下信息
+             *       a. 通知代码从哪儿来
+             *       b. 切点是什么
+             *       c. 通知对象如何创建, 本例共用同一个 Aspect 对象
+             *   类似的通知还有
+             *       1. AspectJAroundAdvice (环绕通知)
+             *       2. AspectJAfterReturningAdvice
+             *       3. AspectJAfterThrowingAdvice (环绕通知)
+             *       4. AspectJAfterAdvice (环绕通知)
+             */
+            if (method.isAnnotationPresent(Before.class)) {
+                // 解析切点
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(Before.class).value());
+                // 通知类
+                // 切面
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut, new AspectJMethodBeforeAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(After.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(After.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut,  new AspectJAfterAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(AfterReturning.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(AfterReturning.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut,  new AspectJAfterReturningAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            } else if (method.isAnnotationPresent(Around.class)) {
+                AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+                pointcut.setExpression(method.getAnnotation(Around.class).value());
+                Advisor advisor = new DefaultPointcutAdvisor(pointcut, new AspectJAroundAdvice(method, pointcut, factory));
+                aspectAdvisors.add(advisor);
+            }
+        }
+        printAdvisor(aspectAdvisors);
+        return aspectAdvisors;
+    }
+
+    private static List<Advisor> findAdvisorsThatCanApply(List<Advisor> candidateAdvisors, Class<?> clazz){
+        System.out.println("找到适合当前 Bean 的所有 Advisor 切面");
+        List<Advisor> eligibleAdvisors = new ArrayList<>();
+        for (Advisor advisor : candidateAdvisors) {
+            for(Method method:Target1.class.getDeclaredMethods()){
+                if(((PointcutAdvisor)advisor).getPointcut().getMethodMatcher().matches(method, clazz)){
+                    eligibleAdvisors.add(advisor);
+                    break;
+                }
+            }
+        }
+        printAdvisor(eligibleAdvisors);
+        return eligibleAdvisors;
+    }
+
+    private static void printAdvisor(List<Advisor> advisors){
+        for(Advisor advisor:advisors){
+            System.out.println(advisor);
+        }
+    }
+}
+```
+
+
+
+##### 总结
+
+代理方法执行时会做如下工作
+
+1. 通过 proxyFactory 的 getInterceptorsAndDynamicInterceptionAdvice() 将其他通知统一转换为 MethodInterceptor 环绕通知
+   - MethodBeforeAdviceAdapter 将 @Before AspectJMethodBeforeAdvice 适配为 MethodBeforeAdviceInterceptor
+   - AfterReturningAdviceAdapter 将 @AfterReturning AspectJAfterReturningAdvice 适配为 AfterReturningAdviceInterceptor
+   - 这体现的是适配器设计模式
+2. 所谓静态通知，体现在上面方法的 Interceptors 部分，这些通知调用时无需再次检查切点，直接调用即可
+3. 结合目标与环绕通知链，创建 MethodInvocation 对象，通过它完成整个调用
+
+
+
+#### 模拟 MethodInvocation
+
+##### 示例
+
+```java
+static class Target {
+    public void foo() {
+        System.out.println("Target.foo()");
+    }
+}
+```
+
+```java
+static class Advice1 implements MethodInterceptor {
+    public Object invoke(MethodInvocation invocation) throws Throwable {
+        System.out.println("Advice1.before()");
+        Object result = invocation.proceed();// 调用下一个通知或目标
+        System.out.println("Advice1.after()");
+        return result;
+    }
+}
+
+static class Advice2 implements MethodInterceptor {
+    public Object invoke(MethodInvocation invocation) throws Throwable {
+        System.out.println("Advice2.before()");
+        Object result = invocation.proceed();// 调用下一个通知或目标
+        System.out.println("Advice2.after()");
+        return result;
+    }
+}
+```
+
+```java
+static class MyInvocation implements MethodInvocation {
+    private Object target;  // 1
+    private Method method;
+    private Object[] args;
+    List<MethodInterceptor> methodInterceptorList; // 2
+    private int count = 1; // 调用次数
+
+    public MyInvocation(Object target, Method method, Object[] args, List<MethodInterceptor> methodInterceptorList) {
+        this.target = target;
+        this.method = method;
+        this.args = args;
+        this.methodInterceptorList = methodInterceptorList;
+    }
+
+    @Override
+    public Method getMethod() {
+        return method;
+    }
+
+    @Override
+    public Object[] getArguments() {
+        return args;
+    }
+
+    @Override
+    public Object proceed() throws Throwable { // 调用每一个环绕通知, 调用目标
+        if (count > methodInterceptorList.size()) {
+            // 调用目标， 返回并结束递归
+            return method.invoke(target, args);
+        }
+        // 逐一调用通知, count + 1
+        MethodInterceptor methodInterceptor = methodInterceptorList.get(count++ - 1);
+        return methodInterceptor.invoke(this);
+    }
+
+    @Override
+    public Object getThis() {
+        return target;
+    }
+
+    @Override
+    public AccessibleObject getStaticPart() {
+        return method;
+    }
+}
+```
+
+```java
+public static void main(String[] args) throws Throwable {
+    Target target = new Target();
+    List<MethodInterceptor> list = List.of(
+            new Advice1(),
+            new Advice2()
+    );
+    MyInvocation invocation = new MyInvocation(target, Target.class.getMethod("foo"), new Object[0], list);
+    invocation.proceed();
+}
+```
+
+
+
+##### 总结
+
+1. proceed() 方法调用链中下一个环绕通知
+2. 每个环绕通知内部继续调用 proceed()
+3. 调用到没有更多通知了, 就调用目标方法
+
+MethodInvocation 的编程技巧在实现拦截器、过滤器时能用上
+
+
+
+### 动态通知调用
+
+#### 示例
+
+```java
+public class Target{
+    public void foo(){
+        System.out.println("target1 foo");
+    }
+
+    public void foo(int x) {
+        System.out.printf("target1 foo(%d)%n", x);
+    }
+}
+```
+
+```java
+@Aspect
+public class MyAspect {
+    @Before("execution(* foo(..))") // 静态通知调用，不带参数绑定，执行时不需要切点
+    public void before1() {
+        System.out.println("before1");
+    }
+
+    @Before("execution(* foo(..)) && args(x)") // 动态通知调用，需要参数绑定，执行时还需要切点对象
+    public void before2(int x) {
+        System.out.printf("before2(%d)%n", x);
+    }
+}
+```
+
+```java
+public class Application {
+    public static void main(String[]args) throws Throwable {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.registerBean("myAspect", MyAspect.class);
+        context.registerBean(AnnotationAwareAspectJAutoProxyCreator.class);
+        context.refresh();
+
+        AnnotationAwareAspectJAutoProxyCreator creator = context.getBean(AnnotationAwareAspectJAutoProxyCreator.class);
+        List<Advisor> advisors = creator.findEligibleAdvisors(Target.class, "target");
+
+        Target target = new Target();
+        ProxyFactory factory = new ProxyFactory();
+        factory.setTarget(target);
+        factory.addAdvisors(advisors);
+        Object proxy = factory.getProxy(); // 获取代理
+
+        List<Object> interceptorList = factory.getInterceptorsAndDynamicInterceptionAdvice(Target.class.getMethod("foo", int.class), Target.class);
+        for (Object o : interceptorList) {
+            showDetail(o);
+        }
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>");
+        ReflectiveMethodInvocation invocation = new ReflectiveMethodInvocation(
+                proxy, target, Target.class.getMethod("foo", int.class), new Object[]{100}, Target.class, interceptorList
+        ) {};
+
+        invocation.proceed();
+
+        /*
+            学到了什么
+                a. 有参数绑定的通知调用时还需要切点，对参数进行匹配及绑定
+                b. 复杂程度高, 性能比无参数绑定的通知调用低
+         */
+    }
+
+    public static void showDetail(Object o) {
+        try {
+            Class<?> clazz = Class.forName("org.springframework.aop.framework.InterceptorAndDynamicMethodMatcher");
+            if (clazz.isInstance(o)) {
+                Field methodMatcher = clazz.getDeclaredField("methodMatcher");
+                methodMatcher.setAccessible(true);
+                Field methodInterceptor = clazz.getDeclaredField("interceptor");
+                methodInterceptor.setAccessible(true);
+                System.out.println("环绕通知和切点：" + o);
+                System.out.println("\t切点为：" + methodMatcher.get(o));
+                System.out.println("\t通知为：" + methodInterceptor.get(o));
+            } else {
+                System.out.println("普通环绕通知：" + o);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+
+
+#### 总结
+
+1. 通过 proxyFactory 的 getInterceptorsAndDynamicInterceptionAdvice() 将其他通知统一转换为 MethodInterceptor 环绕通知
+2. 所谓动态通知，体现在上面方法的 DynamicInterceptionAdvice 部分，这些通知调用时因为要为通知方法绑定参数，还需再次利用切点表达式
+3. 动态通知调用复杂程度高，性能较低
+
+
+
+## Spring MVC
+
+### RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter
+
+RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter 俩是一对，分别用来
+
+* 处理 @RequestMapping 映射
+* 调用控制器方法、并处理方法参数与方法返回值
+
+
+
+#### 依赖配置
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cn.example</groupId>
+    <artifactId>example</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+
+    <!-- 引入Spring Boot依赖 -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.3.12.RELEASE</version>
+    </parent>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <!-- 引入Web场景依赖启动器 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+```properties
+server.port=8081
+spring.mvc.servlet.load-on-startup=1
+```
+
+
+
+#### DispatcherServlet 初始化
+
+
+
+##### 示例
+
+
+
+```java
+@Configuration
+@ComponentScan
+@PropertySource("classpath:application.properties")
+@EnableConfigurationProperties({WebMvcProperties.class, ServerProperties.class})
+/**
+ * WebMvcProperties 以 spring.mvc 开头的配置
+ * 类似的还有
+ * WebMvcProperties 以 spring.web 开头的配置
+ * ServerProperties 以 server 开头的配置
+ */
+public class WebConfig {
+    /**
+     * 内嵌 web 容器工厂
+     */
+    @Bean
+    public TomcatServletWebServerFactory tomcatServletWebServerFactory(ServerProperties serverProperties) {
+        return new TomcatServletWebServerFactory(serverProperties.getPort());
+    }
+
+    /**
+     * 创建 DispatcherServlet
+     */
+    @Bean
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
+
+    /**
+     * 注册 DispatcherServlet, Spring MVC 的入口
+     */
+    @Bean
+    public DispatcherServletRegistrationBean dispatcherServletRegistrationBean(
+            DispatcherServlet dispatcherServlet, WebMvcProperties webMvcProperties) {
+        DispatcherServletRegistrationBean registrationBean = new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+        /**
+         * 设置 Servlet 一启动时就初始化，参数对应不用 Servlet 启动优先级，优先级从小到大逐渐降低
+         * 或者在 Spring 的配置文件配置 spring.mvc.servlet.load-on-startup=1
+         * registrationBean.setLoadOnStartup(1);
+         */
+        registrationBean.setLoadOnStartup(webMvcProperties.getServlet().getLoadOnStartup());
+        return registrationBean;
+    }
+
+    /**
+     * 如果用 DispatcherServlet 初始化时默认添加的组件, 并不会作为 bean 添加到 Spring 容器中, 给测试带来困扰
+     * 1. 加入 RequestMappingHandlerMapping
+     */
+    @Bean
+    public RequestMappingHandlerMapping requestMappingHandlerMapping() {
+        return new RequestMappingHandlerMapping();
+    }
+
+    /**
+     * 2. 继续加入RequestMappingHandlerAdapter, 会替换掉 DispatcherServlet 默认的 4 个 HandlerAdapter
+     */
+    @Bean
+    public MyRequestMappingHandlerAdapter requestMappingHandlerAdapter() {
+        MyRequestMappingHandlerAdapter handlerAdapter = new MyRequestMappingHandlerAdapter();
+        return handlerAdapter;
+    }
+}
+```
+
+```java
+@Controller
+public class MyController {
+
+    private static final Logger log = LoggerFactory.getLogger(MyController.class);
+
+    @GetMapping("/test1")
+    public ModelAndView test1() throws Exception {
+        log.debug("test1()");
+        return null;
+    }
+    
+    @PostMapping("/test2")
+    public ModelAndView test2(@RequestParam("name") String name) {
+        log.debug("test2({})", name);
+        return null;
+    }
+}
+```
+
+```java
+/**
+ * 为了调用父类的受保护方法，所以写一个子类重写为 public
+ */
+public class MyRequestMappingHandlerAdapter extends RequestMappingHandlerAdapter {
+    @Override
+    public ModelAndView invokeHandlerMethod(HttpServletRequest request, HttpServletResponse response, HandlerMethod handlerMethod) throws Exception {
+        return super.invokeHandlerMethod(request, response, handlerMethod);
+    }
+}
+```
+
+```java
+public class Application {
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+
+        // 作用 解析 @RequestMapping 以及派生注解，生成路径与控制器方法的映射关系, 在初始化时就生成
+        RequestMappingHandlerMapping handlerMapping = context.getBean(RequestMappingHandlerMapping.class);
+
+        // 获取映射结果
+        Map<RequestMappingInfo, HandlerMethod> handlerMethods = handlerMapping.getHandlerMethods();
+        handlerMethods.forEach((k, v) -> {
+            System.out.println(k + "=" + v);
+        });
+
+        // 请求来了，获取控制器方法  返回处理器执行链对象
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/test1");
+        request.setLocalPort(8081);
+        // request.setParameter("name", "张三");
+        // request.addHeader("token", "某个令牌");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        HandlerExecutionChain chain = handlerMapping.getHandler(request);
+        System.out.println(chain);
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>");
+        // HandlerAdapter 作用: 调用控制器方法
+        MyRequestMappingHandlerAdapter handlerAdapter = context.getBean(MyRequestMappingHandlerAdapter.class);
+        handlerAdapter.invokeHandlerMethod(request, response, (HandlerMethod) chain.getHandler());
+
+        // 检查响应
+        byte[] content = response.getContentAsByteArray();
+        System.out.println("结果：" + new String(content, StandardCharsets.UTF_8));
+    }
+}
+```
+
+
+
+##### 源码
+
+```java
+protected void onRefresh(ApplicationContext context) {
+    this.initStrategies(context);
+}
+
+protected void initStrategies(ApplicationContext context) {
+    // 初始化文件解析器
+    this.initMultipartResolver(context);
+    // 初始化本地化解析器
+    this.initLocaleResolver(context);
+    // 初始化模板解析器
+    this.initThemeResolver(context);
+    // 初始化路径映射器
+    this.initHandlerMappings(context);
+    // 初始化控制器适配器
+    this.initHandlerAdapters(context);
+    // 初始化异常解析器
+    this.initHandlerExceptionResolvers(context);
+    this.initRequestToViewNameTranslator(context);
+    this.initViewResolvers(context);
+    this.initFlashMapManager(context);
+}
+
+private void initHandlerMappings(ApplicationContext context) {
+    this.handlerMappings = null;
+    // 是否检测包括父子容器的所有 HandlerMapping
+    if (this.detectAllHandlerMappings) {
+        Map<String, HandlerMapping> matchingBeans = BeanFactoryUtils.beansOfTypeIncludingAncestors(context, HandlerMapping.class, true, false);
+        if (!matchingBeans.isEmpty()) {
+            this.handlerMappings = new ArrayList(matchingBeans.values());
+            AnnotationAwareOrderComparator.sort(this.handlerMappings);
+        }
+    } else {
+        try {
+            HandlerMapping hm = (HandlerMapping)context.getBean("handlerMapping", HandlerMapping.class);
+            this.handlerMappings = Collections.singletonList(hm);
+        } catch (NoSuchBeanDefinitionException var3) {
+        }
+    }
+
+    // 容器中没有找到 HandlerMapping，则获取默认的 HandlerMapping
+    if (this.handlerMappings == null) {
+        this.handlerMappings = this.getDefaultStrategies(context, HandlerMapping.class);
+        if (this.logger.isTraceEnabled()) {
+            this.logger.trace("No HandlerMappings declared for servlet '" + this.getServletName() + "': using default strategies from DispatcherServlet.properties");
+        }
+    }
+
+}
+```
+
+
+
+#### 参数与返回值处理器
+
+##### 示例
+
+```java
+public class Application {
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    public static void main(String[] args) {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+
+        // HandlerAdapter 作用: 调用控制器方法
+        MyRequestMappingHandlerAdapter handlerAdapter = context.getBean(MyRequestMappingHandlerAdapter.class);
+		/**
+		 * 不同的参数由不同的参数解析器来解析
+		 */
+        System.out.println(">>>>>>>>>>>>>>>>>>>>> 所有参数解析器");
+        for (HandlerMethodArgumentResolver resolver : handlerAdapter.getArgumentResolvers()) {
+            System.out.println(resolver);
+        }
+
+		/**
+		 * 不同的返回值由不同的返回值解析器来解析
+		 */
+        System.out.println(">>>>>>>>>>>>>>>>>>>>> 所有返回值解析器");
+        for (HandlerMethodReturnValueHandler handler : handlerAdapter.getReturnValueHandlers()) {
+            System.out.println(handler);
+        }
+    }
+}
+```
+
+
+
+##### 自定义解析器
+
+```java
+/**
+ * 例如经常需要用到请求头中的 token 信息, 用下面注解来标注由哪个参数来获取它
+ * token=令牌
+ */
+@Target(ElementType.PARAMETER)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Token {
+}
+```
+
+```java
+/**
+ * 自定义参数解析器
+ */
+public class TokenArgumentResolver implements HandlerMethodArgumentResolver {
+    /**
+     * 是否支持某个参数
+     */
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+        Token token = parameter.getParameterAnnotation(Token.class);
+        return token != null;
+    }
+
+    /**
+     * 解析参数
+     */
+    @Override
+    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
+                                  NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+        return webRequest.getHeader("token");
+    }
+}
+```
+
+```java
+/**
+ * 自定义返回值解析器
+ */
+public class YmlReturnValueHandler implements HandlerMethodReturnValueHandler {
+    /**
+     * 是否支持某个返回值
+     */
+    @Override
+    public boolean supportsReturnType(MethodParameter returnType) {
+        Yml yml = returnType.getMethodAnnotation(Yml.class);
+        return yml != null;
+    }
+
+    /**
+     * 解析返回值
+     */
+    @Override
+    public void handleReturnValue(Object returnValue, MethodParameter returnType,
+                                  ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+        // 1. 转换返回结果为 yaml 字符串
+        String str = new Yaml().dump(returnValue);
+
+        // 2. 将 yaml 字符串写入响应
+        HttpServletResponse response = webRequest.getNativeResponse(HttpServletResponse.class);
+        response.setContentType("text/plain;charset=utf-8");
+        response.getWriter().print(str);
+
+        // 3. 设置请求已经处理完毕
+        mavContainer.setRequestHandled(true);
+    }
+}
+```
+
+```java
+@Configuration
+@ComponentScan
+@PropertySource("classpath:application.properties")
+@EnableConfigurationProperties({WebMvcProperties.class, ServerProperties.class})
+/**
+ * WebMvcProperties 以 spring.mvc 开头的配置
+ * 类似的还有
+ * WebMvcProperties 以 spring.web 开头的配置
+ * ServerProperties 以 server 开头的配置
+ */
+public class WebConfig {
+    /**
+     * 内嵌 web 容器工厂
+     */
+    @Bean
+    public TomcatServletWebServerFactory tomcatServletWebServerFactory(ServerProperties serverProperties) {
+        return new TomcatServletWebServerFactory(serverProperties.getPort());
+    }
+
+    /**
+     * 创建 DispatcherServlet
+     */
+    @Bean
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
+
+    /**
+     * 注册 DispatcherServlet, Spring MVC 的入口
+     */
+    @Bean
+    public DispatcherServletRegistrationBean dispatcherServletRegistrationBean(
+            DispatcherServlet dispatcherServlet, WebMvcProperties webMvcProperties) {
+        DispatcherServletRegistrationBean registrationBean = new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+        /**
+         * 设置 Servlet 一启动时就初始化，参数对应不用 Servlet 启动优先级，优先级从小到大逐渐降低
+         * 或者在 Spring 的配置文件配置 spring.mvc.servlet.load-on-startup=1
+         * registrationBean.setLoadOnStartup(1);
+         */
+        registrationBean.setLoadOnStartup(webMvcProperties.getServlet().getLoadOnStartup());
+        return registrationBean;
+    }
+
+    /**
+     * 如果用 DispatcherServlet 初始化时默认添加的组件, 并不会作为 bean 添加到 Spring 容器中, 给测试带来困扰
+     * 1. 加入 RequestMappingHandlerMapping
+     */
+    @Bean
+    public RequestMappingHandlerMapping requestMappingHandlerMapping() {
+        return new RequestMappingHandlerMapping();
+    }
+
+    /**
+     * 2. 继续加入RequestMappingHandlerAdapter, 会替换掉 DispatcherServlet 默认的 4 个 HandlerAdapter
+     */
+    @Bean
+    public MyRequestMappingHandlerAdapter requestMappingHandlerAdapter() {
+        TokenArgumentResolver tokenArgumentResolver = new TokenArgumentResolver();
+        YmlReturnValueHandler ymlReturnValueHandler = new YmlReturnValueHandler();
+        MyRequestMappingHandlerAdapter handlerAdapter = new MyRequestMappingHandlerAdapter();
+        /**
+         * 加入自定义参数解析器和返回值解析器
+         */
+        handlerAdapter.setCustomArgumentResolvers(Collections.singletonList(tokenArgumentResolver));
+        handlerAdapter.setCustomReturnValueHandlers(Collections.singletonList(ymlReturnValueHandler));
+        return handlerAdapter;
+    }
+}
+```
+
+```java
+@Controller
+public class MyController {
+
+    private static final Logger log = LoggerFactory.getLogger(MyController.class);
+    @PutMapping("/test3")
+    @Yml
+    public User test3(@Token String token) {
+        log.debug("test3({})", token);
+        return new User("张三", 18);
+    }
+
+    public static class User {
+        private String name;
+        private int age;
+
+        public User(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+    }
+}
+```
+
+```java
+public class Application {
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+
+
+        // 作用 解析 @RequestMapping 以及派生注解，生成路径与控制器方法的映射关系, 在初始化时就生成
+        RequestMappingHandlerMapping handlerMapping = context.getBean(RequestMappingHandlerMapping.class);
+
+        // HandlerAdapter 作用: 调用控制器方法
+        MyRequestMappingHandlerAdapter handlerAdapter = context.getBean(MyRequestMappingHandlerAdapter.class);
+
+        // 请求来了，获取控制器方法  返回处理器执行链对象
+        MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/test3");
+        request.setParameter("token", "token");
+        request.addHeader("token", "某个令牌");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        HandlerExecutionChain chain = handlerMapping.getHandler(request);
+        System.out.println(chain);
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>");
+        handlerAdapter.invokeHandlerMethod(request, response, (HandlerMethod) chain.getHandler());
+
+        // 检查响应
+        byte[] content = response.getContentAsByteArray();
+        System.out.println("结果：" + new String(content, StandardCharsets.UTF_8));
+    }
+}
+```
+
+
+
+#### 总结
+
+1. DispatcherServlet 是在第一次被访问时执行初始化, 也可以通过配置修改为 Tomcat 启动后就初始化
+2. 在初始化时会从 Spring 容器中找一些 Web 需要的组件, 如 HandlerMapping、HandlerAdapter 等，并逐一调用它们的初始化
+3. RequestMappingHandlerMapping 初始化时，会收集所有 @RequestMapping 映射信息，封装为 Map，其中
+   * key 是 RequestMappingInfo 类型，包括请求路径、请求方法等信息
+   * value 是 HandlerMethod 类型，包括控制器方法对象、控制器对象
+   * 有了这个 Map，就可以在请求到达时，快速完成映射，找到 HandlerMethod 并与匹配的拦截器一起返回给 DispatcherServlet
+4. RequestMappingHandlerAdapter 初始化时，会准备 HandlerMethod 调用时需要的各个组件，如：
+   * HandlerMethodArgumentResolver 解析控制器方法参数
+   * HandlerMethodReturnValueHandler 处理控制器方法返回值
+
+
+
+### 参数解析器
+
+#### 常见参数解析器
+
+```java
+org.springframework.web.method.annotation.RequestParamMethodArgumentResolver@abbc908
+org.springframework.web.method.annotation.RequestParamMapMethodArgumentResolver@44afefd5
+org.springframework.web.servlet.mvc.method.annotation.PathVariableMethodArgumentResolver@9a7a808
+org.springframework.web.servlet.mvc.method.annotation.PathVariableMapMethodArgumentResolver@72209d93
+org.springframework.web.servlet.mvc.method.annotation.MatrixVariableMethodArgumentResolver@2687f956
+org.springframework.web.servlet.mvc.method.annotation.MatrixVariableMapMethodArgumentResolver@1ded7b14
+org.springframework.web.servlet.mvc.method.annotation.ServletModelAttributeMethodProcessor@29be7749
+org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor@5f84abe8
+org.springframework.web.servlet.mvc.method.annotation.RequestPartMethodArgumentResolver@4650a407
+org.springframework.web.method.annotation.RequestHeaderMethodArgumentResolver@30135202
+org.springframework.web.method.annotation.RequestHeaderMapMethodArgumentResolver@6a4d7f76
+org.springframework.web.servlet.mvc.method.annotation.ServletCookieValueMethodArgumentResolver@10ec523c
+org.springframework.web.method.annotation.ExpressionValueMethodArgumentResolver@53dfacba
+org.springframework.web.servlet.mvc.method.annotation.SessionAttributeMethodArgumentResolver@79767781
+org.springframework.web.servlet.mvc.method.annotation.RequestAttributeMethodArgumentResolver@78411116
+org.springframework.web.servlet.mvc.method.annotation.ServletRequestMethodArgumentResolver@aced190
+org.springframework.web.servlet.mvc.method.annotation.ServletResponseMethodArgumentResolver@245a060f
+org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor@6edaa77a
+org.springframework.web.servlet.mvc.method.annotation.RedirectAttributesMethodArgumentResolver@1e63d216
+org.springframework.web.method.annotation.ModelMethodProcessor@62ddd21b
+org.springframework.web.method.annotation.MapMethodProcessor@16c3ca31
+org.springframework.web.method.annotation.ErrorsMethodArgumentResolver@2d195ee4
+org.springframework.web.method.annotation.SessionStatusMethodArgumentResolver@2d6aca33
+org.springframework.web.servlet.mvc.method.annotation.UriComponentsBuilderMethodArgumentResolver@21ab988f
+org.springframework.web.servlet.mvc.method.annotation.PrincipalMethodArgumentResolver@29314cc9
+org.springframework.web.method.annotation.RequestParamMethodArgumentResolver@4e38d975
+org.springframework.web.servlet.mvc.method.annotation.ServletModelAttributeMethodProcessor@35f8a9d3
+```
+
+
+
+#### 示例
+
+```java
+public class User {
+    private String name;
+    private int age;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                '}';
+    }
+}
+```
+
+```java
+public class MyController {
+    public void test(
+            @RequestParam("name1") String name1, // name1=张三
+            String name2,                        // name2=李四
+            @RequestParam("age") int age,        // age=18
+            @RequestParam(name = "home", defaultValue = "${JAVA_HOME}") String home1, // spring 获取数据
+            @RequestParam("file") MultipartFile file, // 上传文件
+            @PathVariable("id") int id,               //  /test/124   /test/{id}
+            @RequestHeader("Content-Type") String header,
+            @CookieValue("token") String token,
+            @Value("${JAVA_HOME}") String home2, // spring 获取数据  ${} #{}
+            HttpServletRequest request,          // request, response, session ...
+            @ModelAttribute("abc") User user1,          // name=zhang&age=18
+            User user2,                          // name=zhang&age=18
+            @RequestBody User user3              // json
+    ) {
+    }
+}
+```
+
+```java
+public class Application {
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(WebConfig.class);
+        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+        // 准备测试 Request
+        HttpServletRequest request = mockRequest();
+
+        // 要点1. 控制器方法被封装为 HandlerMethod
+        HandlerMethod handlerMethod = new HandlerMethod(new MyController(), MyController.class.getMethod("test", String.class, String.class, int.class, String.class, MultipartFile.class, int.class, String.class, String.class, String.class, HttpServletRequest.class, User.class, User.class, User.class));
+
+        // 要点2. 准备对象绑定与类型转换
+        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(null, null);
+
+        // 要点3. 准备 ModelAndViewContainer 用来存储中间 Model 结果
+        ModelAndViewContainer container = new ModelAndViewContainer();
+
+        // 要点4. 解析每个参数值
+        for (MethodParameter parameter : handlerMethod.getMethodParameters()) {
+            // 多个解析器组合
+            HandlerMethodArgumentResolverComposite composite = new HandlerMethodArgumentResolverComposite();
+            composite.addResolvers(
+                    //                                          false 表示必须有 @RequestParam
+                    new RequestParamMethodArgumentResolver(beanFactory, false),
+                    new PathVariableMethodArgumentResolver(),
+                    new RequestHeaderMethodArgumentResolver(beanFactory),
+                    new ServletCookieValueMethodArgumentResolver(beanFactory),
+                    new ExpressionValueMethodArgumentResolver(beanFactory),
+                    new ServletRequestMethodArgumentResolver(),
+                    new ServletModelAttributeMethodProcessor(false), // 必须有 @ModelAttribute
+                    new RequestResponseBodyMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())),
+                    new ServletModelAttributeMethodProcessor(true), // 省略了 @ModelAttribute
+                    new RequestParamMethodArgumentResolver(beanFactory, true) // 省略 @RequestParam
+            );
+
+            String annotations = Arrays.stream(parameter.getParameterAnnotations()).map(a -> a.annotationType().getSimpleName()).collect(Collectors.joining());
+            String str = annotations.length() > 0 ? " @" + annotations + " " : " ";
+            parameter.initParameterNameDiscovery(new DefaultParameterNameDiscoverer());
+
+            if (composite.supportsParameter(parameter)) {
+                // 支持此参数
+                Object v = composite.resolveArgument(parameter, container, new ServletWebRequest(request), factory);
+//                System.out.println(v.getClass());
+                System.out.println(String.format("[%d] %s %s %s -> %s", parameter.getParameterIndex(), str, parameter.getParameterType().getSimpleName(), parameter.getParameterName(), v));
+                System.out.println("模型数据为：" + container.getModel());
+            } else {
+                System.out.println(String.format("[%d] %s %s %s", parameter.getParameterIndex(), str, parameter.getParameterType().getSimpleName(), parameter.getParameterName()));
+            }
+        }
+    }
+
+    private static HttpServletRequest mockRequest() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("name1", "zhangsan");
+        request.setParameter("name2", "lisi");
+        request.addPart(new MockPart("file", "abc", "hello".getBytes(StandardCharsets.UTF_8)));
+        Map<String, String> map = new AntPathMatcher().extractUriTemplateVariables("/test/{id}", "/test/123");
+        System.out.println(map);
+        request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, map);
+        request.setContentType("application/json");
+        request.setCookies(new Cookie("token", "123456"));
+        request.setParameter("name", "张三");
+        request.setParameter("age", "18");
+        request.setContent("{\"nam\":\"李四\",\"ag\":20}".getBytes(StandardCharsets.UTF_8));
+
+        return new StandardServletMultipartResolver().resolveMultipart(request);
+    }
+}
+```
+
+
+
+#### 总结
+
+1. 初步了解 RequestMappingHandlerAdapter 的调用过程
+   1. 控制器方法被封装为 HandlerMethod
+   2. 准备对象绑定与类型转换
+   3. 准备 ModelAndViewContainer 用来存储中间 Model 结果
+   4. 解析每个参数值
+2. 解析参数依赖的就是各种参数解析器，它们都有两个重要方法
+   * supportsParameter 判断是否支持方法参数
+   * resolveArgument 解析方法参数
+3. 常见参数的解析
+   * @RequestParam
+   * 省略 @RequestParam
+   * @RequestParam(defaultValue)
+   * MultipartFile
+   * @PathVariable
+   * @RequestHeader
+   * @CookieValue
+   * @Value
+   * HttpServletRequest 等
+   * @ModelAttribute
+   * 省略 @ModelAttribute
+   * @RequestBody
+4. 组合模式在 Spring 中的体现
+5. @RequestParam, @CookieValue 等注解中的参数名、默认值, 都可以写成活的, 即从 ${ } #{ }中获取
+
+
+
+### 参数名解析
+
+#### 问题
+
+方法的参数经过编译器编译之后不再是源码中的参数名
+
+```java
+// 源码
+public class Bean{
+    public void foo(String name, int age){
+
+    }
+}
+
+// javac ./Bean.java 编译
+// 使用 idea 查看 class 文件
+public class Bean {
+    public Bean() {
+    }
+
+    public void foo(String var1, int var2) {
+    }
+}
+
+// javap -c -v ./Bean.class 反编译查看字节码
+public void foo(java.lang.String, int);
+	descriptor: (Ljava/lang/String;I)V
+    flags: ACC_PUBLIC
+    Code:
+        stack=0, locals=3, args_size=3
+            0: return
+        LineNumberTable:
+            line 6: 0
+```
+
+
+
+#### 解决方法
+
+##### 使用参数 `-parameters`编译
+
+```java
+// javac -parameters ./Bean.java 编译
+// 使用 idea 查看 class 文件
+public class Bean {
+    public Bean() {
+    }
+
+    public void foo(String name, int age) {
+    }
+}
+
+// javap -c -v ./Bean.class 反编译查看字节码
+public void foo(java.lang.String, int);
+	descriptor: (Ljava/lang/String;I)V
+    flags: ACC_PUBLIC
+    Code:
+        stack=0, locals=3, args_size=3
+            0: return
+        LineNumberTable:
+            line 6: 0
+        MethodParameters:
+            Name                           Flags
+            name
+            age
+```
+
+##### 使用参数 `-g`编译
+
+```java
+// javac -parameters ./Bean.java 编译
+// 使用 idea 查看 class 文件
+public class Bean {
+    public Bean() {
+    }
+
+    public void foo(String name, int age) {
+    }
+}
+
+// javap -c -v ./Bean.class 反编译查看字节码
+public void foo(java.lang.String, int);
+	descriptor: (Ljava/lang/String;I)V
+    flags: ACC_PUBLIC
+    Code:
+        stack=0, locals=3, args_size=3
+            0: return
+        LineNumberTable:
+            line 6: 0
+        LocalVariableTable:
+            Start  Length  Slot  Name   Signature
+                0       1     0  this   Lcom/example/vo/Bean;
+                0       1     1  name   Ljava/lang/String;
+                0       1     2   age   I
+```
+
+
+
+##### 区别
+
+ `-parameters`与`-g`的区别
+
+- `-parameters`方法参数名存在方法参数表中，可以通过反射获取方法参数名
+- `-g`方法参数名存在本地变量表中，不可以通过反射获取方法参数名，但是能通过 ASM 技术获取
+- Spring 中同时支持这两个方式获取变量名
+
+
+
+#### Spring 的参数名获取
+
+- Spring Boot 会在编译时加入 `-parameters`
+- 大部分 IDE 会在编译时加入 `-g`
+
+
+
+1. 在 Spring 项目的 src 同级目录添加下面的源码（避免 Idea 自动编译）
+
+```java
+public class MyBean{
+    public void foo(String name, int age){
+
+    }
+}
+```
+
+2. File -> Project Structure -> Project Settings -> Modules -> 选择当前项目 -> Dependencies -> 添加 JARs or Directories -> 添加 MyBean 目录
+
+3. 使用不同编译方式编译 MyBean 之后运行测试代码查看运行结果
+
+```java
+public class Application {
+    public static void main(String[] args) throws NoSuchMethodException {
+        System.out.println("反射获取的变量名：");
+        Method foo = MyBean.class.getMethod("foo", String.class, int.class);
+        for(Parameter parameter:foo.getParameters()){
+            System.out.println(parameter.getName());
+        }
+
+        System.out.println("本地变量表的变量名：");
+        LocalVariableTableParameterNameDiscoverer nameDiscoverer = new LocalVariableTableParameterNameDiscoverer();
+        String[] parameterNames = nameDiscoverer.getParameterNames(foo);
+        if(null != parameterNames){
+            for(String parameterName:parameterNames){
+                System.out.println(parameterName);
+            }
+        }
+
+        System.out.println("Spring 获取的的变量名：");
+        DefaultParameterNameDiscoverer defaultNameDiscoverer = new DefaultParameterNameDiscoverer();
+        parameterNames = defaultNameDiscoverer.getParameterNames(foo);
+        if(null != parameterNames){
+            for(String parameterName:parameterNames){
+                System.out.println(parameterName);
+            }
+        }
+    }
+}
+```
+
+
+
+**DefaultParameterNameDiscoverer 结合了方法参数变量表和本地变量表参数名的获取方法**
+
+```java
+public class DefaultParameterNameDiscoverer extends PrioritizedParameterNameDiscoverer {
+    public DefaultParameterNameDiscoverer() {
+        if (KotlinDetector.isKotlinReflectPresent() && !GraalDetector.inImageCode()) {
+            this.addDiscoverer(new KotlinReflectionParameterNameDiscoverer());
+        }
+		
+        // 根据反射获取方法参数变量名
+        this.addDiscoverer(new StandardReflectionParameterNameDiscoverer());
+        // 根据本地变量表获取方法参数名
+        this.addDiscoverer(new LocalVariableTableParameterNameDiscoverer());
+    }
+}
+```
+
+
+
+#### 总结
+
+1. 如果编译时添加了 -parameters 可以生成参数表, 反射时就可以拿到参数名
+2. 如果编译时添加了 -g 可以生成调试信息, 但分为两种情况
+   * 普通类, 会包含局部变量表, 用 asm 可以拿到参数名
+   * 接口, 不会包含局部变量表, 无法获得参数名
+     * 这也是 MyBatis 在实现 Mapper 接口时为何要提供 @Param 注解来辅助获得参数名
+
+
+
+### 对象绑定与类型转换
+
+#### 底层第一套转换接口与实现
+
+```mermaid
+classDiagram
+
+Formatter --|> Printer
+Formatter --|> Parser
+
+class Converters {
+   Set~GenericConverter~
+}
+class Converter
+
+class ConversionService
+class FormattingConversionService
+
+ConversionService <|-- FormattingConversionService
+FormattingConversionService o-- Converters
+
+Printer --> Adapter1
+Adapter1 --> Converters
+Parser --> Adapter2
+Adapter2 --> Converters
+Converter --> Adapter3
+Adapter3 --> Converters
+
+<<interface>> Formatter
+<<interface>> Printer
+<<interface>> Parser
+<<interface>> Converter
+<<interface>> ConversionService
+```
+
+* Printer 把其它类型转为 String
+* Parser 把 String 转为其它类型
+* Formatter 综合 Printer 与 Parser 功能
+* Converter 把类型 S 转为类型 T
+* Printer、Parser、Converter 经过适配转换成 GenericConverter 放入 Converters 集合
+* FormattingConversionService 利用其它们实现转换
+
+
+
+#### 底层第二套转换接口
+
+```mermaid
+classDiagram
+
+PropertyEditorRegistry o-- "多" PropertyEditor
+
+<<interface>> PropertyEditorRegistry
+<<interface>> PropertyEditor
+```
+
+* PropertyEditor 把 String 与其它类型相互转换
+* PropertyEditorRegistry 可以注册多个 PropertyEditor 对象
+* 与第一套接口直接可以通过 FormatterPropertyEditorAdapter 来进行适配
+
+
+
+#### 高层接口与实现
+
+```mermaid
+classDiagram
+TypeConverter <|-- SimpleTypeConverter
+TypeConverter <|-- BeanWrapperImpl
+TypeConverter <|-- DirectFieldAccessor
+TypeConverter <|-- ServletRequestDataBinder
+
+SimpleTypeConverter --> TypeConverterDelegate
+BeanWrapperImpl --> TypeConverterDelegate
+DirectFieldAccessor --> TypeConverterDelegate
+ServletRequestDataBinder --> TypeConverterDelegate
+
+TypeConverterDelegate --> ConversionService
+TypeConverterDelegate --> PropertyEditorRegistry
+
+<<interface>> TypeConverter
+<<interface>> ConversionService
+<<interface>> PropertyEditorRegistry
+```
+
+* 它们都实现了 TypeConverter 这个高层转换接口，在转换时，会用到 TypeConverter Delegate 委派ConversionService 与 PropertyEditorRegistry 真正执行转换（Facade 门面模式）
+  * 首先看是否有自定义转换器, @InitBinder 添加的即属于这种 (用了适配器模式把 Formatter 转为需要的 PropertyEditor)
+  * 再看有没有 ConversionService 转换
+  * 再利用默认的 PropertyEditor 转换
+  * 最后有一些特殊处理
+* SimpleTypeConverter 仅做类型转换
+* BeanWrapperImpl 为 bean 的属性赋值，当需要时做类型转换，走 Property
+* DirectFieldAccessor 为 bean 的属性赋值，当需要时做类型转换，走 Field
+* ServletRequestDataBinder 为 bean 的属性执行绑定，当需要时做类型转换，根据 directFieldAccess 选择走 Property 还是 Field，具备校验与获取校验结果功能
+
+
+
+#### 类型转换与数据绑定
+
+##### 示例
+
+###### SimpleTypeConverter
+
+```java
+public class TestSimpleConverter {
+    public static void main(String[] args) {
+        // 仅有类型转换的功能
+        SimpleTypeConverter typeConverter = new SimpleTypeConverter();
+        Integer number = typeConverter.convertIfNecessary("13", int.class);
+        Date date = typeConverter.convertIfNecessary("1999/03/04", Date.class);
+        System.out.println(number);
+        System.out.println(date);
+    }
+}
+```
+
+###### BeanWrapperImpl
+
+```java
+public class TestBeanWrapper {
+    public static void main(String[] args) {
+        // 利用反射原理, 为 bean 的属性赋值
+        MyBean target = new MyBean();
+        BeanWrapperImpl wrapper = new BeanWrapperImpl(target);
+        wrapper.setPropertyValue("a", "10");
+        wrapper.setPropertyValue("b", "hello");
+        wrapper.setPropertyValue("c", "1999/03/04");
+        System.out.println(target);
+    }
+
+    static class MyBean {
+        private int a;
+        private String b;
+        private Date c;
+
+        public int getA() {
+            return a;
+        }
+
+        public void setA(int a) {
+            this.a = a;
+        }
+
+        public String getB() {
+            return b;
+        }
+
+        public void setB(String b) {
+            this.b = b;
+        }
+
+        public Date getC() {
+            return c;
+        }
+
+        public void setC(Date c) {
+            this.c = c;
+        }
+
+        @Override
+        public String toString() {
+            return "MyBean{" +
+                   "a=" + a +
+                   ", b='" + b + '\'' +
+                   ", c=" + c +
+                   '}';
+        }
+    }
+}
+```
+
+###### DirectFieldAccessor
+
+```java
+public class TestFieldAccessor {
+    public static void main(String[] args) {
+        // 利用反射原理, 为 bean 的属性赋值
+        MyBean target = new MyBean();
+        DirectFieldAccessor accessor = new DirectFieldAccessor(target);
+        accessor.setPropertyValue("a", "10");
+        accessor.setPropertyValue("b", "hello");
+        accessor.setPropertyValue("c", "1999/03/04");
+        System.out.println(target);
+    }
+
+    static class MyBean {
+        private int a;
+        private String b;
+        private Date c;
+        @Override
+        public String toString() {
+            return "MyBean{" +
+                   "a=" + a +
+                   ", b='" + b + '\'' +
+                   ", c=" + c +
+                   '}';
+        }
+    }
+}
+```
+
+###### DataBinder
+
+```java
+public class TestDataBinder {
+
+    public static void main(String[] args) {
+        // 执行数据绑定
+        MyBean target = new MyBean();
+        DataBinder dataBinder = new DataBinder(target);
+        // 设置走 Property 还是 Field
+        dataBinder.initDirectFieldAccess();
+        MutablePropertyValues pvs = new MutablePropertyValues();
+        pvs.add("a", "10");
+        pvs.add("b", "hello");
+        pvs.add("c", "1999/03/04");
+        dataBinder.bind(pvs);
+        System.out.println(target);
+    }
+
+    static class MyBean {
+        private int a;
+        private String b;
+        private Date c;
+
+        @Override
+        public String toString() {
+            return "MyBean{" +
+                   "a=" + a +
+                   ", b='" + b + '\'' +
+                   ", c=" + c +
+                   '}';
+        }
+    }
+}
+```
+
+###### ServletRequestDataBinder
+
+```java
+public class TestServletDataBinder {
+
+    public static void main(String[] args) {
+        // web 环境下数据绑定
+        MyBean target = new MyBean();
+        ServletRequestDataBinder dataBinder = new ServletRequestDataBinder(target);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("a", "10");
+        request.setParameter("b", "hello");
+        request.setParameter("c", "1999/03/04");
+
+        dataBinder.bind(new ServletRequestParameterPropertyValues(request));
+
+        System.out.println(target);
+    }
+
+    static class MyBean {
+        private int a;
+        private String b;
+        private Date c;
+
+        public int getA() {
+            return a;
+        }
+
+        public void setA(int a) {
+            this.a = a;
+        }
+
+        public String getB() {
+            return b;
+        }
+
+        public void setB(String b) {
+            this.b = b;
+        }
+
+        public Date getC() {
+            return c;
+        }
+
+        public void setC(Date c) {
+            this.c = c;
+        }
+
+        @Override
+        public String toString() {
+            return "MyBean{" +
+                   "a=" + a +
+                   ", b='" + b + '\'' +
+                   ", c=" + c +
+                   '}';
+        }
+    }
+}
+```
+
+
+
+#### 数据绑定工厂
+
+##### 示例
+
+```java
+public class MyDateFormatter implements Formatter<Date> {
+    private static final Logger log = LoggerFactory.getLogger(MyDateFormatter.class);
+    private final String desc;
+
+    public MyDateFormatter(String desc) {
+        this.desc = desc;
+    }
+
+    @Override
+    public String print(Date date, Locale locale) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy|MM|dd");
+        return sdf.format(date);
+    }
+
+    @Override
+    public Date parse(String text, Locale locale) throws ParseException {
+        log.debug(">>>>>> 进入了: {}", desc);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy|MM|dd");
+        return sdf.parse(text);
+    }
+}
+```
+
+```java
+public class TestServletDataBinderFactory {
+    public static void main(String[] args) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("birthday", "1999|01|02");
+        request.setParameter("address.name", "西安");
+
+        User target = new User();
+//         "1. 用工厂, 无转换功能"
+//        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(null, null);
+
+//         "2. 用 @InitBinder 转换"          PropertyEditorRegistry PropertyEditor
+//        InvocableHandlerMethod method = new InvocableHandlerMethod(new MyController(), MyController.class.getMethod("testInitBinder", WebDataBinder.class));
+//        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(Collections.singletonList(method), null);
+
+//         "3. 用 ConversionService 转换"    ConversionService Formatter
+//        FormattingConversionService service = new FormattingConversionService();
+//        service.addFormatter(new MyDateFormatter("用 ConversionService 方式扩展转换功能"));
+//        ConfigurableWebBindingInitializer initializer = new ConfigurableWebBindingInitializer();
+//        initializer.setConversionService(service);
+//        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(null, initializer);
+
+//         "4. 同时加了 @InitBinder 和 ConversionService" 使用了 @InitBinder
+//        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(Collections.singletonList(method), initializer);
+
+//         "5. 使用默认 ConversionService 转换" 需要配合 Spring 的容器格式化注解 @DateTimeFormat
+//        非 Spring Boot 程序可以使用 DefaultFormattingConversionService，Spring Boot 程序可以使用 ApplicationConversionService，
+        DefaultFormattingConversionService service = new DefaultFormattingConversionService();
+//        ApplicationConversionService service = new ApplicationConversionService();
+        ConfigurableWebBindingInitializer initializer = new ConfigurableWebBindingInitializer();
+        initializer.setConversionService(service);
+        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(null, initializer);
+
+        WebDataBinder dataBinder = factory.createBinder(new ServletWebRequest(request), target, "user");
+        dataBinder.bind(new ServletRequestParameterPropertyValues(request));
+        System.out.println(target);
+    }
+
+    static class MyController {
+        @InitBinder
+        public void testInitBinder(WebDataBinder dataBinder) {
+            // 扩展 dataBinder 的转换器
+            dataBinder.addCustomFormatter(new MyDateFormatter("用 @InitBinder 方式扩展的"));
+        }
+    }
+
+    public static class User {
+        @DateTimeFormat(pattern = "yyyy|MM|dd")
+        private Date birthday;
+        private Address address;
+
+        public Address getAddress() {
+            return address;
+        }
+
+        public void setAddress(Address address) {
+            this.address = address;
+        }
+
+        public Date getBirthday() {
+            return birthday;
+        }
+
+        public void setBirthday(Date birthday) {
+            this.birthday = birthday;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                   "birthday=" + birthday +
+                   ", address=" + address +
+                   '}';
+        }
+    }
+
+    public static class Address {
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return "Address{" +
+                   "name='" + name + '\'' +
+                   '}';
+        }
+    }
+}
+```
+
+
+
+##### 总结
+
+ServletRequestDataBinderFactory 的用法和扩展点
+
+1. 可以解析控制器的 @InitBinder 标注方法作为扩展点，添加自定义转换器
+   * 控制器私有范围
+2. 可以通过 ConfigurableWebBindingInitializer 配置 ConversionService 作为扩展点，添加自定义转换器
+   * 公共范围
+3. 同时加了 @InitBinder 和 ConversionService 的转换优先级
+   1. 优先采用 @InitBinder 的转换器
+   2. 其次使用 ConversionService 的转换器
+   3. 使用默认转换器
+   4. 特殊处理（例如有参构造）
+
+
+
+#### 获取泛型参数
+
+##### 示例
+
+```java
+public class TestGenericType {
+    public static void main(String[] args) {
+//         小技巧
+//         1. java api
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>");
+        Type type = TeacherDao.class.getGenericSuperclass();
+        System.out.println(type);
+
+//        判断父类型是否是泛型
+        if (type instanceof ParameterizedType) {
+            ParameterizedType parameterizedType = (ParameterizedType) type;
+            System.out.println(parameterizedType.getActualTypeArguments()[0]);
+        }
+
+//         2. spring api 1
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>");
+        Class<?> t = GenericTypeResolver.resolveTypeArgument(TeacherDao.class, BaseDao.class);
+        System.out.println(t);
+
+//         3. spring api 2
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>");
+        System.out.println(ResolvableType.forClass(TeacherDao.class).getSuperType().getGeneric().resolve());
+    }
+
+}
+```
+
+
+
+### @ControllerAdvice 
+
+对 Controller 提供增强功能
+
+- @InitBinder 补充自定义参数转换器
+
+- @ModelAttribute 方法的返回值会作为模型数据补充到控制器的执行过程中
+- @ExceptionHandler 统一处理异样
+
+
+
+#### @InitBinder
+
+- 可以加在 `@ControllerAdvice` 的方法上，作用范围是全局的，对所有 `@Controller` 都生效
+- 可以加在 `@Controller` 的方法上，作用范围是当前 `@Controller`，只对当前 `@Controller` 生效
+
+
+
+##### 示例
+
+**准备 @InitBinder** 在整个 HandlerAdapter 调用过程中所处的位置
+
+```mermaid
+sequenceDiagram
+participant adapter as HandlerAdapter
+participant bf as WebDataBinderFactory
+participant mf as ModelFactory
+participant ihm as ServletInvocableHandlerMethod
+participant ar as ArgumentResolvers 
+participant rh as ReturnValueHandlers
+participant container as ModelAndViewContainer
+rect rgb(200, 150, 255)
+adapter ->> +bf: 准备 @InitBinder
+bf -->> -adapter: 
+end
+adapter ->> +mf: 准备 @ModelAttribute
+mf ->> +container: 添加Model数据
+container -->> -mf: 
+mf -->> -adapter: 
+
+adapter ->> +ihm: invokeAndHandle
+ihm ->> +ar: 获取 args
+ar ->> ar: 有的解析器涉及 RequestBodyAdvice
+ar ->> container: 有的解析器涉及数据绑定生成Model数据
+ar -->> -ihm: args
+ihm ->> ihm: method.invoke(bean,args) 得到 returnValue
+ihm ->> +rh: 处理 returnValue
+rh ->> rh: 有的处理器涉及 ResponseBodyAdvice
+rh ->> +container: 添加Model数据,处理视图名,是否渲染等
+container -->> -rh: 
+rh -->> -ihm: 
+ihm -->> -adapter: 
+adapter ->> +container: 获取 ModelAndView
+container -->> -adapter: 
+```
+
+* RequestMappingHandlerAdapter 在图中缩写为 HandlerAdapter
+* HandlerMethodArgumentResolverComposite 在图中缩写为 ArgumentResolvers
+* HandlerMethodReturnValueHandlerComposite 在图中缩写为 ReturnValueHandlers
+
+
+
+```java
+public class MyDateFormatter implements Formatter<Date> {
+    private static final Logger log = LoggerFactory.getLogger(MyDateFormatter.class);
+    private final String desc;
+
+    public MyDateFormatter(String desc) {
+        this.desc = desc;
+    }
+
+    @Override
+    public String print(Date date, Locale locale) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy|MM|dd");
+        return sdf.format(date);
+    }
+
+    @Override
+    public Date parse(String text, Locale locale) throws ParseException {
+        log.debug(">>>>>> 进入了: {}", desc);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy|MM|dd");
+        return sdf.parse(text);
+    }
+}
+```
+
+```java
+@Configuration
+public class WebConfig {
+
+    @ControllerAdvice
+    static class MyControllerAdvice {
+        @InitBinder
+        public void binder3(WebDataBinder webDataBinder) {
+            webDataBinder.addCustomFormatter(new MyDateFormatter("binder3 转换器"));
+        }
+    }
+
+    @Controller
+    static class Controller1 {
+        @InitBinder
+        public void binder1(WebDataBinder webDataBinder) {
+            webDataBinder.addCustomFormatter(new MyDateFormatter("binder1 转换器"));
+        }
+
+        public void foo() {
+
+        }
+    }
+
+    @Controller
+    static class Controller2 {
+        @InitBinder
+        public void binder21(WebDataBinder webDataBinder) {
+            webDataBinder.addCustomFormatter(new MyDateFormatter("binder21 转换器"));
+        }
+
+        @InitBinder
+        public void binder22(WebDataBinder webDataBinder) {
+            webDataBinder.addCustomFormatter(new MyDateFormatter("binder22 转换器"));
+        }
+
+        public void bar() {
+
+        }
+    }
+
+}
+```
+
+```java
+public class Application {
+
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    public static void main(String[] args) throws Exception {
+        /*
+            @InitBinder 的来源有两个
+            1. @ControllerAdvice 中 @InitBinder 标注的方法，由 RequestMappingHandlerAdapter 在初始化时解析并记录
+            2. @Controller 中 @InitBinder 标注的方法，由 RequestMappingHandlerAdapter 会在控制器方法首次执行时解析并记录
+         */
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(WebConfig.class);
+
+        RequestMappingHandlerAdapter handlerAdapter = new RequestMappingHandlerAdapter();
+        handlerAdapter.setApplicationContext(context);
+        handlerAdapter.afterPropertiesSet();
+
+        log.debug("1. 刚开始...");
+        showBindMethods(handlerAdapter);
+
+        Method getDataBinderFactory = RequestMappingHandlerAdapter.class.getDeclaredMethod("getDataBinderFactory", HandlerMethod.class);
+        getDataBinderFactory.setAccessible(true);
+
+        log.debug("2. 模拟调用 Controller1 的 foo 方法时 ...");
+        getDataBinderFactory.invoke(handlerAdapter, new HandlerMethod(new WebConfig.Controller1(), WebConfig.Controller1.class.getMethod("foo")));
+        showBindMethods(handlerAdapter);
+
+        log.debug("3. 模拟调用 Controller2 的 bar 方法时 ...");
+        getDataBinderFactory.invoke(handlerAdapter, new HandlerMethod(new WebConfig.Controller2(), WebConfig.Controller2.class.getMethod("bar")));
+        showBindMethods(handlerAdapter);
+
+        context.close();
+
+        /*
+            a. Method 对象的获取利用了缓存来进行加速
+            b. 绑定器工厂的扩展点(advice 之一), 通过 @InitBinder 扩展类型转换器
+         */
+    }
+
+    @SuppressWarnings("all")
+    private static void showBindMethods(RequestMappingHandlerAdapter handlerAdapter) throws NoSuchFieldException, IllegalAccessException {
+        Field initBinderAdviceCache = RequestMappingHandlerAdapter.class.getDeclaredField("initBinderAdviceCache");
+        initBinderAdviceCache.setAccessible(true);
+        Map<ControllerAdviceBean, Set<Method>> globalMap = (Map<ControllerAdviceBean, Set<Method>>) initBinderAdviceCache.get(handlerAdapter);
+        log.debug("全局的 @InitBinder 方法 {}",
+                globalMap.values().stream()
+                        .flatMap(ms -> ms.stream().map(m -> m.getName()))
+                        .collect(Collectors.toList())
+        );
+
+        Field initBinderCache = RequestMappingHandlerAdapter.class.getDeclaredField("initBinderCache");
+        initBinderCache.setAccessible(true);
+        Map<Class<?>, Set<Method>> controllerMap = (Map<Class<?>, Set<Method>>) initBinderCache.get(handlerAdapter);
+        log.debug("控制器的 @InitBinder 方法 {}",
+                controllerMap.entrySet().stream()
+                        .flatMap(e -> e.getValue().stream().map(v -> e.getKey().getSimpleName() + "." + v.getName()))
+                        .collect(Collectors.toList())
+        );
+    }
+}
+```
+
+
+
+##### 总结
+
+1. RequestMappingHandlerAdapter 初始化时会解析 @ControllerAdvice 中的 @InitBinder 方法
+2. RequestMappingHandlerAdapter 会以类为单位，在该类首次使用时，解析此类的 @InitBinder 方法
+3. 以上两种 @InitBinder 的解析结果都会缓存来避免重复解析
+4. 控制器方法调用时，会综合利用本类的 @InitBinder 方法和 @ControllerAdvice 中的 @InitBinder 方法创建绑定工厂
+
+
+
+#### 控制器方法执行流程
+
+##### 图1
+
+```mermaid
+classDiagram
+class ServletInvocableHandlerMethod {
+	+invokeAndHandle(ServletWebRequest,ModelAndViewContainer)
+}
+HandlerMethod <|-- ServletInvocableHandlerMethod
+HandlerMethod o-- bean
+HandlerMethod o-- method
+ServletInvocableHandlerMethod o-- WebDataBinderFactory
+ServletInvocableHandlerMethod o-- ParameterNameDiscoverer
+ServletInvocableHandlerMethod o-- HandlerMethodArgumentResolverComposite
+ServletInvocableHandlerMethod o-- HandlerMethodReturnValueHandlerComposite
+```
+
+HandlerMethod 需要
+
+* bean 即是哪个 Controller
+* method 即是 Controller 中的哪个方法
+
+ServletInvocableHandlerMethod 需要
+
+* WebDataBinderFactory 负责对象绑定、类型转换
+* ParameterNameDiscoverer 负责参数名解析
+* HandlerMethodArgumentResolverComposite 负责解析参数
+* HandlerMethodReturnValueHandlerComposite 负责处理返回值
+
+
+
+##### 图2
+
+```mermaid
+sequenceDiagram
+participant adapter as RequestMappingHandlerAdapter
+participant bf as WebDataBinderFactory
+participant mf as ModelFactory
+participant container as ModelAndViewContainer
+adapter ->> +bf: 准备 @InitBinder
+bf -->> -adapter: 
+adapter ->> +mf: 准备 @ModelAttribute
+mf ->> +container: 添加Model数据
+container -->> -mf: 
+mf -->> -adapter: 
+```
+
+- WebDataBinderFactory 数据绑定工厂
+- ModelFactory 模型工厂，用来创建模型数据
+- ModelAndViewContainer 存放临时模型数据，`@ControllerAdvice` 的 `@ModelAttribute` 产生的临时数据
+
+
+
+##### 图3
+
+```mermaid
+sequenceDiagram
+participant adapter as RequestMappingHandlerAdapter
+participant ihm as ServletInvocableHandlerMethod
+participant ar as ArgumentResolvers
+participant rh as ReturnValueHandlers
+participant container as ModelAndViewContainer
+
+adapter ->> +ihm: invokeAndHandle
+ihm ->> +ar: 获取 args
+ar ->> ar: 有的解析器涉及 RequestBodyAdvice
+ar ->> container: 有的解析器涉及数据绑定生成模型数据
+container -->> ar: 
+ar -->> -ihm: args
+ihm ->> ihm: method.invoke(bean,args) 得到 returnValue
+ihm ->> +rh: 处理 returnValue
+rh ->> rh: 有的处理器涉及 ResponseBodyAdvice
+rh ->> +container: 添加Model数据,处理视图名,是否渲染等
+container -->> -rh: 
+rh -->> -ihm: 
+ihm -->> -adapter: 
+adapter ->> +container: 获取 ModelAndView
+container -->> -adapter: 
+```
+
+
+
+- RequestMappingHandlerAdapter
+- ServletInvocableHandlerMethod 反射调用控制器方法
+- ArgumentResolvers HandlerMethodArgumentResolverComposite 参数解析器，准备参数
+- ReturnValueHandlers HandlerMethodReturnValueHandlerComposite  返回值处理器，处理返回值
+- ModelAndViewContainer
+
+
+
+
+
+#### @ModelAttribute
+
+**准备 @ModelAttribute** 在整个 HandlerAdapter 调用过程中所处的位置
+
+```mermaid
+sequenceDiagram
+participant adapter as HandlerAdapter
+participant bf as WebDataBinderFactory
+participant mf as ModelFactory
+participant ihm as ServletInvocableHandlerMethod
+participant ar as ArgumentResolvers 
+participant rh as ReturnValueHandlers
+participant container as ModelAndViewContainer
+
+adapter ->> +bf: 准备 @InitBinder
+bf -->> -adapter: 
+rect rgb(200, 150, 255)
+adapter ->> +mf: 准备 @ModelAttribute
+mf ->> +container: 添加Model数据
+container -->> -mf: 
+mf -->> -adapter: 
+end
+adapter ->> +ihm: invokeAndHandle
+ihm ->> +ar: 获取 args
+ar ->> ar: 有的解析器涉及 RequestBodyAdvice
+ar ->> container: 有的解析器涉及数据绑定生成Model数据
+ar -->> -ihm: args
+ihm ->> ihm: method.invoke(bean,args) 得到 returnValue
+ihm ->> +rh: 处理 returnValue
+rh ->> rh: 有的处理器涉及 ResponseBodyAdvice
+rh ->> +container: 添加Model数据,处理视图名,是否渲染等
+container -->> -rh: 
+rh -->> -ihm: 
+ihm -->> -adapter: 
+adapter ->> +container: 获取 ModelAndView
+container -->> -adapter: 
+```
+
+
+
+##### 示例
+
+```java
+@Configuration
+public class WebConfig {
+
+    @ControllerAdvice
+    static class MyControllerAdvice {
+        @ModelAttribute("a")
+        public String aa() {
+            return "aa";
+        }
+    }
+
+    @Controller
+    static class Controller1 {
+        @ModelAttribute("b")
+        public String aa() {
+            return "bb";
+        }
+
+        // 使用 @ResponseStatus 为了方便测试，不需要实现 HandlerMethodReturnValueHandlerComposite
+        @ResponseStatus(HttpStatus.OK)
+        public ModelAndView foo(@ModelAttribute("u") User user) {
+            System.out.println("foo");
+            return null;
+        }
+    }
+
+    static class User {
+        private String name;
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+
+            return name;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                   "name='" + name + '\'' +
+                   '}';
+        }
+    }
+}
+```
+
+```java
+public class Application {
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(WebConfig.class);
+
+        RequestMappingHandlerAdapter adapter = new RequestMappingHandlerAdapter();
+        adapter.setApplicationContext(context);
+        adapter.afterPropertiesSet();
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("name", "张三");
+        /*
+            现在可以通过 ServletInvocableHandlerMethod 把这些整合在一起, 并完成控制器方法的调用, 如下
+         */
+        ServletInvocableHandlerMethod handlerMethod = new ServletInvocableHandlerMethod(
+                new WebConfig.Controller1(), WebConfig.Controller1.class.getMethod("foo", WebConfig.User.class));
+
+        ServletRequestDataBinderFactory factory = new ServletRequestDataBinderFactory(null, null);
+
+        handlerMethod.setDataBinderFactory(factory);
+        handlerMethod.setParameterNameDiscoverer(new DefaultParameterNameDiscoverer());
+        handlerMethod.setHandlerMethodArgumentResolvers(getArgumentResolvers(context));
+
+        ModelAndViewContainer container = new ModelAndViewContainer();
+
+        // 获取模型工厂方法
+        Method getModelFactory = RequestMappingHandlerAdapter.class.getDeclaredMethod("getModelFactory", HandlerMethod.class, WebDataBinderFactory.class);
+        getModelFactory.setAccessible(true);
+        ModelFactory modelFactory = (ModelFactory) getModelFactory.invoke(adapter, handlerMethod, factory);
+
+        // 初始化模型数据
+        modelFactory.initModel(new ServletWebRequest(request), container, handlerMethod);
+
+        handlerMethod.invokeAndHandle(new ServletWebRequest(request), container);
+
+        System.out.println(container.getModel());
+
+        context.close();
+
+        /*
+            a. 控制器方法是如何调用的
+            b. 模型数据如何产生
+            c. advice 之二, @ModelAttribute 补充模型数据
+         */
+    }
+
+    public static HandlerMethodArgumentResolverComposite getArgumentResolvers(AnnotationConfigApplicationContext context) {
+        HandlerMethodArgumentResolverComposite composite = new HandlerMethodArgumentResolverComposite();
+        composite.addResolvers(
+                new RequestParamMethodArgumentResolver(context.getDefaultListableBeanFactory(), false),
+                new PathVariableMethodArgumentResolver(),
+                new RequestHeaderMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ServletCookieValueMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ExpressionValueMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ServletRequestMethodArgumentResolver(),
+                new ServletModelAttributeMethodProcessor(false),
+                new RequestResponseBodyMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())),
+                new ServletModelAttributeMethodProcessor(true),
+                new RequestParamMethodArgumentResolver(context.getDefaultListableBeanFactory(), true)
+        );
+        return composite;
+    }
+
+}
+```
+
+
+
+
+
+##### 总结
+
+1. RequestMappingHandlerAdapter 初始化时会解析 @ControllerAdvice 中的 @ModelAttribute 方法
+2. RequestMappingHandlerAdapter 会以类为单位，在该类首次使用时，解析此类的 @ModelAttribute 方法
+3. 以上两种 @ModelAttribute 的解析结果都会缓存来避免重复解析
+4. 控制器方法调用时，会综合利用本类的 @ModelAttribute 方法和 @ControllerAdvice 中的 @ModelAttribute 方法创建模型工厂
+
+
+
+#### ResponseBodyAdvice
+
+##### 示例
+
+**ResponseBodyAdvice 增强** 在整个 HandlerAdapter 调用过程中所处的位置
+
+```mermaid
+sequenceDiagram
+participant adapter as HandlerAdapter
+participant bf as WebDataBinderFactory
+participant mf as ModelFactory
+participant ihm as ServletInvocableHandlerMethod
+participant ar as ArgumentResolvers 
+participant rh as ReturnValueHandlers
+participant container as ModelAndViewContainer
+
+adapter ->> +bf: 准备 @InitBinder
+bf -->> -adapter: 
+adapter ->> +mf: 准备 @ModelAttribute
+mf ->> +container: 添加Model数据
+container -->> -mf: 
+mf -->> -adapter: 
+adapter ->> +ihm: invokeAndHandle
+ihm ->> +ar: 获取 args
+ar ->> ar: 有的解析器涉及 RequestBodyAdvice
+ar ->> container: 有的解析器涉及数据绑定生成Model数据
+ar -->> -ihm: args
+ihm ->> ihm: method.invoke(bean,args) 得到 returnValue
+ihm ->> +rh: 处理 returnValue
+rect rgb(200, 150, 255)
+rh ->> rh: 有的处理器涉及 ResponseBodyAdvice
+end
+rh ->> +container: 添加Model数据,处理视图名,是否渲染等
+container -->> -rh: 
+rh -->> -ihm: 
+ihm -->> -adapter: 
+adapter ->> +container: 获取 ModelAndView
+container -->> -adapter: 
+```
+
+```java
+@Configuration
+public class WebConfig {
+
+    @ControllerAdvice
+    static class MyControllerAdvice implements ResponseBodyAdvice<Object> {
+        // 满足条件才转换
+        public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
+            /**
+             * @ResponseBody
+             * @RestController
+             */
+            if (returnType.getMethodAnnotation(ResponseBody.class) != null ||
+                AnnotationUtils.findAnnotation(returnType.getContainingClass(), ResponseBody.class) != null) {
+                return true;
+            }
+            return false;
+        }
+
+        // 将 User 或其它类型统一为 Result 类型
+        public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType, Class<? extends HttpMessageConverter<?>> selectedConverterType, ServerHttpRequest request, ServerHttpResponse response) {
+            if (body instanceof Result) {
+                return body;
+            }
+            return Result.ok(body);
+        }
+    }
+
+    // @Controller
+    // @ResponseBody
+    @RestController
+    public static class MyController {
+        public User user() {
+            return new User("王五", 18);
+        }
+    }
+
+    public static class User {
+        private String name;
+        private int age;
+
+        public User(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+    }
+}
+```
+
+```java
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class Result {
+    private int code;
+    private String msg;
+    private Object data;
+
+    public int getCode() {
+        return code;
+    }
+
+    public void setCode(int code) {
+        this.code = code;
+    }
+
+    public String getMsg() {
+        return msg;
+    }
+
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
+
+    public Object getData() {
+        return data;
+    }
+
+    public void setData(Object data) {
+        this.data = data;
+    }
+
+    @JsonCreator
+    private Result(@JsonProperty("code") int code, @JsonProperty("data") Object data) {
+        this.code = code;
+        this.data = data;
+    }
+
+    private Result(int code, String msg) {
+        this.code = code;
+        this.msg = msg;
+    }
+
+    public static Result ok() {
+        return new Result(200, null);
+    }
+
+    public static Result ok(Object data) {
+        return new Result(200, data);
+    }
+
+    public static Result error(String msg) {
+        return new Result(500, "服务器内部错误:" + msg);
+    }
+}
+```
+
+```java
+public class Application {
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(WebConfig.class);
+
+        ServletInvocableHandlerMethod handlerMethod = new ServletInvocableHandlerMethod(
+                context.getBean(WebConfig.MyController.class),
+                WebConfig.MyController.class.getMethod("user")
+        );
+        handlerMethod.setDataBinderFactory(new ServletRequestDataBinderFactory(Collections.emptyList(), null));
+        handlerMethod.setParameterNameDiscoverer(new DefaultParameterNameDiscoverer());
+        handlerMethod.setHandlerMethodArgumentResolvers(getArgumentResolvers(context));
+        handlerMethod.setHandlerMethodReturnValueHandlers(getReturnValueHandlers(context));
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        ModelAndViewContainer container = new ModelAndViewContainer();
+        handlerMethod.invokeAndHandle(new ServletWebRequest(request, response), container);
+
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+    }
+
+    public static HandlerMethodArgumentResolverComposite getArgumentResolvers(AnnotationConfigApplicationContext context) {
+        HandlerMethodArgumentResolverComposite composite = new HandlerMethodArgumentResolverComposite();
+        composite.addResolvers(
+                new RequestParamMethodArgumentResolver(context.getDefaultListableBeanFactory(), false),
+                new PathVariableMethodArgumentResolver(),
+                new RequestHeaderMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ServletCookieValueMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ExpressionValueMethodArgumentResolver(context.getDefaultListableBeanFactory()),
+                new ServletRequestMethodArgumentResolver(),
+                new ServletModelAttributeMethodProcessor(false),
+                new RequestResponseBodyMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())),
+                new ServletModelAttributeMethodProcessor(true),
+                new RequestParamMethodArgumentResolver(context.getDefaultListableBeanFactory(), true)
+        );
+        return composite;
+    }
+
+    public static HandlerMethodReturnValueHandlerComposite getReturnValueHandlers(AnnotationConfigApplicationContext context) {
+        // 添加 advice
+        List<ControllerAdviceBean> annotatedBeans = ControllerAdviceBean.findAnnotatedBeans(context);
+        List<Object> collect = annotatedBeans.stream().filter(b -> ResponseBodyAdvice.class.isAssignableFrom(b.getBeanType()))
+                .collect(Collectors.toList());
+
+        HandlerMethodReturnValueHandlerComposite composite = new HandlerMethodReturnValueHandlerComposite();
+        composite.addHandler(new ModelAndViewMethodReturnValueHandler());
+        composite.addHandler(new ViewNameMethodReturnValueHandler());
+        composite.addHandler(new ServletModelAttributeMethodProcessor(false));
+        composite.addHandler(new HttpEntityMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())));
+        composite.addHandler(new HttpHeadersReturnValueHandler());
+        composite.addHandler(new RequestResponseBodyMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter()), collect));
+        composite.addHandler(new ServletModelAttributeMethodProcessor(true));
+        return composite;
+    }
+}
+```
+
+
+
+##### 总结
+
+1. ResponseBodyAdvice 返回响应体前包装
+
+
+
+#### 异常处理
+
+##### @ExceptionHandler
+
+ExceptionHandlerExceptionResolver
+
+###### 异常处理器调用过程
+
+```java
+public class DispatcherServlet extends FrameworkServlet {
+       protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        HttpServletRequest processedRequest = request;
+        HandlerExecutionChain mappedHandler = null;
+        try {
+            try {
+                try {
+                    processedRequest = this.checkMultipart(request);
+                    mappedHandler = this.getHandler(processedRequest);
+                    HandlerAdapter ha = this.getHandlerAdapter(mappedHandler.getHandler());
+                    // 控制器方法调用
+                    mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+                } catch (Exception var20) {
+                    dispatchException = var20;
+                } catch (Throwable var21) {
+                    dispatchException = new NestedServletException("Handler dispatch failed", var21);
+                }
+				// 处理调用结果
+                this.processDispatchResult(processedRequest, response, mappedHandler, mv, (Exception)dispatchException);
+            } catch (Exception var22) {
+			// ...
+            } catch (Throwable var23) {
+			// ...
+            }
+
+        } finally {
+			// ...
+        }
+    }
+    
+    private void processDispatchResult(HttpServletRequest request, HttpServletResponse response, @Nullable HandlerExecutionChain mappedHandler, @Nullable ModelAndView mv, @Nullable Exception exception) throws Exception {
+        boolean errorView = false;
+        // 发生异常，进行异常处理
+        if (exception != null) {
+            if (exception instanceof ModelAndViewDefiningException) {
+                this.logger.debug("ModelAndViewDefiningException encountered", exception);
+                mv = ((ModelAndViewDefiningException)exception).getModelAndView();
+            } else {
+                Object handler = mappedHandler != null ? mappedHandler.getHandler() : null;
+                mv = this.processHandlerException(request, response, handler, exception);
+                errorView = mv != null;
+            }
+        }
+
+        // ...
+    }
+    
+    @Nullable
+    protected ModelAndView processHandlerException(HttpServletRequest request, HttpServletResponse response, @Nullable Object handler, Exception ex) throws Exception {
+        request.removeAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE);
+        ModelAndView exMv = null;
+        // 查找异常处理器来处理异常
+        if (this.handlerExceptionResolvers != null) {
+            Iterator var6 = this.handlerExceptionResolvers.iterator();
+
+            while(var6.hasNext()) {
+                HandlerExceptionResolver resolver = (HandlerExceptionResolver)var6.next();
+                exMv = resolver.resolveException(request, response, handler, ex);
+                if (exMv != null) {
+                    break;
+                }
+            }
+        }
+		// ...
+    }
+}
+```
+
+
+
+###### 示例
+
+异常处理器 ExceptionHandlerExceptionResolver
+
+该异常处理器用来处理 `@ExceptionHandler` 的异常方法
+
+```java
+public class Application {
+    public static void main(String[] args) throws NoSuchMethodException {
+        ExceptionHandlerExceptionResolver resolver = new ExceptionHandlerExceptionResolver();
+        resolver.setMessageConverters(Collections.singletonList(new MappingJackson2HttpMessageConverter()));
+        // 添加参数、返回值处理器
+        resolver.afterPropertiesSet();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        System.out.println("1.测试 json");
+        HandlerMethod handlerMethod = new HandlerMethod(new Controller1(), Controller1.class.getMethod("foo"));
+        Exception e = new ArithmeticException("被零除");
+        resolver.resolveException(request, response, handlerMethod, e);
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+
+        System.out.println("2.测试 mav");
+        handlerMethod = new HandlerMethod(new Controller2(), Controller2.class.getMethod("foo"));
+        e = new ArithmeticException("被零除");
+        ModelAndView mav = resolver.resolveException(request, response, handlerMethod, e);
+        System.out.println(mav.getModel());
+        System.out.println(mav.getViewName());
+
+        System.out.println("3.测试嵌套异常");
+        handlerMethod = new HandlerMethod(new Controller3(), Controller3.class.getMethod("foo"));
+        e = new Exception("e1", new RuntimeException("e2", new IOException("e3")));
+        resolver.resolveException(request, response, handlerMethod, e);
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+
+        System.out.println("4.测试异常处理方法参数解析");
+
+        handlerMethod = new HandlerMethod(new Controller4(), Controller4.class.getMethod("foo"));
+        e = new Exception("e1");
+        resolver.resolveException(request, response, handlerMethod, e);
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+    }
+
+    static class Controller1 {
+        public void foo() {
+
+        }
+        @ExceptionHandler
+        @ResponseBody
+        public Map<String, Object> handle(ArithmeticException e) {
+            Map<String, Object> map = new HashMap<>(1);
+            map.put("error", e.getMessage());
+            return map;
+        }
+    }
+
+    static class Controller2 {
+        public void foo() {
+
+        }
+        @ExceptionHandler
+        public ModelAndView handle(ArithmeticException e) {
+            Map<String, Object> map = new HashMap<>(1);
+            map.put("error", e.getMessage());
+            return new ModelAndView("test2", map);
+        }
+    }
+
+    static class Controller3 {
+        public void foo() {
+
+        }
+        @ExceptionHandler
+        @ResponseBody
+        public Map<String, Object> handle(IOException e) {
+            Map<String, Object> map = new HashMap<>(1);
+            map.put("error", e.getMessage());
+            return map;
+        }
+    }
+
+    static class Controller4 {
+        public void foo() {}
+        @ExceptionHandler
+        @ResponseBody
+        public Map<String, Object> handler(Exception e, HttpServletRequest request) {
+            System.out.println(request);
+            Map<String, Object> map = new HashMap<>(1);
+            map.put("error", e.getMessage());
+            return map;
+        }
+    }
+}
+```
+
+
+
+###### afterPropertiesSet()
+
+Spring 初始化时调用
+
+```java
+public void afterPropertiesSet() {
+    // 缓存解析器
+    this.initExceptionHandlerAdviceCache();
+    List handlers;
+    // 添加常用参数解析器
+    if (this.argumentResolvers == null) {
+        handlers = this.getDefaultArgumentResolvers();
+        this.argumentResolvers = (new HandlerMethodArgumentResolverComposite()).addResolvers(handlers);
+    }
+
+    // 添加常用返回值处理器
+    if (this.returnValueHandlers == null) {
+        handlers = this.getDefaultReturnValueHandlers();
+        this.returnValueHandlers = (new HandlerMethodReturnValueHandlerComposite()).addHandlers(handlers);
+    }
+
+}
+
+private void initExceptionHandlerAdviceCache() {
+    if (this.getApplicationContext() != null) {
+        List<ControllerAdviceBean> adviceBeans = ControllerAdviceBean.findAnnotatedBeans(this.getApplicationContext());
+        Iterator var2 = adviceBeans.iterator();
+
+        while(var2.hasNext()) {
+            ControllerAdviceBean adviceBean = (ControllerAdviceBean)var2.next();
+            Class<?> beanType = adviceBean.getBeanType();
+            // ... 
+            ExceptionHandlerMethodResolver resolver = new ExceptionHandlerMethodResolver(beanType);
+            if (resolver.hasExceptionMappings()) {
+                this.exceptionHandlerAdviceCache.put(adviceBean, resolver);
+            }
+
+            if (ResponseBodyAdvice.class.isAssignableFrom(beanType)) {
+                this.responseBodyAdvice.add(adviceBean);
+            }
+            // ...
+        }
+    }
+}
+```
+
+
+
+###### 总结
+
+1. ExceptionHandlerExceptionResolver 能够重用参数解析器、返回值处理器，实现组件重用
+2. 能够支持嵌套异常，在解析异常时会将嵌套的异常展开为数组
+
+
+
+##### 全局@ExceptionHandler
+
+当我们没有在 Controller 中使用 `@ExceptionHandler` 进行异常处理时，希望有一个可以进行全局处理异常的 `@ExceptionHandler`
+
+###### 示例
+
+```java
+@Configuration
+public class WebConfig {
+    @ControllerAdvice
+    static class MyControllerAdvice {
+        @ExceptionHandler
+        @ResponseBody
+        public Map<String, Object> handle(Exception e) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("error", e.getMessage());
+            return map;
+        }
+    }
+
+    @Bean
+    public ExceptionHandlerExceptionResolver resolver() {
+        List list = new ArrayList();
+        list.add(new MappingJackson2HttpMessageConverter());
+        ExceptionHandlerExceptionResolver resolver = new ExceptionHandlerExceptionResolver();
+        resolver.setMessageConverters(list);
+        return resolver;
+    }
+}
+```
+
+```java
+public class Application {
+    public static void main(String[] args) throws NoSuchMethodException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+//        ExceptionHandlerExceptionResolver resolver = new ExceptionHandlerExceptionResolver();
+//        resolver.setMessageConverters(List.of(new MappingJackson2HttpMessageConverter()));
+//        resolver.afterPropertiesSet();
+
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(WebConfig.class);
+        ExceptionHandlerExceptionResolver resolver = context.getBean(ExceptionHandlerExceptionResolver.class);
+
+        HandlerMethod handlerMethod = new HandlerMethod(new Controller5(), Controller5.class.getMethod("foo"));
+        Exception e = new Exception("e1");
+        resolver.resolveException(request, response, handlerMethod, e);
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+    }
+
+    static class Controller5 {
+        public void foo() {
+
+        }
+    }
+}
+```
+
+
+
+###### 总结
+
+1. ExceptionHandlerExceptionResolver 初始化时会解析 @ControllerAdvice 中的 @ExceptionHandler 方法
+2. ExceptionHandlerExceptionResolver 会以类为单位，在该类首次处理异常时，解析此类的 @ExceptionHandler 方法
+3. 以上两种 @ExceptionHandler 的解析结果都会缓存来避免重复解析
+
+
+
+### 返回值处理器
+
+#### 常见返回值处理器
+
+```java
+org.springframework.web.servlet.mvc.method.annotation.ModelAndViewMethodReturnValueHandler@4c9e38
+org.springframework.web.method.annotation.ModelMethodProcessor@5d1e09bc
+org.springframework.web.servlet.mvc.method.annotation.ViewMethodReturnValueHandler@4bdc8b5d
+org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitterReturnValueHandler@3bcd426c
+org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBodyReturnValueHandler@5f14a673
+org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor@726a17c4
+org.springframework.web.servlet.mvc.method.annotation.HttpHeadersReturnValueHandler@5dc3fcb7
+org.springframework.web.servlet.mvc.method.annotation.CallableMethodReturnValueHandler@c4c0b41
+org.springframework.web.servlet.mvc.method.annotation.DeferredResultMethodReturnValueHandler@76911385
+org.springframework.web.servlet.mvc.method.annotation.AsyncTaskMethodReturnValueHandler@5467eea4
+org.springframework.web.servlet.mvc.method.annotation.ServletModelAttributeMethodProcessor@160396db
+org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor@7a799159
+org.springframework.web.servlet.mvc.method.annotation.ViewNameMethodReturnValueHandler@40ab8a8
+org.springframework.web.method.annotation.MapMethodProcessor@6ff37443
+org.springframework.web.servlet.mvc.method.annotation.ServletModelAttributeMethodProcessor@65cc8228
+```
+
+
+
+#### 示例
+
+> `Spring Boot` 版本为 `2.5.5`
+
+```java
+@Configuration
+public class WebConfig {
+
+    @Bean
+    public FreeMarkerConfigurer freeMarkerConfigurer() throws IOException {
+        FreeMarkerConfigurer configurer = new FreeMarkerConfigurer();
+        configurer.setDefaultEncoding("utf-8");
+        configurer.setTemplateLoaderPath("classpath:templates");
+        return configurer;
+    }
+
+    @Bean // FreeMarkerView 在借助 Spring 初始化时，会要求 web 环境才会走 setConfiguration, 这里想办法去掉了 web 环境的约束
+    public FreeMarkerViewResolver viewResolver(FreeMarkerConfigurer configurer) {
+        FreeMarkerViewResolver resolver = new FreeMarkerViewResolver(){
+//            @Override
+            protected AbstractUrlBasedView instantiateView() {
+                FreeMarkerView view = new FreeMarkerView() {
+                    @Override
+                    protected boolean isContextRequired() {
+                        return false;
+                    }
+                };
+                view.setConfiguration(configurer.getConfiguration());
+                return view;
+            }
+        };
+        resolver.setContentType("text/html;charset=utf-8");
+        resolver.setPrefix("/");
+        resolver.setSuffix(".ftl");
+        resolver.setExposeSpringMacroHelpers(false);
+        return resolver;
+    }
+
+}
+```
+
+```java
+public class Application {
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(WebConfig.class);
+        // 1. 测试返回值类型为 ModelAndView
+        test(context, "test1", null);
+
+        // 2. 测试返回值类型为 String 时, 把它当做视图名
+        test(context, "test2", null);
+
+        // 3. 测试返回值添加了 @ModelAttribute 注解时, 此时需找到默认视图名
+        test(context, "test3", "/test3");
+
+        // 4. 测试返回值不加 @ModelAttribute 注解且返回非简单类型时, 此时需找到默认视图名
+        test(context, "test4", "/test4");
+
+        // 5. 测试返回值类型为 ResponseEntity 时, 此时不走视图流程
+        test(context, "test5", null);
+
+        // 6. 测试返回值类型为 HttpHeaders 时, 此时不走视图流程
+        test(context, "test6", null);
+
+        // 7. 测试返回值添加了 @ResponseBody 注解时, 此时不走视图流程
+        test(context, "test7", null);
+    }
+
+    private static void test(AnnotationConfigApplicationContext context, String methodName, String uri) throws Exception {
+        Method method = Controller.class.getMethod(methodName);
+        Controller controller = new Controller();
+        Object returnValue = method.invoke(controller); // 获取返回值
+
+        HandlerMethod methodHandle = new HandlerMethod(controller, method);
+
+        ModelAndViewContainer container = new ModelAndViewContainer();
+        HandlerMethodReturnValueHandlerComposite composite = getReturnValueHandler();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        if(null != uri){
+            request.setRequestURI(uri);
+            // 将请求 uri 存入 request 域，当没有找到视图名时将获取 uri 作为视图名
+            UrlPathHelper.defaultInstance.resolveAndCacheLookupPath(request);
+        }
+        ServletWebRequest webRequest = new ServletWebRequest(request, response);
+        if (composite.supportsReturnType(methodHandle.getReturnType())) { // 检查是否支持此类型的返回值
+            composite.handleReturnValue(returnValue, methodHandle.getReturnType(), container, webRequest);
+            System.out.println(container.getModel());
+            System.out.println(container.getViewName());
+            // 返回值为 ResponseEntity、HttpHeaders、@ResponseBody 的处理器中 `handleReturnValue` 方法内 `mavContainer.setRequestHandled(true);` 设置了不需要视图解析
+            if (!container.isRequestHandled()) {
+                renderView(context, container, webRequest); // 渲染视图
+            } else {
+                for (String name : response.getHeaderNames()) {
+                    System.out.println(name + "=" + response.getHeader(name));
+                }
+                System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+            }
+        }
+    }
+
+    public static HandlerMethodReturnValueHandlerComposite getReturnValueHandler() {
+        HandlerMethodReturnValueHandlerComposite composite = new HandlerMethodReturnValueHandlerComposite();
+        composite.addHandler(new ModelAndViewMethodReturnValueHandler());
+        composite.addHandler(new ViewNameMethodReturnValueHandler());
+        composite.addHandler(new ServletModelAttributeMethodProcessor(false));
+        composite.addHandler(new HttpEntityMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())));
+        composite.addHandler(new HttpHeadersReturnValueHandler());
+        composite.addHandler(new RequestResponseBodyMethodProcessor(Collections.singletonList(new MappingJackson2HttpMessageConverter())));
+        composite.addHandler(new ServletModelAttributeMethodProcessor(true));
+        return composite;
+    }
+
+    @SuppressWarnings("all")
+    private static void renderView(AnnotationConfigApplicationContext context, ModelAndViewContainer container,
+                                   ServletWebRequest webRequest) throws Exception {
+        log.debug(">>>>>> 渲染视图");
+        FreeMarkerViewResolver resolver = context.getBean(FreeMarkerViewResolver.class);
+        String viewName = container.getViewName() != null ? container.getViewName() : new DefaultRequestToViewNameTranslator().getViewName(webRequest.getRequest());
+        log.debug("没有获取到视图名, 采用默认视图名: {}", viewName);
+        // 每次渲染时, 会产生新的视图对象, 它并非被 Spring 所管理, 但确实借助了 Spring 容器来执行初始化
+        View view = resolver.resolveViewName(viewName, Locale.getDefault());
+        view.render(container.getModel(), webRequest.getRequest(), webRequest.getResponse());
+        System.out.println(new String(((MockHttpServletResponse) webRequest.getResponse()).getContentAsByteArray(), StandardCharsets.UTF_8));
+    }
+
+    static class Controller {
+        private static final Logger log = LoggerFactory.getLogger(Controller.class);
+
+        public ModelAndView test1() {
+            log.debug("test1()");
+            ModelAndView mav = new ModelAndView("view1");
+            mav.addObject("name", "张三");
+            return mav;
+        }
+
+        public String test2() {
+            log.debug("test2()");
+            return "view2";
+        }
+
+        @ModelAttribute
+//        @RequestMapping("/test3")
+        // 返回值缺少视图名，找不到视图名时会使用路径作为视图名
+        public User test3() {
+            log.debug("test3()");
+            return new User("李四", 20);
+        }
+
+        public User test4() {
+            log.debug("test4()");
+            return new User("王五", 30);
+        }
+
+        public HttpEntity<User> test5() {
+            log.debug("test5()");
+            return new HttpEntity<>(new User("赵六", 40));
+        }
+
+        public HttpHeaders test6() {
+            log.debug("test6()");
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Content-Type", "text/html");
+            return headers;
+        }
+
+        @ResponseBody
+        public User test7() {
+            log.debug("test7()");
+            return new User("钱七", 50);
+        }
+    }
+
+    // 必须用 public 修饰, 否则 freemarker 渲染其 name, age 属性时失败
+    public static class User {
+        private String name;
+        private int age;
+
+        public User(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                   "name='" + name + '\'' +
+                   ", age=" + age +
+                   '}';
+        }
+    }
+}
+```
+
+
+
+#### 总结
+
+1. 常见的返回值处理器
+   * ModelAndView，分别获取其模型和视图名，放入 ModelAndViewContainer
+   * 返回值类型为 String 时，把它当做视图名，放入 ModelAndViewContainer
+   * 返回值添加了 @ModelAttribute 注解时，将返回值作为模型，放入 ModelAndViewContainer
+     * 此时需找到默认视图名（使用路径作为视图名）
+   * 返回值省略 @ModelAttribute 注解且返回非简单类型时，将返回值作为模型，放入 ModelAndViewContainer
+     * 此时需找到默认视图名（使用路径作为视图名）
+   * 返回值类型为 ResponseEntity 时
+     * 不走视图相应流程，此时走 MessageConverter，并设置 ModelAndViewContainer.requestHandled 为 true
+     * 处理器中 `handleReturnValue` 方法内 `mavContainer.setRequestHandled(true);` 设置了不需要视图解析
+   * 返回值类型为 HttpHeaders 时
+     * 不走视图相应流程，会设置 ModelAndViewContainer.requestHandled 为 true
+     * 处理器中 `handleReturnValue` 方法内 `mavContainer.setRequestHandled(true);` 设置了不需要视图解析
+   * 返回值添加了 @ResponseBody 注解时
+     * 不走视图相应流程，此时走 MessageConverter，并设置 ModelAndViewContainer.requestHandled 为 true
+     * 处理器中 `handleReturnValue` 方法内 `mavContainer.setRequestHandled(true);` 设置了不需要视图解析
+2. 组合模式在 Spring 中的体现 + 1
+
+
+
+### MessageConverter
+
+#### 示例
+
+```java
+public class Application {
+    public static void main(String[] args) throws IOException, NoSuchMethodException, HttpMediaTypeNotAcceptableException {
+        test1();
+        test2();
+        test3();
+        test4();
+    }
+
+    private static void test4() throws IOException, HttpMediaTypeNotAcceptableException, NoSuchMethodException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        ServletWebRequest webRequest = new ServletWebRequest(request, response);
+
+        request.addHeader("Accept", "application/xml");
+        response.setContentType("application/json");
+        List messageConverterList = new ArrayList<>(2);
+        messageConverterList.add(new MappingJackson2HttpMessageConverter());
+        messageConverterList.add(new MappingJackson2XmlHttpMessageConverter());
+        RequestResponseBodyMethodProcessor processor = new RequestResponseBodyMethodProcessor(messageConverterList);
+        processor.handleReturnValue(
+                new User("张三", 18),
+                new MethodParameter(Application.class.getMethod("user"), -1),
+                new ModelAndViewContainer(),
+                webRequest
+        );
+        System.out.println(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8));
+    }
+
+    @ResponseBody
+    @RequestMapping(produces = "application/json")
+    public User user() {
+        return null;
+    }
+
+    /**
+     * json 字符串转 java 对象
+     */
+    private static void test3() throws IOException {
+        MockHttpInputMessage message = new MockHttpInputMessage("{\"name\":\"李四\",\"age\":20}".getBytes(StandardCharsets.UTF_8));
+        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+        if (converter.canRead(User.class, MediaType.APPLICATION_JSON)) {
+            Object read = converter.read(User.class, message);
+            System.out.println(read);
+        }
+    }
+
+    /**
+     * java 对象转 xml 格式字符串
+     */
+    private static void test2() throws IOException {
+        MockHttpOutputMessage message = new MockHttpOutputMessage();
+        MappingJackson2XmlHttpMessageConverter converter = new MappingJackson2XmlHttpMessageConverter();
+        if (converter.canWrite(User.class, MediaType.APPLICATION_XML)) {
+            converter.write(new User("李四", 20), MediaType.APPLICATION_XML, message);
+            System.out.println(message.getBodyAsString());
+        }
+    }
+
+    /**
+     * java 对象转 json 格式字符串
+     */
+    public static void test1() throws IOException {
+        MockHttpOutputMessage message = new MockHttpOutputMessage();
+        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+        if (converter.canWrite(User.class, MediaType.APPLICATION_JSON)) {
+            converter.write(new User("张三", 18), MediaType.APPLICATION_JSON, message);
+            System.out.println(message.getBodyAsString());
+        }
+    }
+
+    public static class User {
+        private String name;
+        private int age;
+
+        @JsonCreator
+        public User(@JsonProperty("name") String name, @JsonProperty("age") int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                   "name='" + name + '\'' +
+                   ", age=" + age +
+                   '}';
+        }
+    }
+}
+```
+
+
+
+
+
+
+
+#### 总结
+
+1. MessageConverter 的作用
+   * @ResponseBody 是返回值处理器解析的
+   * 但具体转换工作是 MessageConverter 做的
+2. 如何选择 MediaType
+   * 首先看 @RequestMapping 上有没有指定
+   * 其次看 request 的 Accept 头有没有指定
+   * 最后按 MessageConverter 的顺序, 谁能谁先转换
+
+
+
+
+
+### Tomcat 异常处理
+
+* 我们知道 @ExceptionHandler 只能处理发生在 mvc 流程中的异常，例如控制器内、拦截器内，那么如果是 Filter 出现了异常，如何进行处理呢？
+
+* 在 Spring Boot 中，是这么实现的：
+  1. 因为内嵌了 Tomcat 容器，因此可以配置 Tomcat 的错误页面，Filter 与 错误页面之间是通过请求转发跳转的，可以在这里做手脚
+  2. 先通过 ErrorPageRegistrarBeanPostProcessor 这个后处理器配置错误页面地址，默认为 `/error` 也可以通过 `${server.error.path}` 进行配置
+  3. 当 Filter 发生异常时，不会走 Spring 流程，但会走 Tomcat 的错误处理，于是就希望转发至 `/error` 这个地址
+     * 当然，如果没有 @ExceptionHandler，那么最终也会走到 Tomcat 的错误处理
+  4. Spring Boot 又提供了一个 BasicErrorController，它就是一个标准 @Controller，@RequestMapping 配置为 `/error`，所以处理异常的职责就又回到了 Spring
+  5. 异常信息由于会被 Tomcat 放入 request 作用域，因此 BasicErrorController 里也能获取到
+  6. 具体异常信息会由 DefaultErrorAttributes 封装好
+  7. BasicErrorController 通过 Accept 头判断需要生成哪种 MediaType 的响应
+     * 如果要的不是 text/html，走 MessageConverter 流程
+     * 如果需要 text/html，走 mvc 流程，此时又分两种情况
+       * 配置了 ErrorViewResolver，根据状态码去找 View
+       * 没配置或没找到，用 BeanNameViewResolver 根据一个固定为 error 的名字找到 View，即所谓的 WhitelabelErrorView
+
+
+
+#### 示例基础代码
+
+```java
+@Configuration
+public class WebConfig {
+    @Bean
+    public TomcatServletWebServerFactory servletWebServerFactory() {
+        return new TomcatServletWebServerFactory();
+    }
+
+    @Bean
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
+
+    @Bean
+    public DispatcherServletRegistrationBean servletRegistrationBean(DispatcherServlet dispatcherServlet) {
+        DispatcherServletRegistrationBean registrationBean = new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+        registrationBean.setLoadOnStartup(1);
+        return registrationBean;
+    }
+
+    @Bean // @RequestMapping
+    public RequestMappingHandlerMapping requestMappingHandlerMapping() {
+        return new RequestMappingHandlerMapping();
+    }
+
+    @Bean // 注意默认的 RequestMappingHandlerAdapter 不会带 jackson 转换器
+    public RequestMappingHandlerAdapter requestMappingHandlerAdapter() {
+        RequestMappingHandlerAdapter handlerAdapter = new RequestMappingHandlerAdapter();
+        List list = new ArrayList();
+        list.add(new MappingJackson2HttpMessageConverter());
+        handlerAdapter.setMessageConverters(list);
+        return handlerAdapter;
+    }
+
+    @Controller
+    public static class MyController {
+        @RequestMapping("test")
+        public ModelAndView test() {
+            int i = 1 / 0;
+            return null;
+        }
+}
+```
+
+```java
+public class Application {
+
+    public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+        RequestMappingHandlerMapping handlerMapping = context.getBean(RequestMappingHandlerMapping.class);
+        handlerMapping.getHandlerMethods().forEach((RequestMappingInfo k, HandlerMethod v) -> {
+            System.out.println("映射路径:" + k + "\t方法信息:" + v);
+        });
+    }
+}
+```
+
+
+
+#### 示例 - Tomcat 的错误页处理
+
+```java
+// 自定义错误处理 1.修改了 Tomcat 服务器默认错误地址
+// ErrorPageRegistrar 是 TomcatServletWebServerFactory 的父接口
+@Bean
+public ErrorPageRegistrar errorPageRegistrar() {
+    // 出现错误，会使用请求转发 forward 跳转到 error 地址
+    // error 地址可以是 servlet 地址、静态页面地址、Controller 地址
+    return webServerFactory -> webServerFactory.addErrorPages(new ErrorPage("/error"));
+}
+
+// 自定义错误处理 2.添加后处理器
+// TomcatServletWebServerFactory 初始化前调用用它增强，注册所有 ErrorPageRegistrar
+@Bean
+public ErrorPageRegistrarBeanPostProcessor errorPageRegistrarBeanPostProcessor() {
+    return new ErrorPageRegistrarBeanPostProcessor();
+}
+
+@Controller
+public static class MyController {
+//   自定义错误处理 3.异常展示
+    @RequestMapping("/error")
+    @ResponseBody
+    public Map<String, Object> error(HttpServletRequest request) {
+        // 出现异常时 tomcat 会把异常存储到 request 作用域中
+        Throwable e = (Throwable) request.getAttribute(RequestDispatcher.ERROR_EXCEPTION);
+        Map<String, Object> map = new HashMap<>();
+        map.put("error", e.getMessage());
+        return map;
+    }
+}
+```
+
+
+
+#### 示例 - Spring Boot 的 BasicErrorController
+
+```java
+// 自定义错误处理 1.修改了 Tomcat 服务器默认错误地址
+// ErrorPageRegistrar 是 TomcatServletWebServerFactory 的父接口
+@Bean
+public ErrorPageRegistrar errorPageRegistrar() {
+    // 出现错误，会使用请求转发 forward 跳转到 error 地址
+    // error 地址可以是 servlet 地址、静态页面地址、Controller 地址
+    return webServerFactory -> webServerFactory.addErrorPages(new ErrorPage("/error"));
+}
+
+// 自定义错误处理 2.添加后处理器
+// TomcatServletWebServerFactory 初始化前调用用它增强，注册所有 ErrorPageRegistrar
+@Bean
+public ErrorPageRegistrarBeanPostProcessor errorPageRegistrarBeanPostProcessor() {
+    return new ErrorPageRegistrarBeanPostProcessor();
+}
+
+//    自定义错误处理 3.SpringBoot 中的 BasicErrorController
+@Bean
+public BasicErrorController basicErrorController() {
+    ErrorProperties errorProperties = new ErrorProperties();
+    errorProperties.setIncludeException(true);
+    return new BasicErrorController(new DefaultErrorAttributes(), errorProperties);
+}
+
+//    提供视图
+@Bean
+public View error() {
+    return new View() {
+        @Override
+        public void render(Map<String, ?> model, HttpServletRequest request, HttpServletResponse response) throws Exception {
+            System.out.println(model);
+            response.setContentType("text/html;charset=utf-8");
+            response.getWriter().print("<h3>服务器内部错误</h3>");
+        }
+    };
+}
+
+//    视图解析器
+@Bean
+public ViewResolver viewResolver() {
+    // 按照视图名找到对应名字的视图对象
+    return new BeanNameViewResolver();
+}
+```
+
+
+
+### BeanNameUrlHandlerMapping 与 SimpleControllerHandlerAdapter
+
+路径映射和控制器方法调用，属于 Spring MVC 早期的实现
+
+#### 示例
+
+```java
+@Configuration
+public class WebConfig {
+    @Bean // 内嵌 web 容器工厂
+    public TomcatServletWebServerFactory servletWebServerFactory() {
+        return new TomcatServletWebServerFactory(8080);
+    }
+
+    @Bean // 创建 DispatcherServlet
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
+
+    @Bean // 注册 DispatcherServlet, Spring MVC 的入口
+    public DispatcherServletRegistrationBean servletRegistrationBean(DispatcherServlet dispatcherServlet) {
+        return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+    }
+
+    // /c1  -->  /c1
+    // /c2  -->  /c2
+    @Bean
+    public BeanNameUrlHandlerMapping beanNameUrlHandlerMapping() {
+        return new BeanNameUrlHandlerMapping();
+    }
+
+    @Bean
+    public SimpleControllerHandlerAdapter simpleControllerHandlerAdapter() {
+        return new SimpleControllerHandlerAdapter();
+    }
+
+    @Component("/c1")
+    public static class Controller1 implements Controller {
+        @Override
+        public ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+            response.getWriter().print("this is c1");
+            return null;
+        }
+    }
+
+    @Component("/c2")
+    public static class Controller2 implements Controller {
+        @Override
+        public ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+            response.getWriter().print("this is c2");
+            return null;
+        }
+    }
+
+    @Bean("/c3")
+    public Controller controller3() {
+        return (request, response) -> {
+            response.getWriter().print("this is c3");
+            return null;
+        };
+    }
+}
+```
+
+```java
+public class Application {
+    public static void main(String[] args) {
+        AnnotationConfigServletWebServerApplicationContext context
+                = new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+    }
+}
+```
+
+
+
+#### 自定义 HandlerMapping 和 HandlerAdapter
+
+将上例中创建 HandlerMapping 和 HandlerAdapter 的方法改为如下
+
+```java
+// /c1  -->  /c1
+// /c2  -->  /c2
+@Component
+static class MyHandlerMapping implements HandlerMapping {
+    @Override
+    public HandlerExecutionChain getHandler(HttpServletRequest request) throws Exception {
+        String key = request.getRequestURI();
+        Controller controller = collect.get(key);
+        if (controller == null) {
+            return null;
+        }
+        return new HandlerExecutionChain(controller);
+    }
+
+    @Autowired
+    private ApplicationContext context;
+    private Map<String, Controller> collect;
+
+    @PostConstruct
+    public void init() {
+        collect = context.getBeansOfType(Controller.class).entrySet()
+                .stream().filter(e -> e.getKey().startsWith("/"))
+                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+        System.out.println(collect);
+    }
+}
+
+@Component
+static class MyHandlerAdapter implements HandlerAdapter {
+
+    @Override
+    public boolean supports(Object handler) {
+        return handler instanceof Controller;
+    }
+
+    @Override
+    public ModelAndView handle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        if (handler instanceof Controller) {
+            Controller controller = (Controller) handler;
+            controller.handleRequest(request, response);
+        }
+        return null;
+    }
+
+    @Override
+    public long getLastModified(HttpServletRequest request, Object handler) {
+        return -1;
+    }
+}
+```
+
+
+
+#### 总结
+
+1. BeanNameUrlHandlerMapping，以  `/` 开头的 bean 的名字会被当作映射路径
+2. 这些 bean 本身当作 handler，要求实现 Controller 接口
+3. SimpleControllerHandlerAdapter，调用 handler
+4. 模拟实现这组映射器和适配器
+5. 对比 RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter
+   - RequestMappingHandlerAdapter, 以 @RequestMapping 作为映射路径
+   - 控制器的具体方法会被当作 handler
+   - RequestMappingHandlerAdapter, 调用 handler
+
+
+
+
+
+### RouterFunctionMapping 与 HandlerFunctionAdapter
+
+Spring 5.2 开始才引入
+
+#### 示例
+
+```java
+@Configuration
+public class WebConfig {
+    @Bean // 内嵌 web 容器工厂
+    public TomcatServletWebServerFactory servletWebServerFactory() {
+        return new TomcatServletWebServerFactory(8080);
+    }
+
+    @Bean // 创建 DispatcherServlet
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
+
+    @Bean // 注册 DispatcherServlet, Spring MVC 的入口
+    public DispatcherServletRegistrationBean servletRegistrationBean(DispatcherServlet dispatcherServlet) {
+        return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+    }
+
+    // RouterFunctionMapping 初始化时会收集所有 RouterFunction 建立映射
+    // 请求到达之后根据请求信息找到对应 HandlerFunction
+    @Bean
+    public RouterFunctionMapping routerFunctionMapping() {
+        return new RouterFunctionMapping();
+    }
+
+    // 找到 HandlerFunction 之后调用 HandlerFunction
+    @Bean
+    public HandlerFunctionAdapter handlerFunctionAdapter() {
+        return new HandlerFunctionAdapter();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> r1() {
+        return RouterFunctions.route(RequestPredicates.GET("/r1"), new HandlerFunction<ServerResponse>() {
+            @Override
+            public ServerResponse handle(ServerRequest serverRequest) throws Exception {
+                return ServerResponse.ok().body("this is r1");
+            }
+        });
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> r2() {
+        return route(GET("/r2"), request -> ok().body("this is r2"));
+    }
+
+}
+```
+
+```java
+public class Application {
+    public static void main(String[] args) {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+    }
+}
+```
+
+
+
+#### 总结
+
+1. RouterFunctionMapping, 通过 RequestPredicate 条件映射
+2. handler 要实现 HandlerFunction 接口
+3. HandlerFunctionAdapter, 调用 handler
+4. 对比 RequestMappingHandlerMapping 与 RequestMappingHandlerAdapter
+   - RequestMappingHandlerAdapter, 以 @RequestMapping 作为映射路径
+   - 控制器的具体方法会被当作 handler
+   - RequestMappingHandlerAdapter, 调用 handler
+
+
+
+### SimpleUrlHandlerMapping 与 HttpRequestHandlerAdapter
+
+静态资源处理
+
+#### 示例
+
+```java
+@Configuration
+public class WebConfig {
+    @Bean // 内嵌 web 容器工厂
+    public TomcatServletWebServerFactory servletWebServerFactory() {
+        return new TomcatServletWebServerFactory(8080);
+    }
+
+    @Bean // 创建 DispatcherServlet
+    public DispatcherServlet dispatcherServlet() {
+        return new DispatcherServlet();
+    }
+
+    @Bean // 注册 DispatcherServlet, Spring MVC 的入口
+    public DispatcherServletRegistrationBean servletRegistrationBean(DispatcherServlet dispatcherServlet) {
+        return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+    }
+
+    /**
+     * 映射路径
+     */
+    @Bean
+    public SimpleUrlHandlerMapping simpleUrlHandlerMapping(ApplicationContext context) {
+        SimpleUrlHandlerMapping handlerMapping = new SimpleUrlHandlerMapping();
+        Map<String, ResourceHttpRequestHandler> map = context.getBeansOfType(ResourceHttpRequestHandler.class);
+        handlerMapping.setUrlMap(map);
+        System.out.println(map);
+        return handlerMapping;
+    }
+
+    /**
+     * 调用 handler
+     */
+    @Bean
+    public HttpRequestHandlerAdapter httpRequestHandlerAdapter() {
+        return new HttpRequestHandlerAdapter();
+    }
+
+    /**
+     * 作为静态资源 handler
+     *
+     * /** ->
+     *       /index.html
+     *       /r1.html
+     *       /r2.html
+     */
+    @Bean("/**")
+    public ResourceHttpRequestHandler handler1() {
+        ResourceHttpRequestHandler handler = new ResourceHttpRequestHandler();
+        List classPathResourceList = new ArrayList();
+        List resourceResolver = new ArrayList();
+        classPathResourceList.add(new ClassPathResource("static/"));
+        // 用于缓存静态资源，第一次从磁盘读取静态资源后缓存下来
+        resourceResolver.add(new CachingResourceResolver(new ConcurrentMapCache("cache1")));
+        // 用于读取压缩静态资源，需要先将静态资源压缩，例：initGzip
+        resourceResolver.add(new EncodedResourceResolver());
+        resourceResolver.add(new PathResourceResolver());
+        handler.setLocations(classPathResourceList);
+        handler.setResourceResolvers(resourceResolver);
+        return handler;
+    }
+
+    /**
+     * /img/** ->
+     *          /img/1.jpg
+     *          /img/2.jpg
+     *          /img/3.jpg
+     */
+    @Bean("/img/**")
+    public ResourceHttpRequestHandler handler2() {
+        ResourceHttpRequestHandler handler = new ResourceHttpRequestHandler();
+        List classPathResourceList = new ArrayList();
+        classPathResourceList.add(new ClassPathResource("images/"));
+        handler.setLocations(classPathResourceList);
+        return handler;
+    }
+
+    /**
+     * 欢迎页
+     * WelcomePageHandlerMapping 由 Spring Boot 提供
+     * 可以映射到静态资源和 Controller
+     *
+     * a. WelcomePageHandlerMapping, 映射欢迎页(即只映射 '/')
+     *     - 它内置了 handler ParameterizableViewController 作用是不执行逻辑, 仅根据视图名找视图
+     *     - 视图名固定为 forward:index.html       /**
+     * b. SimpleControllerHandlerAdapter, 调用 handler
+     *     - 转发至 /index.html
+     *     - 处理 /index.html 又会走上面的静态资源处理流程
+     */
+    @Bean
+    public WelcomePageHandlerMapping welcomePageHandlerMapping(ApplicationContext context) {
+        Resource resource = context.getResource("classpath:static/index.html");
+        return new WelcomePageHandlerMapping(null, context, resource, "/**");
+        // 生成实现了 Controller 接口的处理器
+    }
+
+    /**
+     * 识别调用 Controller 接口的处理器
+     */
+    @Bean
+    public SimpleControllerHandlerAdapter simpleControllerHandlerAdapter() {
+        return new SimpleControllerHandlerAdapter();
+    }
+
+    /**
+     * 压缩静态资源
+     */
+    @PostConstruct
+    @SuppressWarnings("all")
+    public void initGzip() throws IOException {
+        Resource resource = new ClassPathResource("static");
+        File dir = resource.getFile();
+        for (File file : dir.listFiles(pathname -> pathname.getName().endsWith(".html"))) {
+            System.out.println(file);
+            try (FileInputStream fis = new FileInputStream(file); GZIPOutputStream fos = new GZIPOutputStream(new FileOutputStream(file.getAbsoluteFile() + ".gz"))) {
+                byte[] bytes = new byte[8 * 1024];
+                int len;
+                while ((len = fis.read(bytes)) != -1) {
+                    fos.write(bytes, 0, len);
+                }
+            }
+        }
+    }
+}
+```
+
+```java
+public class Application {
+    public static void main(String[] args) {
+        AnnotationConfigServletWebServerApplicationContext context
+                = new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+    }
+}
+```
+
+
+
+#### 总结
+
+##### 静态资源处理
+
+1. SimpleUrlHandlerMapping 不会在初始化时收集映射信息，需要手动收集
+2. SimpleUrlHandlerMapping 映射路径
+3. ResourceHttpRequestHandler 作为静态资源 handler
+4. HttpRequestHandlerAdapter, 调用 handler
+
+
+
+##### 静态资源解析优化
+
+1. 责任链模式体现
+2. 压缩文件需要手动生成
+
+
+
+##### 欢迎页
+
+1. 欢迎页支持静态欢迎页与动态欢迎页
+2. WelcomePageHandlerMapping 映射欢迎页（即只映射 '/'）
+   * 它内置的 handler ParameterizableViewController 作用是不执行逻辑，仅根据视图名找视图
+   * 视图名固定为 forward:index.html
+3. SimpleControllerHandlerAdapter, 调用 handler
+   * 转发至 /index.html
+   * 处理 /index.html 又会走上面的静态资源处理流程
+
+
+
+#### 映射器与适配器小结
+
+1. HandlerMapping 负责建立请求与控制器之间的映射关系
+   * RequestMappingHandlerMapping (与 @RequestMapping 匹配)
+   * WelcomePageHandlerMapping    (/)
+   * BeanNameUrlHandlerMapping    (与 bean 的名字匹配 以 / 开头)
+   * RouterFunctionMapping        (函数式 RequestPredicate, HandlerFunction)
+   * SimpleUrlHandlerMapping      (静态资源 通配符 /** /img/**)
+   * 之间也会有顺序问题, boot 中默认顺序如上
+2. HandlerAdapter 负责实现对各种各样的 handler 的适配调用
+   * RequestMappingHandlerAdapter 处理：@RequestMapping 方法
+     * 参数解析器、返回值处理器体现了组合模式
+   * SimpleControllerHandlerAdapter 处理：Controller 接口
+   * HandlerFunctionAdapter 处理：HandlerFunction 函数式接口
+   * HttpRequestHandlerAdapter 处理：HttpRequestHandler 接口 (静态资源处理)
+   * 这也是典型适配器模式体现
+
+
+
+### MVC 处理流程
+
+当浏览器发送一个请求 `http://localhost:8080/hello` 后，请求到达服务器，其处理流程是：
+
+1. 服务器提供了 DispatcherServlet，它使用的是标准 Servlet 技术
+
+   * 路径：默认映射路径为 `/`，即会匹配到所有请求 URL，可作为请求的统一入口，也被称之为**前控制器**
+     * jsp 不会匹配到 DispatcherServlet
+     * 其它有路径的 Servlet 匹配优先级也高于 DispatcherServlet
+   * 创建：在 Boot 中，由 DispatcherServletAutoConfiguration 这个自动配置类提供 DispatcherServlet 的 bean
+   * 初始化：DispatcherServlet 初始化时会优先到容器里寻找各种组件，作为它的成员变量
+     * HandlerMapping，初始化时记录映射关系
+     * HandlerAdapter，初始化时准备参数解析器、返回值处理器、消息转换器
+     * HandlerExceptionResolver，初始化时准备参数解析器、返回值处理器、消息转换器
+     * ViewResolver
+2. DispatcherServlet 会利用 RequestMappingHandlerMapping 查找控制器方法
+
+   * 例如根据 /hello 路径找到 @RequestMapping("/hello") 对应的控制器方法
+
+   * 控制器方法会被封装为 HandlerMethod 对象，并结合匹配到的拦截器一起返回给 DispatcherServlet 
+
+   * HandlerMethod 和拦截器合在一起称为 HandlerExecutionChain（调用链）对象
+3. DispatcherServlet 接下来会：
+
+   1. 调用拦截器的 preHandle 方法
+   2. RequestMappingHandlerAdapter 调用 handle 方法，准备数据绑定工厂、模型工厂、ModelAndViewContainer、将 HandlerMethod 完善为 ServletInvocableHandlerMethod
+      * @ControllerAdvice 全局增强点1️⃣：补充模型数据
+      * @ControllerAdvice 全局增强点2️⃣：补充自定义类型转换器
+      * 使用 HandlerMethodArgumentResolver 准备参数
+        * @ControllerAdvice 全局增强点3️⃣：RequestBody 增强
+      * 调用 ServletInvocableHandlerMethod 
+      * 使用 HandlerMethodReturnValueHandler 处理返回值
+        * @ControllerAdvice 全局增强点4️⃣：ResponseBody 增强
+      * 根据 ModelAndViewContainer 获取 ModelAndView
+        * 如果返回的 ModelAndView 为 null，不走第 4 步视图解析及渲染流程
+          * 例如，有的返回值处理器调用了 HttpMessageConverter 来将结果转换为 JSON，这时 ModelAndView 就为 null
+        * 如果返回的 ModelAndView 不为 null，会在第 4 步走视图解析及渲染流程
+   3. 调用拦截器的 postHandle 方法
+   4. 处理异常或视图渲染
+      * 如果 1~3 出现异常，走 ExceptionHandlerExceptionResolver 处理异常流程
+        * @ControllerAdvice 全局增强点5️⃣：@ExceptionHandler 异常处理
+      * 正常，走视图解析及渲染流程
+   5. 调用拦截器的 afterCompletion 方法
+
+
+
+## Spring Boot
+
+### Boot War项目
+
+步骤1：创建模块，区别在于打包方式选择 war
+
+<img src="D:\documents\notes\solid\Java.assets\001-178892492371984.png" alt="image-20211021160145072" style="zoom: 50%;" />
+
+接下来勾选 Spring Web 支持
+
+<img src="D:\documents\notes\solid\Java.assets\002-178892492371985.png" alt="image-20211021162416525" style="zoom:50%;" />
+
+步骤2：编写控制器
+
+```java
+@Controller
+public class MyController {
+
+    @RequestMapping("/hello")
+    public String abc() {
+        System.out.println("进入了控制器");
+        return "hello";
+    }
+}
+```
+
+步骤3：编写 jsp 视图，新建 webapp 目录和一个 hello.jsp 文件，注意文件名与控制器方法返回的视图逻辑名一致
+
+```
+src
+	|- main
+		|- java
+		|- resources
+		|- webapp
+			|- hello.jsp
+```
+
+步骤4：配置视图路径，打开 application.properties 文件
+
+```properties
+spring.mvc.view.prefix=/
+spring.mvc.view.suffix=.jsp
+```
+
+> 将来 prefix + 控制器方法返回值 + suffix 即为视图完整路径
+
+
+
+#### 测试
+
+如果用 mvn 插件 `mvn spring-boot:run` 或 main 方法测试
+
+* 必须添加如下依赖，因为此时用的还是内嵌 tomcat，而内嵌 tomcat 默认不带 jasper（用来解析 jsp）
+
+```xml
+<dependency>
+    <groupId>org.apache.tomcat.embed</groupId>
+    <artifactId>tomcat-embed-jasper</artifactId>
+    <scope>provided</scope>
+</dependency>
+```
+
+也可以使用 Idea 配置 tomcat 来测试，此时用的是外置 tomcat
+
+* 骨架生成的代码中，多了一个 ServletInitializer，它的作用就是配置外置 Tomcat 使用的，在外置 Tomcat 启动后，去调用它创建和运行 SpringApplication
+
+
+
+#### 启示
+
+对于 jar 项目，若要支持 jsp，也可以在加入 jasper 依赖的前提下，把 jsp 文件置入 `META-INF/resources` 
+
+
+
+### Boot 启动过程
+
+
+
+#### 启动过程
+
+##### 阶段一：SpringApplication 构造
+
+1. 记录 BeanDefinition 源
+2. 推断应用类型
+3. 记录 ApplicationContext 初始化器
+4. 记录监听器
+5. 推断主启动类
+
+
+
+###### 源码
+
+```java
+public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
+    this.sources = new LinkedHashSet();
+    this.bannerMode = Mode.CONSOLE;
+    this.logStartupInfo = true;
+    this.addCommandLineProperties = true;
+    this.addConversionService = true;
+    this.headless = true;
+    this.registerShutdownHook = true;
+    this.additionalProfiles = new HashSet();
+    this.isCustomEnvironment = false;
+    this.lazyInitialization = false;
+    this.resourceLoader = resourceLoader;
+    Assert.notNull(primarySources, "PrimarySources must not be null");
+    // 获取 Bean Definition 源，Bean 可以来自配置类，配置文件...
+    this.primarySources = new LinkedHashSet(Arrays.asList(primarySources));
+    // 推断应用类型，Spring Boot 支持三种应用类型。非 WEB 应用程序，基于 Servlet 的应用程序，基于 reactive 的应用程序
+    // 后续需要根据不同应用类型创建不同类型的 ApplicationConetxt
+    this.webApplicationType = WebApplicationType.deduceFromClasspath();
+    // 添加 ApplicationContext 初始化器
+    // 		作用
+    // 		调用 SpringApplication.run 的时候创建 ApplicationContext
+    // 		调用初始化器，对 ApplicationContext 进行扩展
+    // 		调用 ApplicationContext.reflush 完成 ApplicationContext 初始化
+    this.setInitializers(this.getSpringFactoriesInstances(ApplicationContextInitializer.class));
+    // 监听器与事件
+    //		作用
+    //		Spring Boot 程序启动和运行过程中会发布一些事件，监听器就是用来相应这些事件并且做出处理
+    this.setListeners(this.getSpringFactoriesInstances(ApplicationListener.class));
+    // 主类推断。获取 main 方法所在类
+    this.mainApplicationClass = this.deduceMainApplicationClass();
+}
+```
+
+
+
+###### 演示
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="bean1" class="cn.example.uums.test.a39.Application.Bean1"/>
+
+</beans>
+```
+
+
+
+```java
+@Configuration
+public class Application {
+
+    public static void main(String[] args) throws Exception {
+        System.out.println("1. 演示获取 Bean Definition 源");
+        SpringApplication spring = new SpringApplication(Application.class);
+        Set sourcesSet = new HashSet();
+        sourcesSet.add("classpath:b01.xml");
+        spring.setSources(sourcesSet);
+
+        System.out.println("2. 演示推断应用类型");
+        Method deduceFromClasspath = WebApplicationType.class.getDeclaredMethod("deduceFromClasspath");
+        deduceFromClasspath.setAccessible(true);
+        System.out.println("\t应用类型为:"+deduceFromClasspath.invoke(null));
+
+        System.out.println("3. 演示 ApplicationContext 初始化器");
+        spring.addInitializers(new ApplicationContextInitializer<ConfigurableApplicationContext>() {
+            @Override
+            public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
+                if (configurableApplicationContext instanceof GenericApplicationContext) {
+                    GenericApplicationContext gac = (GenericApplicationContext) configurableApplicationContext;
+                    gac.registerBean("bean3", Bean3.class);
+                }
+            }
+        });
+        System.out.println("4. 演示监听器与事件");
+        spring.addListeners(event -> System.out.println("\t事件为:" + event.getClass()));
+        System.out.println("5. 演示主类推断");
+        Method deduceMainApplicationClass = SpringApplication.class.getDeclaredMethod("deduceMainApplicationClass");
+        deduceMainApplicationClass.setAccessible(true);
+        System.out.println("\t主类是："+deduceMainApplicationClass.invoke(spring));
+
+        ConfigurableApplicationContext context = spring.run(args);
+
+        // 创建 ApplicationContext
+        // 调用初始化器 对 ApplicationContext 做扩展
+        // ApplicationContext.refresh
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println("name: " + name + " 来源：" + context.getBeanFactory().getBeanDefinition(name).getResourceDescription());
+        }
+        context.close();
+    }
+
+    static class Bean1 {
+
+    }
+
+    static class Bean2 {
+
+    }
+
+    static class Bean3 {
+
+    }
+
+    @Bean
+    public Bean2 bean2() {
+        return new Bean2();
+    }
+
+    @Bean
+    public TomcatServletWebServerFactory servletWebServerFactory() {
+        return new TomcatServletWebServerFactory();
+    }
+}
+```
+
+
+
+##### 阶段二：执行 run 方法
+
+12 个步骤，7个事件
+
+1. 得到 SpringApplicationRunListeners，名字取得不好，实际是事件发布器
+
+   * 发布 application starting 事件1️⃣
+
+2. 封装启动 args
+
+3. 准备 Environment 添加命令行参数（*）
+
+4. ConfigurationPropertySources 处理（*）
+
+   * 发布 application environment 已准备事件2️⃣
+
+5. 通过 EnvironmentPostProcessorApplicationListener 进行 env 后处理（*）
+   * application.properties，由 StandardConfigDataLocationResolver 解析
+   * spring.application.json
+
+6. 绑定 spring.main 到 SpringApplication 对象（*）
+
+7. 打印 banner（*）
+
+8. 创建容器
+
+9. 准备容器
+
+   * 发布 application context 已初始化事件3️⃣
+
+10. 加载 bean 定义
+
+    * 发布 application prepared 事件4️⃣
+
+11. refresh 容器
+
+    * 发布 application started 事件5️⃣
+
+12. 执行 runner
+
+    * 发布 application ready 事件6️⃣
+
+    * 这其中有异常，发布 application failed 事件7️⃣
+
+> 带 * 的有独立的示例
+
+
+
+###### 源码
+
+```java
+public class SpringApplication {
+	public ConfigurableApplicationContext run(String... args) {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        ConfigurableApplicationContext context = null;
+        this.configureHeadlessProperty();
+        // s1.
+        SpringApplicationRunListeners listeners = this.getRunListeners(args);
+        listeners.starting();
+
+        try {
+            ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+            ConfigurableEnvironment environment = this.prepareEnvironment(listeners, applicationArguments);
+            this.configureIgnoreBeanInfo(environment);
+            Banner printedBanner = this.printBanner(environment);
+            // s8.
+            context = this.createApplicationContext();
+            this.prepareContext(context, environment, listeners, applicationArguments, printedBanner);
+            this.refreshContext(context);
+            this.afterRefresh(context, applicationArguments);
+            stopWatch.stop();
+            if (this.logStartupInfo) {
+                (new StartupInfoLogger(this.mainApplicationClass)).logStarted(this.getApplicationLog(), stopWatch);
+            }
+
+            listeners.started(context);
+            this.callRunners(context, applicationArguments);
+        } catch (Throwable var9) {
+            this.handleRunFailure(context, var9, listeners);
+            throw new IllegalStateException(var9);
+        }
+
+        try {
+            listeners.running(context);
+            return context;
+        } catch (Throwable var8) {
+            this.handleRunFailure(context, var8, (SpringApplicationRunListeners)null);
+            throw new IllegalStateException(var8);
+        }
+    }
+}
+```
+
+
+
+###### 第1步，7 个事件
+
+```java
+public class Application {
+    public static void main(String[] args) throws Exception{
+
+        System.out.println("----------------step 1 添加 app 监听器--------------------");
+        SpringApplication app = new SpringApplication();
+        app.addListeners(e -> System.out.println(e.getClass()));
+
+        // 获取事件发送器实现类名
+        // 如何读取 spring.factories 中的配置
+        List<String> names = SpringFactoriesLoader.loadFactoryNames(SpringApplicationRunListener.class, Application.class.getClassLoader());
+        for (String name : names) {
+            System.out.println(name);
+            Class<?> clazz = Class.forName(name);
+            Constructor<?> constructor = clazz.getConstructor(SpringApplication.class, String[].class);
+            SpringApplicationRunListener publisher = (SpringApplicationRunListener) constructor.newInstance(app, args);
+
+            // 发布事件
+            // DefaultBootstrapContext 需要 Spring Boot 版本 2.5.5
+            DefaultBootstrapContext bootstrapContext = new DefaultBootstrapContext();
+            // spring boot 开始启动
+        	System.out.println("----------------e1.发布 application starting 事件--------------------");
+            publisher.starting(bootstrapContext);
+            // 环境信息准备完毕
+        	System.out.println("----------------e2.发布 application environment 已准备事件--------------------");
+            publisher.environmentPrepared(bootstrapContext, new StandardEnvironment());
+            // 在 spring 容器创建，并调用初始化器之后，发送此事件
+        	System.out.println("----------------e3.发布 application context 已初始化事件--------------------");
+            GenericApplicationContext context = new GenericApplicationContext();
+            publisher.contextPrepared(context);
+            // 所有 bean definition 加载完毕
+        	System.out.println("----------------e4.发布 application prepared 事件--------------------");
+            publisher.contextLoaded(context);
+            context.refresh();
+            // spring 容器初始化完成(refresh 方法调用完毕)
+        	System.out.println("----------------e5.发布 application started 事件--------------------");
+            publisher.started(context);
+            // spring boot 启动完毕
+            System.out.println("----------------e6.发布 application ready 事件--------------------");
+            publisher.running(context);
+            // spring boot 启动出错
+            System.out.println("----------------e7.这其中有异常，发布 application failed 事件--------------------");
+            publisher.failed(context, new Exception("出错了"));
+        }
+    }
+}
+```
+
+
+
+###### 第2、8到12步
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="bean4" class="cn.example.uums.test.a39.Application.Bean4"/>
+
+</beans>
+```
+
+
+
+```java
+@Component
+public class Bean7 {
+}
+```
+
+
+
+```java
+// 运行时请添加运行参数 --server.port=8080 debug
+public class Application {
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws Exception {
+        SpringApplication app = new SpringApplication();
+        app.addInitializers(new ApplicationContextInitializer<ConfigurableApplicationContext>() {
+            @Override
+            public void initialize(ConfigurableApplicationContext applicationContext) {
+                System.out.println("执行初始化器增强...");
+            }
+        });
+
+        System.out.println("----------------step 2 封装启动 args--------------------");
+        DefaultApplicationArguments arguments = new DefaultApplicationArguments(args);
+
+        System.out.println("----------------step 8 创建容器--------------------");
+        GenericApplicationContext context = createApplicationContext(WebApplicationType.SERVLET);
+
+        System.out.println("----------------step 9 准备容器--------------------");
+        for (ApplicationContextInitializer initializer : app.getInitializers()) {
+            initializer.initialize(context);
+        }
+
+        System.out.println("----------------step 10 加载 bean definition--------------------");
+        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+        AnnotatedBeanDefinitionReader reader1 = new AnnotatedBeanDefinitionReader(beanFactory);
+        XmlBeanDefinitionReader reader2 = new XmlBeanDefinitionReader(beanFactory);
+        ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(beanFactory);
+
+        reader1.register(Config.class);
+        reader2.loadBeanDefinitions(new ClassPathResource("b03.xml"));
+        scanner.scan("cn.example.uums.test.a39.sub");
+
+        System.out.println("----------------step 11 refresh 容器--------------------");
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println("name:" + name + " 来源：" + beanFactory.getBeanDefinition(name).getResourceDescription());
+        }
+
+        System.out.println("----------------step 12 执行 runner--------------------");
+        // runner 是实现了特定接口的 Bean
+        for (CommandLineRunner runner : context.getBeansOfType(CommandLineRunner.class).values()) {
+            runner.run(args);
+        }
+
+        for (ApplicationRunner runner : context.getBeansOfType(ApplicationRunner.class).values()) {
+            runner.run(arguments);
+        }
+
+        /*
+            学到了什么
+            a. 创建容器、加载 bean 定义、refresh, 对应的步骤
+
+         */
+    }
+
+    /**
+     * SpringApplication 构造时已经推断出了应用类型，需要根据不同应用类型创建不同类型的 ApplicationConetxt
+     */
+    private static GenericApplicationContext createApplicationContext(WebApplicationType type) {
+        GenericApplicationContext context = null;
+        switch (type) {
+            case SERVLET:
+                context = new AnnotationConfigServletWebServerApplicationContext();
+            case REACTIVE:
+                context = new AnnotationConfigReactiveWebServerApplicationContext();
+            case NONE:
+                context = new AnnotationConfigApplicationContext();
+        }
+        return context;
+    }
+
+    static class Bean4 {
+
+    }
+
+    static class Bean5 {
+
+    }
+
+    static class Bean6 {
+
+    }
+
+    @Configuration
+    static class Config {
+        @Bean
+        public Bean5 bean5() {
+            return new Bean5();
+        }
+
+        @Bean
+        public ServletWebServerFactory servletWebServerFactory() {
+            return new TomcatServletWebServerFactory();
+        }
+
+        @Bean
+        public CommandLineRunner commandLineRunner() {
+            return new CommandLineRunner() {
+                @Override
+                public void run(String... args) throws Exception {
+                    System.out.println("commandLineRunner()..." + Arrays.toString(args));
+                }
+            };
+        }
+
+        @Bean
+        public ApplicationRunner applicationRunner() {
+            return new ApplicationRunner() {
+                @Override
+                public void run(ApplicationArguments args) throws Exception {
+                    System.out.println("applicationRunner()..." + Arrays.toString(args.getSourceArgs()));
+                    System.out.println(args.getOptionNames());
+                    System.out.println(args.getOptionValues("server.port"));
+                    System.out.println(args.getNonOptionArgs());
+                }
+            };
+        }
+    }
+}
+```
+
+
+
+###### 第3到7步
+
+step3.properties
+
+```properties
+server.port=8080
+```
+
+step4.properties
+
+```properties
+user.first-name=George
+user.middle_name=Walker
+user.lastName=Bush
+```
+
+step6.properties
+
+```properties
+spring.main.banner-mode=off
+spring.main.lazy-initialization=true
+```
+
+banner1.txt
+
+```txt
+  _____            _             ____              _
+ / ____|          (_)           |  _ \            | |
+| (___  _ __  _ __ _ _ __   __ _| |_) | ___   ___ | |_
+ \___ \| '_ \| '__| | '_ \ / _` |  _ < / _ \ / _ \| __|
+ ____) | |_) | |  | | | | | (_| | |_) | (_) | (_) | |_
+|_____/| .__/|_|  |_|_| |_|\__, |____/ \___/ \___/ \__|
+       | |                  __/ |
+       |_|                 |___/
+```
+
+[banner2.png](../pictures/20230507/003.png)
+
+```java
+public class Application {
+    public static void main(String[] args) throws IOException {
+        step3(args);
+        step4();
+        step5(args);
+        step6();
+        step7();
+    }
+
+    private static void step3(String[] args) throws IOException {
+        System.out.println("----------------step 3 准备 Environment 添加命令行参数--------------------");
+        ApplicationEnvironment env = new ApplicationEnvironment(); // 系统环境变量, properties, yaml
+        env.getPropertySources().addLast(new ResourcePropertySource(new ClassPathResource("step3.properties")));
+        env.getPropertySources().addFirst(new SimpleCommandLinePropertySource(args));
+        // 环境变量来源
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        System.out.println(env.getProperty("JAVA_HOME"));
+        System.out.println(env.getProperty("server.port"));
+    }
+
+    private static void step4() throws IOException {
+        System.out.println("----------------step 4 ConfigurationPropertySources 处理--------------------");
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        env.getPropertySources().addLast(
+                new ResourcePropertySource("step4", new ClassPathResource("step4.properties"))
+        );
+        ConfigurationPropertySources.attach(env);
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+
+        System.out.println(env.getProperty("user.first-name"));
+        System.out.println(env.getProperty("user.middle-name"));
+        System.out.println(env.getProperty("user.last-name"));
+    }
+
+    private static void step5(String[] args){
+        System.out.println("----------------step 5 通过 EnvironmentPostProcessorApplicationListener 进行 env 后处理--------------------");
+        // application.properties 在这步被添加到环境
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        SpringApplication app = new SpringApplication();
+        app.addListeners(new EnvironmentPostProcessorApplicationListener());
+
+        /*List<String> names = SpringFactoriesLoader.loadFactoryNames(EnvironmentPostProcessor.class, Application.class.getClassLoader());
+        for (String name : names) {
+            System.out.println(name);
+        }*/
+
+        EventPublishingRunListener publisher = new EventPublishingRunListener(app, args);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强前");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        publisher.environmentPrepared(new DefaultBootstrapContext(), env);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强后");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        step5Test();
+    }
+
+    private static void step6() throws IOException {
+        System.out.println("----------------step 6 绑定 spring.main 前缀的 key value 至 SpringApplication--------------------");
+        SpringApplication application = new SpringApplication();
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        env.getPropertySources().addLast(new ResourcePropertySource("step4", new ClassPathResource("step4.properties")));
+        env.getPropertySources().addLast(new ResourcePropertySource("step6", new ClassPathResource("step6.properties")));
+
+//        User user = Binder.get(env).bind("user", User.class).get();
+//        System.out.println(user);
+
+//        User user = new User();
+//        Binder.get(env).bind("user", Bindable.ofInstance(user));
+//        System.out.println(user);
+
+        // 属性为 SpringApplication 的私有属性, 请通过 debug 查看
+        System.out.println(application);
+        Binder.get(env).bind("spring.main", Bindable.ofInstance(application));
+        System.out.println(application);
+    }
+
+    private static void step7(){
+        System.out.println("----------------step 7 打印 banner--------------------");
+        ApplicationEnvironment env = new ApplicationEnvironment();
+        SpringApplicationBannerPrinter printer = new SpringApplicationBannerPrinter(
+                new DefaultResourceLoader(),
+                new SpringBootBanner()
+        );
+        // 测试文字 banner
+//        env.getPropertySources().addLast(new MapPropertySource("custom", Map.of("spring.banner.location","banner1.txt")));
+        // 测试图片 banner
+//        env.getPropertySources().addLast(new MapPropertySource("custom", Map.of("spring.banner.image.location","banner2.png")));
+        // 版本号的获取
+        System.out.println(SpringBootVersion.getVersion());
+        printer.print(env, Application.class, System.out);
+    }
+
+    private static void step5Test() {
+        SpringApplication app = new SpringApplication();
+        ApplicationEnvironment env = new ApplicationEnvironment();
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强前");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        ConfigDataEnvironmentPostProcessor postProcessor1 = new ConfigDataEnvironmentPostProcessor(new DeferredLogs(), new DefaultBootstrapContext());
+        postProcessor1.postProcessEnvironment(env, app);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强后");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        RandomValuePropertySourceEnvironmentPostProcessor postProcessor2 = new RandomValuePropertySourceEnvironmentPostProcessor(new DeferredLog());
+        postProcessor2.postProcessEnvironment(env, app);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>> 增强后");
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            System.out.println(ps);
+        }
+        System.out.println(env.getProperty("server.port"));
+        System.out.println(env.getProperty("random.int"));
+        System.out.println(env.getProperty("random.int"));
+        System.out.println(env.getProperty("random.int"));
+        System.out.println(env.getProperty("random.uuid"));
+        System.out.println(env.getProperty("random.uuid"));
+        System.out.println(env.getProperty("random.uuid"));
+    }
+
+    static class User {
+        private String firstName;
+        private String middleName;
+        private String lastName;
+        public String getFirstName() {
+            return firstName;
+        }
+        public void setFirstName(String firstName) {
+            this.firstName = firstName;
+        }
+        public String getMiddleName() {
+            return middleName;
+        }
+        public void setMiddleName(String middleName) {
+            this.middleName = middleName;
+        }
+        public String getLastName() {
+            return lastName;
+        }
+        public void setLastName(String lastName) {
+            this.lastName = lastName;
+        }
+        @Override
+        public String toString() {
+            return "User{" +
+                    "firstName='" + firstName + '\'' +
+                    ", middleName='" + middleName + '\'' +
+                    ", lastName='" + lastName + '\'' +
+                    '}';
+        }
+    }
+}
+```
+
+
+
+#### 收获
+
+1. SpringApplication 构造方法中所做的操作
+   * 可以有多种源用来加载 bean 定义
+   * 应用类型推断
+   * 添加容器初始化器
+   * 添加监听器
+   * 演示主类推断
+2. 如何读取 spring.factories 中的配置
+3. 从配置中获取重要的事件发布器：SpringApplicationRunListeners
+4. 容器的创建、初始化器增强、加载 bean 定义等
+5. CommandLineRunner、ApplicationRunner 的作用
+6. 环境对象
+   1. 命令行 PropertySource
+   2. ConfigurationPropertySources 规范环境键名称
+   3. EnvironmentPostProcessor 后处理增强
+      * 由 EventPublishingRunListener 通过监听事件2️⃣来调用
+   4. 绑定 spring.main 前缀的 key value 至 SpringApplication
+7. Banner 
+
+
+
+### Tomcat 内嵌容器
+
+Tomcat 基本结构
+
+```
+Server
+└───Service
+    ├───Connector (协议, 端口)
+    └───Engine
+        └───Host(虚拟主机 localhost)
+            ├───Context1 (应用1, 可以设置虚拟路径, / 即 url 起始路径; 项目磁盘路径, 即 docBase )
+            │   │   index.html
+            │   └───WEB-INF
+            │       │   web.xml (servlet, filter, listener) 3.0
+            │       ├───classes (servlet, controller, service ...)
+            │       ├───jsp
+            │       └───lib (第三方 jar 包)
+            └───Context2 (应用2)
+                │   index.html
+                └───WEB-INF
+                        web.xml
+```
+
+#### Tomcat 内嵌容器
+
+
+
+```java
+public class TestTomcat {
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws LifecycleException, IOException {
+        // 1.创建 Tomcat 对象
+        Tomcat tomcat = new Tomcat();
+        tomcat.setBaseDir("tomcat");
+
+        // 2.创建项目文件夹, 即 docBase 文件夹
+        File docBase = Files.createTempDirectory("boot.").toFile();
+        docBase.deleteOnExit();
+
+        // 3.创建 Tomcat 项目, 在 Tomcat 中称为 Context
+        Context context = tomcat.addContext("test/", docBase.getAbsolutePath());
+        
+        // 4.编程添加 Servlet
+        context.addServletContainerInitializer(new ServletContainerInitializer() {
+            @Override
+            public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
+                HelloServlet helloServlet = new HelloServlet();
+                ctx.addServlet("aaa", helloServlet).addMapping("/hello");
+            }
+        }, Collections.emptySet());
+
+        // 5.启动 Tomcat
+        tomcat.start();
+
+        // 6.创建连接器, 设置监听端口
+        Connector connector = new Connector(new Http11Nio2Protocol());
+        connector.setPort(8080);
+        tomcat.setConnector(connector);
+    }
+}
+```
+
+
+
+```java
+public class HelloServlet extends HttpServlet {
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.setContentType("text/html;charset=utf-8");
+        resp.getWriter().print("<h3>hello</h3>");
+    }
+}
+```
+
+
+
+#### 集成 Spring 容器
+
+##### Tomcat 在 Spring 容器中的初始化
+
+创建 Spring 容器时执行 refresh 方法会初始化 Tomcat
+
+```java
+public abstract class AbstractApplicationContext extends DefaultResourceLoader implements ConfigurableApplicationContext {
+    public void refresh() throws BeansException, IllegalStateException {
+        synchronized(this.startupShutdownMonitor) {
+            StartupStep contextRefresh = this.applicationStartup.start("spring.context.refresh");
+            this.prepareRefresh();
+            ConfigurableListableBeanFactory beanFactory = this.obtainFreshBeanFactory();
+            this.prepareBeanFactory(beanFactory);
+
+            try {
+                this.postProcessBeanFactory(beanFactory);
+                StartupStep beanPostProcess = this.applicationStartup.start("spring.context.beans.post-process");
+                this.invokeBeanFactoryPostProcessors(beanFactory);
+                this.registerBeanPostProcessors(beanFactory);
+                beanPostProcess.end();
+                this.initMessageSource();
+                this.initApplicationEventMulticaster();
+                // onRefresh 创建 Tomcat 步骤 1、2、3、4
+                this.onRefresh();
+                this.registerListeners();
+                this.finishBeanFactoryInitialization(beanFactory);
+                // 启动 Tomcat 步骤 5、6
+                this.finishRefresh();
+            } catch (BeansException var10) {
+                if (this.logger.isWarnEnabled()) {
+                    this.logger.warn("Exception encountered during context initialization - cancelling refresh attempt: " + var10);
+                }
+
+                this.destroyBeans();
+                this.cancelRefresh(var10);
+                throw var10;
+            } finally {
+                this.resetCommonCaches();
+                contextRefresh.end();
+            }
+
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+@Configuration
+static class Config {
+    @Bean
+    public DispatcherServletRegistrationBean registrationBean(DispatcherServlet dispatcherServlet) {
+        return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+    }
+
+    @Bean
+    // 这个例子中必须为 DispatcherServlet 提供 AnnotationConfigWebApplicationContext, 否则会选择 XmlWebApplicationContext 实现
+    public DispatcherServlet dispatcherServlet(WebApplicationContext applicationContext) {
+        return new DispatcherServlet(applicationContext);
+    }
+
+    @Bean
+    public RequestMappingHandlerAdapter requestMappingHandlerAdapter() {
+        RequestMappingHandlerAdapter handlerAdapter = new RequestMappingHandlerAdapter();
+        List list = new ArrayList();
+        list.add(new MappingJackson2HttpMessageConverter());
+        handlerAdapter.setMessageConverters(list);
+        return handlerAdapter;
+    }
+
+    @RestController
+    static class MyController {
+        @GetMapping("hello2")
+        public Map<String,Object> hello() {
+            Map<String, Object> map = new HashMap<>();
+            map.put("hello2", "hello2, spring!");
+            return map;
+        }
+    }
+}
+```
+
+
+
+```java
+public class TestTomcat {
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws LifecycleException, IOException {
+        // 1.创建 Tomcat 对象
+        Tomcat tomcat = new Tomcat();
+        tomcat.setBaseDir("tomcat");
+
+        // 2.创建项目文件夹, 即 docBase 文件夹
+        File docBase = Files.createTempDirectory("boot.").toFile();
+        docBase.deleteOnExit();
+
+        // 3.创建 Tomcat 项目, 在 Tomcat 中称为 Context
+        Context context = tomcat.addContext("test/", docBase.getAbsolutePath());
+
+        WebApplicationContext springContext = getApplicationContext();
+
+        // 4.编程添加 Servlet
+        context.addServletContainerInitializer(new ServletContainerInitializer() {
+            @Override
+            public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
+                HelloServlet helloServlet = new HelloServlet();
+                ctx.addServlet("aaa", helloServlet).addMapping("/hello");
+
+//                DispatcherServlet dispatcherServlet = springContext.getBean(DispatcherServlet.class);
+//                ctx.addServlet("dispatcherServlet", dispatcherServlet).addMapping("/");
+                for (ServletRegistrationBean registrationBean : springContext.getBeansOfType(ServletRegistrationBean.class).values()) {
+                    registrationBean.onStartup(ctx);
+                }
+            }
+        }, Collections.emptySet());
+
+        // 5.启动 Tomcat
+        tomcat.start();
+
+        // 6.创建连接器, 设置监听端口
+        Connector connector = new Connector(new Http11Nio2Protocol());
+        connector.setPort(8080);
+        tomcat.setConnector(connector);
+    }
+
+    public static WebApplicationContext getApplicationContext() {
+//        AnnotationConfigServletWebServerApplicationContext
+        AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
+        context.register(Config.class);
+        context.refresh();
+        return context;
+    }
+}
+```
+
+
+
+
+
+### Boot 自动配置
+
+#### AopAutoConfiguration
+
+Spring Boot 是利用了自动配置类来简化了 aop 相关配置
+
+* AOP 自动配置类为 `org.springframework.boot.autoconfigure.aop.AopAutoConfiguration`
+* 可以通过 `spring.aop.auto=false` 禁用 aop 自动配置
+* AOP 自动配置的本质是通过 `@EnableAspectJAutoProxy` 来开启了自动代理，如果在引导类上自己添加了 `@EnableAspectJAutoProxy` 那么以自己添加的为准
+* `@EnableAspectJAutoProxy` 的本质是向容器中添加了 `AnnotationAwareAspectJAutoProxyCreator` 这个 bean 后处理器，它能够找到容器中所有切面，并为匹配切点的目标类创建代理，创建代理的工作一般是在 bean 的初始化阶段完成的
+
+
+
+##### 源码
+
+```java
+@Configuration(
+    proxyBeanMethods = false
+)
+@ConditionalOnProperty(
+    prefix = "spring.aop",
+    name = {"auto"},
+    havingValue = "true",
+    matchIfMissing = true
+)
+public class AopAutoConfiguration {
+    public AopAutoConfiguration() {
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @ConditionalOnMissingClass({"org.aspectj.weaver.Advice"})
+    @ConditionalOnProperty(
+        prefix = "spring.aop",
+        name = {"proxy-target-class"},
+        havingValue = "true",
+        matchIfMissing = true
+    )
+    static class ClassProxyingConfiguration {
+        ClassProxyingConfiguration() {
+        }
+
+        @Bean
+        static BeanFactoryPostProcessor forceAutoProxyCreatorToUseClassProxying() {
+            return (beanFactory) -> {
+                if (beanFactory instanceof BeanDefinitionRegistry) {
+                    BeanDefinitionRegistry registry = (BeanDefinitionRegistry)beanFactory;
+                    AopConfigUtils.registerAutoProxyCreatorIfNecessary(registry);
+                    AopConfigUtils.forceAutoProxyCreatorToUseClassProxying(registry);
+                }
+
+            };
+        }
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @ConditionalOnClass({Advice.class})
+    static class AspectJAutoProxyingConfiguration {
+        AspectJAutoProxyingConfiguration() {
+        }
+
+        @Configuration(
+            proxyBeanMethods = false
+        )
+        @EnableAspectJAutoProxy(
+            proxyTargetClass = true
+        )
+        @ConditionalOnProperty(
+            prefix = "spring.aop",
+            name = {"proxy-target-class"},
+            havingValue = "true",
+            matchIfMissing = true
+        )
+        static class CglibAutoProxyConfiguration {
+            CglibAutoProxyConfiguration() {
+            }
+        }
+
+        @Configuration(
+            proxyBeanMethods = false
+        )
+        @EnableAspectJAutoProxy(
+            proxyTargetClass = false
+        )
+        @ConditionalOnProperty(
+            prefix = "spring.aop",
+            name = {"proxy-target-class"},
+            havingValue = "false"
+        )
+        static class JdkDynamicAutoProxyConfiguration {
+            JdkDynamicAutoProxyConfiguration() {
+            }
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class TestAopAuto {
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        StandardEnvironment env = new StandardEnvironment();
+//        env.getPropertySources().addLast(new SimpleCommandLinePropertySource("--spring.aop.auto=false"));
+        context.setEnvironment(env);
+        // 注册常见的后处理器
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(Config.class);
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+        System.out.println(">>>>>>>>>>>>>>>");
+        AnnotationAwareAspectJAutoProxyCreator creator = context.getBean(
+                "org.springframework.aop.config.internalAutoProxyCreator", AnnotationAwareAspectJAutoProxyCreator.class);
+        System.out.println(creator.isProxyTargetClass());
+
+    }
+
+    @Configuration
+    @Import(MyImportSelector.class)
+    static class Config {
+
+    }
+
+    static class MyImportSelector implements DeferredImportSelector {
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{AopAutoConfiguration.class.getName()};
+        }
+    }
+}
+```
+
+
+
+#### DataSourceAutoConfiguration
+
+* 对应的自动配置类为：org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+* 它内部采用了条件装配，通过检查容器的 bean，以及类路径下的 class，来决定该 @Bean 是否生效
+
+简单说明一下，Spring Boot 支持两大类数据源：
+
+* EmbeddedDatabase - 内嵌数据库连接池
+* PooledDataSource - 非内嵌数据库连接池
+
+PooledDataSource 又支持如下数据源
+
+* hikari 提供的 HikariDataSource
+* tomcat-jdbc 提供的 DataSource
+* dbcp2 提供的 BasicDataSource
+* oracle 提供的 PoolDataSourceImpl
+
+如果知道数据源的实现类类型，即指定了 `spring.datasource.type`，理论上可以支持所有数据源，但这样做的一个最大问题是无法订制每种数据源的详细配置（如最大、最小连接数等）
+
+
+
+##### 源码
+
+```java
+@Configuration(
+    proxyBeanMethods = false
+)
+@ConditionalOnClass({DataSource.class, EmbeddedDatabaseType.class})
+@ConditionalOnMissingBean(
+    type = {"io.r2dbc.spi.ConnectionFactory"}
+)
+@EnableConfigurationProperties({DataSourceProperties.class})
+@Import({DataSourcePoolMetadataProvidersConfiguration.class, InitializationSpecificCredentialsDataSourceInitializationConfiguration.class, SharedCredentialsDataSourceInitializationConfiguration.class})
+public class DataSourceAutoConfiguration {
+    public DataSourceAutoConfiguration() {
+    }
+
+    static class EmbeddedDatabaseCondition extends SpringBootCondition {
+        private static final String DATASOURCE_URL_PROPERTY = "spring.datasource.url";
+        private final SpringBootCondition pooledCondition = new DataSourceAutoConfiguration.PooledDataSourceCondition();
+
+        EmbeddedDatabaseCondition() {
+        }
+
+        public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            Builder message = ConditionMessage.forCondition("EmbeddedDataSource", new Object[0]);
+            if (this.hasDataSourceUrlProperty(context)) {
+                return ConditionOutcome.noMatch(message.because("spring.datasource.url is set"));
+            } else if (this.anyMatches(context, metadata, new Condition[]{this.pooledCondition})) {
+                return ConditionOutcome.noMatch(message.foundExactly("supported pooled data source"));
+            } else {
+                EmbeddedDatabaseType type = EmbeddedDatabaseConnection.get(context.getClassLoader()).getType();
+                return type == null ? ConditionOutcome.noMatch(message.didNotFind("embedded database").atAll()) : ConditionOutcome.match(message.found("embedded database").items(new Object[]{type}));
+            }
+        }
+
+        private boolean hasDataSourceUrlProperty(ConditionContext context) {
+            Environment environment = context.getEnvironment();
+            if (environment.containsProperty("spring.datasource.url")) {
+                try {
+                    return StringUtils.hasText(environment.getProperty("spring.datasource.url"));
+                } catch (IllegalArgumentException var4) {
+                }
+            }
+
+            return false;
+        }
+    }
+
+    static class PooledDataSourceAvailableCondition extends SpringBootCondition {
+        PooledDataSourceAvailableCondition() {
+        }
+
+        public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            Builder message = ConditionMessage.forCondition("PooledDataSource", new Object[0]);
+            return DataSourceBuilder.findType(context.getClassLoader()) != null ? ConditionOutcome.match(message.foundExactly("supported DataSource")) : ConditionOutcome.noMatch(message.didNotFind("supported DataSource").atAll());
+        }
+    }
+
+    static class PooledDataSourceCondition extends AnyNestedCondition {
+        PooledDataSourceCondition() {
+            super(ConfigurationPhase.PARSE_CONFIGURATION);
+        }
+
+        @Conditional({DataSourceAutoConfiguration.PooledDataSourceAvailableCondition.class})
+        static class PooledDataSourceAvailable {
+            PooledDataSourceAvailable() {
+            }
+        }
+
+        @ConditionalOnProperty(
+            prefix = "spring.datasource",
+            name = {"type"}
+        )
+        static class ExplicitType {
+            ExplicitType() {
+            }
+        }
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @Conditional({DataSourceAutoConfiguration.PooledDataSourceCondition.class})
+    @ConditionalOnMissingBean({DataSource.class, XADataSource.class})
+    @Import({Hikari.class, Tomcat.class, Dbcp2.class, OracleUcp.class, Generic.class, DataSourceJmxConfiguration.class})
+    protected static class PooledDataSourceConfiguration {
+        protected PooledDataSourceConfiguration() {
+        }
+    }
+
+    @Configuration(
+        proxyBeanMethods = false
+    )
+    @Conditional({DataSourceAutoConfiguration.EmbeddedDatabaseCondition.class})
+    @ConditionalOnMissingBean({DataSource.class, XADataSource.class})
+    @Import({EmbeddedDataSourceConfiguration.class})
+    protected static class EmbeddedDatabaseConfiguration {
+        protected EmbeddedDatabaseConfiguration() {
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class TestDataSourceAuto {
+    @SuppressWarnings("all")
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        StandardEnvironment env = new StandardEnvironment();
+        env.getPropertySources().addLast(new SimpleCommandLinePropertySource(
+                "--spring.datasource.url=jdbc:mysql://localhost:3306/test",
+                "--spring.datasource.username=root",
+                "--spring.datasource.password=root"
+        ));
+        context.setEnvironment(env);
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(Config.class);
+
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            String resourceDescription = context.getBeanDefinition(name).getResourceDescription();
+            if (resourceDescription != null)
+                System.out.println(name + " 来源:" + resourceDescription);
+        }
+    }
+
+    @Configuration
+    @Import(MyImportSelector.class)
+    static class Config {
+
+    }
+
+    static class MyImportSelector implements DeferredImportSelector {
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{
+                    DataSourceAutoConfiguration.class.getName()
+            };
+        }
+    }
+}
+```
+
+
+
+#### MybatisAutoConfiguration
+
+* MyBatis 自动配置类为 `org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration`
+* 它主要配置了两个 bean
+  * SqlSessionFactory - MyBatis 核心对象，用来创建 SqlSession
+  * SqlSessionTemplate - SqlSession 的实现，此实现会与当前线程绑定
+  * 用 ImportBeanDefinitionRegistrar 的方式扫描所有标注了 @Mapper 注解的接口
+  * 用 AutoConfigurationPackages 来确定扫描的包
+* 还有一个相关的 bean：MybatisProperties，它会读取配置文件中带 `mybatis.` 前缀的配置项进行定制配置
+
+@MapperScan 注解的作用与 MybatisAutoConfiguration 类似，会注册 MapperScannerConfigurer 有如下区别
+
+* @MapperScan 扫描具体包（当然也可以配置关注哪个注解）
+* @MapperScan 如果不指定扫描具体包，则会把引导类范围内，所有接口当做 Mapper 接口
+* MybatisAutoConfiguration 关注的是所有标注 @Mapper 注解的接口，会忽略掉非 @Mapper 标注的接口
+
+这里有同学有疑问，之前介绍的都是将具体类交给 Spring 管理，怎么到了 MyBatis 这儿，接口就可以被管理呢？
+
+* 其实并非将接口交给 Spring 管理，而是每个接口会对应一个 MapperFactoryBean，是后者被 Spring 所管理，接口只是作为 MapperFactoryBean 的一个属性来配置
+
+
+
+##### 源码
+
+```java
+@Configuration
+@ConditionalOnClass({SqlSessionFactory.class, SqlSessionFactoryBean.class})
+@ConditionalOnSingleCandidate(DataSource.class)
+@EnableConfigurationProperties({MybatisProperties.class})
+@AutoConfigureAfter({DataSourceAutoConfiguration.class, MybatisLanguageDriverAutoConfiguration.class})
+public class MybatisAutoConfiguration implements InitializingBean {
+    private static final Logger logger = LoggerFactory.getLogger(MybatisAutoConfiguration.class);
+    private final MybatisProperties properties;
+    private final Interceptor[] interceptors;
+    private final TypeHandler[] typeHandlers;
+    private final LanguageDriver[] languageDrivers;
+    private final ResourceLoader resourceLoader;
+    private final DatabaseIdProvider databaseIdProvider;
+    private final List<ConfigurationCustomizer> configurationCustomizers;
+
+    public MybatisAutoConfiguration(MybatisProperties properties, ObjectProvider<Interceptor[]> interceptorsProvider, ObjectProvider<TypeHandler[]> typeHandlersProvider, ObjectProvider<LanguageDriver[]> languageDriversProvider, ResourceLoader resourceLoader, ObjectProvider<DatabaseIdProvider> databaseIdProvider, ObjectProvider<List<ConfigurationCustomizer>> configurationCustomizersProvider) {
+        this.properties = properties;
+        this.interceptors = (Interceptor[])interceptorsProvider.getIfAvailable();
+        this.typeHandlers = (TypeHandler[])typeHandlersProvider.getIfAvailable();
+        this.languageDrivers = (LanguageDriver[])languageDriversProvider.getIfAvailable();
+        this.resourceLoader = resourceLoader;
+        this.databaseIdProvider = (DatabaseIdProvider)databaseIdProvider.getIfAvailable();
+        this.configurationCustomizers = (List)configurationCustomizersProvider.getIfAvailable();
+    }
+
+    public void afterPropertiesSet() {
+        this.checkConfigFileExists();
+    }
+
+    private void checkConfigFileExists() {
+        if (this.properties.isCheckConfigLocation() && StringUtils.hasText(this.properties.getConfigLocation())) {
+            Resource resource = this.resourceLoader.getResource(this.properties.getConfigLocation());
+            Assert.state(resource.exists(), "Cannot find config location: " + resource + " (please add config file or check your Mybatis configuration)");
+        }
+
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+        SqlSessionFactoryBean factory = new SqlSessionFactoryBean();
+        factory.setDataSource(dataSource);
+        factory.setVfs(SpringBootVFS.class);
+        if (StringUtils.hasText(this.properties.getConfigLocation())) {
+            factory.setConfigLocation(this.resourceLoader.getResource(this.properties.getConfigLocation()));
+        }
+
+        this.applyConfiguration(factory);
+        if (this.properties.getConfigurationProperties() != null) {
+            factory.setConfigurationProperties(this.properties.getConfigurationProperties());
+        }
+
+        if (!ObjectUtils.isEmpty(this.interceptors)) {
+            factory.setPlugins(this.interceptors);
+        }
+
+        if (this.databaseIdProvider != null) {
+            factory.setDatabaseIdProvider(this.databaseIdProvider);
+        }
+
+        if (StringUtils.hasLength(this.properties.getTypeAliasesPackage())) {
+            factory.setTypeAliasesPackage(this.properties.getTypeAliasesPackage());
+        }
+
+        if (this.properties.getTypeAliasesSuperType() != null) {
+            factory.setTypeAliasesSuperType(this.properties.getTypeAliasesSuperType());
+        }
+
+        if (StringUtils.hasLength(this.properties.getTypeHandlersPackage())) {
+            factory.setTypeHandlersPackage(this.properties.getTypeHandlersPackage());
+        }
+
+        if (!ObjectUtils.isEmpty(this.typeHandlers)) {
+            factory.setTypeHandlers(this.typeHandlers);
+        }
+
+        if (!ObjectUtils.isEmpty(this.properties.resolveMapperLocations())) {
+            factory.setMapperLocations(this.properties.resolveMapperLocations());
+        }
+
+        Set<String> factoryPropertyNames = (Set)Stream.of((new BeanWrapperImpl(SqlSessionFactoryBean.class)).getPropertyDescriptors()).map(FeatureDescriptor::getName).collect(Collectors.toSet());
+        Class<? extends LanguageDriver> defaultLanguageDriver = this.properties.getDefaultScriptingLanguageDriver();
+        if (factoryPropertyNames.contains("scriptingLanguageDrivers") && !ObjectUtils.isEmpty(this.languageDrivers)) {
+            factory.setScriptingLanguageDrivers(this.languageDrivers);
+            if (defaultLanguageDriver == null && this.languageDrivers.length == 1) {
+                defaultLanguageDriver = this.languageDrivers[0].getClass();
+            }
+        }
+
+        if (factoryPropertyNames.contains("defaultScriptingLanguageDriver")) {
+            factory.setDefaultScriptingLanguageDriver(defaultLanguageDriver);
+        }
+
+        return factory.getObject();
+    }
+
+    private void applyConfiguration(SqlSessionFactoryBean factory) {
+        org.apache.ibatis.session.Configuration configuration = this.properties.getConfiguration();
+        if (configuration == null && !StringUtils.hasText(this.properties.getConfigLocation())) {
+            configuration = new org.apache.ibatis.session.Configuration();
+        }
+
+        if (configuration != null && !CollectionUtils.isEmpty(this.configurationCustomizers)) {
+            Iterator var3 = this.configurationCustomizers.iterator();
+
+            while(var3.hasNext()) {
+                ConfigurationCustomizer customizer = (ConfigurationCustomizer)var3.next();
+                customizer.customize(configuration);
+            }
+        }
+
+        factory.setConfiguration(configuration);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+        ExecutorType executorType = this.properties.getExecutorType();
+        return executorType != null ? new SqlSessionTemplate(sqlSessionFactory, executorType) : new SqlSessionTemplate(sqlSessionFactory);
+    }
+
+    @Configuration
+    @Import({MybatisAutoConfiguration.AutoConfiguredMapperScannerRegistrar.class})
+    @ConditionalOnMissingBean({MapperFactoryBean.class, MapperScannerConfigurer.class})
+    public static class MapperScannerRegistrarNotFoundConfiguration implements InitializingBean {
+        public MapperScannerRegistrarNotFoundConfiguration() {
+        }
+
+        public void afterPropertiesSet() {
+            MybatisAutoConfiguration.logger.debug("Not found configuration for registering mapper bean using @MapperScan, MapperFactoryBean and MapperScannerConfigurer.");
+        }
+    }
+
+    public static class AutoConfiguredMapperScannerRegistrar implements BeanFactoryAware, ImportBeanDefinitionRegistrar {
+        private BeanFactory beanFactory;
+
+        public AutoConfiguredMapperScannerRegistrar() {
+        }
+
+        public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+            if (!AutoConfigurationPackages.has(this.beanFactory)) {
+                MybatisAutoConfiguration.logger.debug("Could not determine auto-configuration package, automatic mapper scanning disabled.");
+            } else {
+                MybatisAutoConfiguration.logger.debug("Searching for mappers annotated with @Mapper");
+                List<String> packages = AutoConfigurationPackages.get(this.beanFactory);
+                if (MybatisAutoConfiguration.logger.isDebugEnabled()) {
+                    packages.forEach((pkg) -> {
+                        MybatisAutoConfiguration.logger.debug("Using auto-configuration base package '{}'", pkg);
+                    });
+                }
+
+                BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(MapperScannerConfigurer.class);
+                builder.addPropertyValue("processPropertyPlaceHolders", true);
+                builder.addPropertyValue("annotationClass", Mapper.class);
+                builder.addPropertyValue("basePackage", StringUtils.collectionToCommaDelimitedString(packages));
+                BeanWrapper beanWrapper = new BeanWrapperImpl(MapperScannerConfigurer.class);
+                Set<String> propertyNames = (Set)Stream.of(beanWrapper.getPropertyDescriptors()).map(FeatureDescriptor::getName).collect(Collectors.toSet());
+                if (propertyNames.contains("lazyInitialization")) {
+                    builder.addPropertyValue("lazyInitialization", "${mybatis.lazy-initialization:false}");
+                }
+
+                if (propertyNames.contains("defaultScope")) {
+                    builder.addPropertyValue("defaultScope", "${mybatis.mapper-default-scope:}");
+                }
+
+                registry.registerBeanDefinition(MapperScannerConfigurer.class.getName(), builder.getBeanDefinition());
+            }
+        }
+
+        public void setBeanFactory(BeanFactory beanFactory) {
+            this.beanFactory = beanFactory;
+        }
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class TestDataSourceAuto {
+    @SuppressWarnings("all")
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        StandardEnvironment env = new StandardEnvironment();
+        env.getPropertySources().addLast(new SimpleCommandLinePropertySource(
+                "--spring.datasource.url=jdbc:mysql://localhost:3306/test",
+                "--spring.datasource.username=root",
+                "--spring.datasource.password=root"
+        ));
+        context.setEnvironment(env);
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(Config.class);
+
+        // 注册要扫描的包范围
+        String packageName = TestDataSourceAuto.class.getPackage().getName();
+        System.out.println("当前包名:" + packageName);
+        AutoConfigurationPackages.register(context.getDefaultListableBeanFactory(),
+                packageName);
+
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            String resourceDescription = context.getBeanDefinition(name).getResourceDescription();
+            if (resourceDescription != null)
+                System.out.println(name + " 来源:" + resourceDescription);
+        }
+    }
+
+    @Configuration
+    @Import(MyImportSelector.class)
+    static class Config {
+
+    }
+
+    static class MyImportSelector implements DeferredImportSelector {
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{
+                    DataSourceAutoConfiguration.class.getName(),
+                    MybatisAutoConfiguration.class.getName()
+            };
+        }
+    }
+}
+```
+
+
+
+#### TransactionAutoConfiguration
+
+##### 源码
+
+```java
+@Configuration(
+    proxyBeanMethods = false
+)
+@Role(2)
+public class ProxyTransactionManagementConfiguration extends AbstractTransactionManagementConfiguration {
+    public ProxyTransactionManagementConfiguration() {
+    }
+
+    @Bean(
+        name = {"org.springframework.transaction.config.internalTransactionAdvisor"}
+    )
+    @Role(2)
+    public BeanFactoryTransactionAttributeSourceAdvisor transactionAdvisor(TransactionAttributeSource transactionAttributeSource, TransactionInterceptor transactionInterceptor) {
+        BeanFactoryTransactionAttributeSourceAdvisor advisor = new BeanFactoryTransactionAttributeSourceAdvisor();
+        advisor.setTransactionAttributeSource(transactionAttributeSource);
+        advisor.setAdvice(transactionInterceptor);
+        if (this.enableTx != null) {
+            advisor.setOrder((Integer)this.enableTx.getNumber("order"));
+        }
+
+        return advisor;
+    }
+
+    @Bean
+    @Role(2)
+    public TransactionAttributeSource transactionAttributeSource() {
+        return new AnnotationTransactionAttributeSource();
+    }
+
+    @Bean
+    @Role(2)
+    public TransactionInterceptor transactionInterceptor(TransactionAttributeSource transactionAttributeSource) {
+        TransactionInterceptor interceptor = new TransactionInterceptor();
+        interceptor.setTransactionAttributeSource(transactionAttributeSource);
+        if (this.txManager != null) {
+            interceptor.setTransactionManager(this.txManager);
+        }
+
+        return interceptor;
+    }
+}
+```
+
+
+
+##### 示例
+
+```java
+public class TestDataSourceAuto {
+    @SuppressWarnings("all")
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        StandardEnvironment env = new StandardEnvironment();
+        env.getPropertySources().addLast(new SimpleCommandLinePropertySource(
+                "--spring.datasource.url=jdbc:mysql://localhost:3306/test",
+                "--spring.datasource.username=root",
+                "--spring.datasource.password=root"
+        ));
+        context.setEnvironment(env);
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(Config.class);
+
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            String resourceDescription = context.getBeanDefinition(name).getResourceDescription();
+            if (resourceDescription != null)
+                System.out.println(name + " 来源:" + resourceDescription);
+        }
+    }
+
+    @Configuration
+    @Import(MyImportSelector.class)
+    static class Config {
+
+    }
+
+    static class MyImportSelector implements DeferredImportSelector {
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{
+                    DataSourceAutoConfiguration.class.getName(),
+                    DataSourceTransactionManagerAutoConfiguration.class.getName(),
+                    TransactionAutoConfiguration.class.getName()
+            };
+        }
+    }
+}
+```
+
+
+
+* 事务自动配置类有两个：
+  * `org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration`
+  * `org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration`
+
+* 前者配置了 DataSourceTransactionManager 用来执行事务的提交、回滚操作
+* 后者功能上对标 @EnableTransactionManagement，包含以下三个 bean
+  * BeanFactoryTransactionAttributeSourceAdvisor 事务切面类，包含通知和切点
+  * TransactionInterceptor 事务通知类，由它在目标方法调用前后加入事务操作
+  * AnnotationTransactionAttributeSource 会解析 @Transactional 及事务属性，也包含了切点功能
+* 如果自己配置了 DataSourceTransactionManager 或是在引导类加了 @EnableTransactionManagement，则以自己配置的为准
+
+
+
+#### ServletWebServerFactoryAutoConfiguration
+
+* 提供 ServletWebServerFactory
+
+
+
+#### DispatcherServletAutoConfiguration
+
+* 提供 DispatcherServlet
+* 提供 DispatcherServletRegistrationBean
+
+
+
+#### WebMvcAutoConfiguration
+
+* 配置 DispatcherServlet 的各项组件，提供的 bean 见过的有
+  * 多项 HandlerMapping
+  * 多项 HandlerAdapter
+  * HandlerExceptionResolver
+
+
+
+#### ErrorMvcAutoConfiguration
+
+* 提供的 bean 有 BasicErrorController
+
+
+
+#### MultipartAutoConfiguration
+
+* 它提供了 org.springframework.web.multipart.support.StandardServletMultipartResolver
+* 该 bean 用来解析 multipart/form-data 格式的数据
+
+
+
+#### HttpEncodingAutoConfiguration
+
+* POST 请求参数如果有中文，无需特殊设置，这是因为 Spring Boot 已经配置了 org.springframework.boot.web.servlet.filter.OrderedCharacterEncodingFilter
+* 对应配置 server.servlet.encoding.charset=UTF-8，默认就是 UTF-8
+* 当然，它只影响非 json 格式的数据
+
+
+
+#### 自动配置类原理
+
+##### 示例
+
+假设已有第三方的两个自动配置类
+
+```java
+// @Configuration // 第三方的配置类
+public class AutoConfiguration1 {
+    @Bean
+    @ConditionalOnMissingBean
+    public Bean1 bean1() {
+        return new Bean1("第三方");
+    }
+}
+
+// @Configuration // 第三方的配置类
+public class AutoConfiguration2 {
+    @Bean
+    public Bean2 bean2() {
+        return new Bean2();
+    }
+}
+```
+
+提供一个配置文件 META-INF/spring.factories，key 为导入器类名，值为多个自动配置类名，用逗号分隔
+
+```properties
+cn.example.uums.test.a41.MyImportSelector=\
+cn.example.uums.test.a41.AutoConfiguration1,\
+cn.example.uums.test.a41.AutoConfiguration2
+```
+
+
+
+引入自动配置
+
+```java
+@Configuration // 本项目的配置类
+// @Import({AutoConfiguration1.class, AutoConfiguration2.class})
+@Import(MyImportSelector.class)
+public class Config {
+    @Bean
+    public Bean1 bean1() {
+        return new Bean1("本项目");
+    }
+}
+
+public class MyImportSelector implements DeferredImportSelector { // ImportSelector
+    // 该方法从 META-INF/spring.factories 读取自动配置类名，返回的 String[] 即为要导入的配置类
+    @Override
+    public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+        // return new String[]{AutoConfiguration1.class.getName(), AutoConfiguration2.class.getName()};
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>>> 自动配置类 >>>>>>>>>>>>>>>>>>>>>>>");
+        for (String name : SpringFactoriesLoader.loadFactoryNames(EnableAutoConfiguration.class, null)) {
+            System.out.println(name);
+        }
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+
+        List<String> names = SpringFactoriesLoader.loadFactoryNames(MyImportSelector.class, null);
+        return names.toArray(new String[0]);
+    }
+}
+```
+
+
+
+```java
+public class Application {
+
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws IOException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.getDefaultListableBeanFactory().setAllowBeanDefinitionOverriding(false);
+        context.registerBean("config", Config.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>");
+        System.out.println(context.getBean(Bean1.class));
+    }
+}
+```
+
+
+
+#### 总结
+
+1. 自动配置类本质上就是一个配置类而已，只是用 META-INF/spring.factories 管理，与应用配置类解耦
+2. @Enable 打头的注解本质是利用了 @Import
+3. @Import 配合 DeferredImportSelector 即可实现导入，selectImports 方法的返回值即为要导入的配置类名
+4. DeferredImportSelector 的导入会在最后执行，为的是让其它配置优先解析
+
+
+
+### 条件装配底层
+
+#### 基础
+
+条件装配的底层是本质上是 @Conditional 与 @Condition，这两个注解。引入自动配置类时，期望满足一定条件才能被 Spring 管理，不满足则不管理，怎么做呢？
+
+比如条件是【类路径下必须有 dataSource】这个 bean ，怎么做呢？
+
+首先编写条件判断类，它实现 Condition 接口，编写条件判断逻辑
+
+其次，在要导入的自动配置类上添加 `@Conditional(MyCondition1.class)`，将来此类被导入时就会做条件检查
+
+```java
+@Configuration // 第三方的配置类
+@Conditional(MyCondition1.class)
+public class AutoConfiguration1 {
+    @Bean
+    public Bean1 bean1() {
+        return new Bean1();
+    }
+}
+
+@Configuration // 第三方的配置类
+@Conditional(MyCondition2.class)
+public class AutoConfiguration2 {
+    @Bean
+    public Bean2 bean2() {
+        return new Bean2();
+    }
+}
+
+public class MyCondition1 implements Condition { // 存在 Druid 依赖
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        return ClassUtils.isPresent("com.alibaba.druid.pool.DruidDataSource", null);
+    }
+}
+
+public class MyCondition2 implements Condition { // 不存在 Druid 依赖
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        return !ClassUtils.isPresent("com.alibaba.druid.pool.DruidDataSource", null);
+    }
+}
+
+public class Bean1 {}
+public class Bean2 {}
+```
+
+
+
+```java
+@Configuration // 本项目的配置类
+@Import(MyImportSelector.class)
+public class Config {
+}
+
+public class MyImportSelector implements DeferredImportSelector {
+    @Override
+    public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+        return new String[]{AutoConfiguration1.class.getName(), AutoConfiguration2.class.getName()};
+    }
+}
+```
+
+
+
+```java
+public class Application {
+
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws IOException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+    }
+}
+```
+
+分别测试加入和去除 druid 依赖，观察 bean1 是否存在于容器
+
+```xml
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid</artifactId>
+    <version>1.1.17</version>
+</dependency>
+```
+
+##### 总结
+
+1. 学习一种特殊的 if - else
+
+
+
+#### 进阶
+
+```java
+@Configuration // 第三方的配置类
+@ConditionalOnClass(className = "com.alibaba.druid.pool.DruidDataSource", exists = false)
+public class AutoConfiguration1 {
+    @Bean
+    public Bean1 bean1() {
+        return new Bean1();
+    }
+}
+
+@Configuration // 第三方的配置类
+@ConditionalOnClass(className = "com.alibaba.druid.pool.DruidDataSource", exists = true)
+public class AutoConfiguration2 {
+    @Bean
+    public Bean2 bean2() {
+        return new Bean2();
+    }
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.METHOD, ElementType.TYPE})
+@Conditional(MyCondition.class)
+@interface ConditionalOnClass {
+    boolean exists(); // true 判断存在 false 判断不存在
+
+    String className(); // 要判断的类名
+}
+
+public class MyCondition implements Condition { // 存在 Druid 依赖
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        Map<String, Object> attributes = metadata.getAnnotationAttributes(ConditionalOnClass.class.getName());
+        String className = attributes.get("className").toString();
+        boolean exists = (boolean) attributes.get("exists");
+        boolean present = ClassUtils.isPresent(className, null);
+        return exists ? present : !present;
+    }
+}
+
+public class Bean1 {}
+public class Bean2 {}
+```
+
+
+
+```java
+@Configuration // 本项目的配置类
+@Import(MyImportSelector.class)
+public class Config {
+}
+
+public class MyImportSelector implements DeferredImportSelector {
+    @Override
+    public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+        return new String[]{AutoConfiguration1.class.getName(), AutoConfiguration2.class.getName()};
+    }
+}
+```
+
+
+
+```java
+public class Application {
+
+    @SuppressWarnings("all")
+    public static void main(String[] args) throws IOException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+        context.refresh();
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+    }
+}
+```
+
+
+
+## 其它
+
+### FactoryBean
+
+#### 示例
+
+
+
+```java
+@Component
+public class Bean2 {
+}
+
+public class Bean1 implements BeanFactoryAware {
+    private static final Logger log = LoggerFactory.getLogger(Bean1.class);
+
+    private Bean2 bean2;
+
+    @Autowired
+    public void setBean2(Bean2 bean2) {
+        log.debug("setBean2({})", bean2);
+        this.bean2 = bean2;
+    }
+
+    public Bean2 getBean2() {
+        return bean2;
+    }
+
+    @PostConstruct
+    public void init() {
+        log.debug("init");
+    }
+
+    @Override
+    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        log.debug("setBeanFactory({})", beanFactory);
+    }
+}
+```
+
+
+
+```java
+@Component("bean1")
+public class Bean1FactoryBean implements FactoryBean<Bean1> {
+
+    private static final Logger log = LoggerFactory.getLogger(Bean1FactoryBean.class);
+
+    // 决定了根据【类型】获取或依赖注入能否成功
+    @Override
+    public Class<?> getObjectType() {
+        return Bean1.class;
+    }
+
+    // 决定了 getObject() 方法被调用一次还是多次
+    @Override
+    public boolean isSingleton() {
+        return true;
+    }
+
+    @Override
+    public Bean1 getObject() throws Exception {
+        Bean1 bean1 = new Bean1();
+        log.debug("create bean: {}", bean1);
+        return bean1;
+    }
+}
+```
+
+
+
+```java
+@Component
+public class Bean1PostProcessor implements BeanPostProcessor {
+
+    private static final Logger log = LoggerFactory.getLogger(Bean1PostProcessor.class);
+
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("bean1") && bean instanceof Bean1) {
+            log.debug("before [{}] init", beanName);
+        }
+        return bean;
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("bean1") && bean instanceof Bean1) {
+            log.debug("after [{}] init", beanName);
+        }
+        return bean;
+    }
+}
+```
+
+
+
+```java
+@ComponentScan
+public class Application {
+
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+
+        Bean1 bean1 = (Bean1) context.getBean("bean1");
+        Bean1 bean2 = (Bean1) context.getBean("bean1");
+        Bean1 bean3 = (Bean1) context.getBean("bean1");
+        System.out.println(bean1);
+        System.out.println(bean2);
+        System.out.println(bean3);
+
+        System.out.println(context.getBean(Bean1.class));
+
+        System.out.println(context.getBean(Bean1FactoryBean.class));
+        System.out.println(context.getBean("&bean1"));
+
+        context.close();
+    }
+
+}
+```
+
+
+
+#### 总结
+
+一个在 Spring 发展阶段中重要, 但目前已经很鸡肋的接口 FactoryBean 的使用要点
+说它鸡肋有两点:
+
+1. 它的作用是用制造创建过程较为复杂的产品, 如 SqlSessionFactory, 但 @Bean 已具备等价功能
+2. 使用上较为古怪, 一不留神就会用错
+   1. 被 FactoryBean 创建的产品
+      * 会认为创建、依赖注入、Aware 接口回调、前初始化这些都是 FactoryBean 的职责, 这些流程都不会走
+      * 唯有后初始化的流程会走, 也就是产品可以被代理增强
+      * 单例的产品不会存储于 BeanFactory 的 singletonObjects 成员中, 而是另一个 factoryBeanObjectCache 成员中
+   2. 按名字去获取时, 拿到的是产品对象, 名字前面加 & 获取的是工厂对象
+
+但目前此接口的实现仍被大量使用, 想被全面废弃很难
+
+
+
+### @Indexed 原理
+
+真实项目中，只需要加入以下依赖即可
+
+```xml
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-context-indexer</artifactId>
+    <optional>true</optional>
+</dependency>
+```
+
+
+
+#### 示例
+
+```java
+@Component
+public class Bean1 {
+}
+@Component
+public class Bean2 {
+}
+@Component
+public class Bean3 {
+}
+
+```
+
+
+
+```java
+public class Application {
+    public static void main(String[] args) throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+        // 组件扫描的核心类
+        ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(beanFactory);
+
+        scanner.scan(A44.class.getPackage().getName());
+
+        for (String name : beanFactory.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+    }
+}
+```
+
+
+
+#### 总结
+
+1. 在编译时就根据 @Indexed 生成 META-INF/spring.components 文件
+2. 扫描时
+   * 如果发现 META-INF/spring.components 存在, 以它为准加载 bean definition
+   * 否则, 会遍历包下所有 class 资源 (包括 jar 内的)
+3. 解决的问题，在编译期就找到 @Component 组件，节省运行期间扫描 @Component 的时间
+
+
+
+### 代理进一步理解
+
+#### 示例
+
+```java
+@Component
+public class Bean2 {
+}
+
+@Component
+public class Bean1 {
+
+    private static final Logger log = LoggerFactory.getLogger(Bean1.class);
+
+    protected Bean2 bean2;
+
+    protected boolean initialized;
+
+    @Autowired
+    public void setBean2(Bean2 bean2) {
+        log.debug("setBean2(Bean2 bean2)");
+        this.bean2 = bean2;
+    }
+
+    @PostConstruct
+    public void init() {
+        log.debug("init");
+        initialized = true;
+    }
+
+    public Bean2 getBean2() {
+        log.debug("getBean2()");
+        return bean2;
+    }
+
+    public boolean isInitialized() {
+        log.debug("isInitialized()");
+        return initialized;
+    }
+
+    public void m1() {
+        System.out.println("m1() 成员方法");
+    }
+
+    final public void m2() {
+        System.out.println("m2() final 方法");
+    }
+
+    static public void m3() {
+        System.out.println("m3() static 方法");
+    }
+
+    private void m4() {
+        System.out.println("m4() private 方法");
+    }
+
+}
+```
+
+
+
+```java
+@Aspect
+@Component
+public class MyAspect {
+
+    // 故意对所有方法增强
+    @Before("execution(* cn.example.uums.test.a45.Bean1.*(..))")
+    public void before() {
+        System.out.println("before");
+    }
+}
+```
+
+
+
+```java
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) throws Exception {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+
+        Bean1 proxy = context.getBean(Bean1.class);
+
+
+
+        /*
+            1.演示 spring 代理的设计特点
+                依赖注入和初始化影响的是原始对象
+                代理与目标是两个对象，二者成员变量并不共用数据
+         */
+        showProxyAndTarget(proxy);
+
+        System.out.println(">>>>>>>>>>>>>>>>>>>");
+        System.out.println(proxy.getBean2());
+        System.out.println(proxy.isInitialized());
+
+        /*
+            2.演示 static 方法、final 方法、private 方法均无法增强
+         */
+
+        proxy.m1();
+        proxy.m2();
+        proxy.m3();
+        Method m4 = Bean1.class.getDeclaredMethod("m4");
+        m4.setAccessible(true);
+        m4.invoke(proxy);
+
+        context.close();
+    }
+
+
+    public static void showProxyAndTarget(Bean1 proxy) throws Exception {
+        System.out.println(">>>>> 代理中的成员变量");
+        System.out.println("\tinitialized=" + proxy.initialized);
+        System.out.println("\tbean2=" + proxy.bean2);
+
+        if (proxy instanceof Advised) {
+            Advised advised = (Advised) proxy;
+            System.out.println(">>>>> 目标中的成员变量");
+            Bean1 target = (Bean1) advised.getTargetSource().getTarget();
+            System.out.println("\tinitialized=" + target.initialized);
+            System.out.println("\tbean2=" + target.bean2);
+        }
+    }
+
+}
+```
+
+
+
+#### 总结
+
+1. spring 代理的设计特点
+
+   * 依赖注入和初始化影响的是原始对象
+     * 因此 cglib 不能用 MethodProxy.invokeSuper()
+
+   * 代理与目标是两个对象，二者成员变量并不共用数据
+
+2. static 方法、final 方法、private 方法均无法增强
+
+   * 进一步理解代理增强基于方法重写
+
+
+
+### @Value 装配底层
+
+#### 按类型装配的步骤
+
+1. 查看需要的类型是否为 Optional，是，则进行封装（非延迟），否则向下走
+2. 查看需要的类型是否为 ObjectFactory 或 ObjectProvider，是，则进行封装（延迟），否则向下走
+3. 查看需要的类型（成员或参数）上是否用 @Lazy 修饰，是，则返回代理，否则向下走
+4. 解析 @Value 的值
+   1. 如果需要的值是字符串，先解析 ${ }，再解析 #{ }
+   2. 不是字符串，需要用 TypeConverter 转换
+5. 看需要的类型是否为 Stream、Array、Collection、Map，是，则按集合处理，否则向下走
+6. 在 BeanFactory 的 resolvableDependencies 中找有没有类型合适的对象注入，没有向下走
+7. 在 BeanFactory 及父工厂中找类型匹配的 bean 进行筛选，筛选时会考虑 @Qualifier 及泛型
+8. 结果个数为 0 抛出 NoSuchBeanDefinitionException 异常 
+9. 如果结果 > 1，再根据 @Primary 进行筛选
+10. 如果结果仍 > 1，再根据成员名或变量名进行筛选
+11. 结果仍 > 1，抛出 NoUniqueBeanDefinitionException 异常
+
+
+
+#### 示例
+
+```java
+@Configuration
+@SuppressWarnings("all")
+public class Application {
+
+    public static void main(String[] args) throws Exception {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+
+        ContextAnnotationAutowireCandidateResolver resolver = new ContextAnnotationAutowireCandidateResolver();
+        resolver.setBeanFactory(beanFactory);
+
+        System.out.println(">>>>>>>>>>>>>>>@Value(\"${MAVEN_HOME}\")");
+        test1(context, resolver, Bean1.class.getDeclaredField("home"));
+        System.out.println(">>>>>>>>>>>>>>>@Value(\"18\")");
+        test2(context, resolver, Bean1.class.getDeclaredField("age"));
+        System.out.println(">>>>>>>>>>>>>>>@Value(\"#{@bean3}\")");
+        test3(context, resolver, Bean2.class.getDeclaredField("bean3"));
+        System.out.println(">>>>>>>>>>>>>>>@Value(\"#{'hello, ' + '${MAVEN_HOME}'}\")");
+        test3(context, resolver, Bean4.class.getDeclaredField("value"));
+    }
+
+    private static void test3(AnnotationConfigApplicationContext context, ContextAnnotationAutowireCandidateResolver resolver, Field field) {
+        DependencyDescriptor dd1 = new DependencyDescriptor(field, false);
+        // 获取 @Value 的内容
+        String value = resolver.getSuggestedValue(dd1).toString();
+        System.out.println(value);
+
+        // 解析 ${}
+        value = context.getEnvironment().resolvePlaceholders(value);
+        System.out.println(value);
+        System.out.println(value.getClass());
+
+        // 解析 #{} @bean3
+        Object bean3 = context.getBeanFactory().getBeanExpressionResolver().evaluate(value, new BeanExpressionContext(context.getBeanFactory(), null));
+
+        // 类型转换
+        Object result = context.getBeanFactory().getTypeConverter().convertIfNecessary(bean3, dd1.getDependencyType());
+        System.out.println(result);
+    }
+
+    private static void test2(AnnotationConfigApplicationContext context, ContextAnnotationAutowireCandidateResolver resolver, Field field) {
+        DependencyDescriptor dd1 = new DependencyDescriptor(field, false);
+        // 获取 @Value 的内容
+        String value = resolver.getSuggestedValue(dd1).toString();
+        System.out.println(value);
+
+        // 解析 ${}
+        value = context.getEnvironment().resolvePlaceholders(value);
+        System.out.println(value);
+        System.out.println(value.getClass());
+        Object age = context.getBeanFactory().getTypeConverter().convertIfNecessary(value, dd1.getDependencyType());
+        System.out.println(age.getClass());
+    }
+
+    private static void test1(AnnotationConfigApplicationContext context, ContextAnnotationAutowireCandidateResolver resolver, Field field) {
+        DependencyDescriptor dd1 = new DependencyDescriptor(field, false);
+        // 获取 @Value 的内容
+        String value = resolver.getSuggestedValue(dd1).toString();
+        System.out.println(value);
+
+        // 解析 ${}
+        value = context.getEnvironment().resolvePlaceholders(value);
+        System.out.println(value);
+    }
+
+    public class Bean1 {
+        @Value("${MAVEN_HOME}")
+        private String home;
+        @Value("18")
+        private int age;
+    }
+
+    public class Bean2 {
+        @Value("#{@bean3}") // SpringEL       #{SpEL}
+        private Bean3 bean3;
+    }
+
+    @Component("bean3")
+    public class Bean3 {
+    }
+
+    static class Bean4 {
+        @Value("#{'hello, ' + '${MAVEN_HOME}'}")
+        private String value;
+    }
+}
+```
+
+
+
+#### 总结
+
+1. ContextAnnotationAutowireCandidateResolver 作用之一，获取 @Value 的值
+2. 了解 ${ } 对应的解析器
+3. 了解 #{ } 对应的解析器
+4. TypeConvert 的一项体现
+
+
+
+### @Autowired 装配底层
+
+#### 示例
+
+```java
+@Configuration
+public class Application {
+    public static void main(String[] args) throws NoSuchFieldException, NoSuchMethodException {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+        // 1. 根据成员变量的类型注入
+        DependencyDescriptor dd1 = new DependencyDescriptor(Bean1.class.getDeclaredField("bean2"), false);
+        System.out.println(beanFactory.doResolveDependency(dd1, "bean1", null, null));
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+        // 2. 根据参数的类型注入
+        Method setBean2 = Bean1.class.getDeclaredMethod("setBean2", Bean2.class);
+        DependencyDescriptor dd2 = new DependencyDescriptor(new MethodParameter(setBean2, 0), false);
+        System.out.println(beanFactory.doResolveDependency(dd2, "bean1", null, null));
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+        // 3. 结果包装为 Optional<Bean2>
+        DependencyDescriptor dd3 = new DependencyDescriptor(Bean1.class.getDeclaredField("bean3"), false);
+        if (dd3.getDependencyType() == Optional.class) {
+            dd3.increaseNestingLevel();
+            Object result = beanFactory.doResolveDependency(dd3, "bean1", null, null);
+            System.out.println(Optional.ofNullable(result));
+        }
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+        // 4. 结果包装为 ObjectProvider,ObjectFactory
+        DependencyDescriptor dd4 = new DependencyDescriptor(Bean1.class.getDeclaredField("bean4"), false);
+        if (dd4.getDependencyType() == ObjectFactory.class) {
+            dd4.increaseNestingLevel();
+            ObjectFactory objectFactory = new ObjectFactory() {
+                @Override
+                public Object getObject() throws BeansException {
+                    return beanFactory.doResolveDependency(dd4, "bean1", null, null);
+                }
+            };
+            System.out.println(objectFactory.getObject());
+        }
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+        // 5. 对 @Lazy 的处理
+        DependencyDescriptor dd5 = new DependencyDescriptor(Bean1.class.getDeclaredField("bean5"), false);
+        ContextAnnotationAutowireCandidateResolver resolver = new ContextAnnotationAutowireCandidateResolver();
+        resolver.setBeanFactory(beanFactory);
+        Object proxy = resolver.getLazyResolutionProxyIfNecessary(dd5, "bean1");
+        // module java.base does not open java.lang to unnamed module
+        // jdk 1.8+ VM Options --add-opens java.base/java.lang=ALL-UNNAMED
+        // 或者被注入的类型重写 toString 方法
+        System.out.println(proxy);
+        System.out.println(proxy.getClass());
+        /*
+            1. Optional 及 ObjectFactory 对于内嵌类型的处理, 源码参考 ResolvableType
+            2. ObjectFactory 懒惰的思想
+            3. @Lazy 懒惰的思想
+         */
+    }
+
+    static class Bean1 {
+        @Autowired private Bean2 bean2;
+        @Autowired public void setBean2(Bean2 bean2) {
+            this.bean2 = bean2;
+        }
+        @Autowired private Optional<Bean2> bean3;
+        @Autowired private ObjectFactory<Bean2> bean4;
+        @Autowired @Lazy private Bean2 bean5;
+    }
+
+    @Component("bean2")
+    static class Bean2 {
+//        @Override
+//        public String toString() {
+//            return super.toString();
+//        }
+    }
+}
+```
+
+
+
+#### doResolveDependency
+
+##### 例一
+
+
+
+```java
+@SuppressWarnings("all")
+@Configuration
+public class Application {
+    public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1. 数组类型");
+        testArray(beanFactory);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>> 2. List 类型");
+        testList(beanFactory);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>> 3. applicationContext");
+        testApplicationContext(beanFactory);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>> 4. 泛型");
+        testGeneric(beanFactory);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>> 5. @Qualifier");
+        testQualifier(beanFactory);
+        /*
+            学到了什么
+                1. 如何获取数组元素类型
+                2. Spring 如何获取泛型中的类型
+                3. 特殊对象的处理, 如 ApplicationContext, 并注意 Map 取值时的类型匹配问题 (另见  TestMap)
+                4. 谁来进行泛型匹配 (另见 TestGeneric)
+                5. 谁来处理 @Qualifier
+                6. 刚开始都只是按名字处理, 等候选者确定了, 才会创建实例
+         */
+    }
+
+    private static void testQualifier(DefaultListableBeanFactory beanFactory) throws NoSuchFieldException {
+        DependencyDescriptor dd5 = new DependencyDescriptor(Target.class.getDeclaredField("service"), true);
+        Class<?> type = dd5.getDependencyType();
+        ContextAnnotationAutowireCandidateResolver resolver = new ContextAnnotationAutowireCandidateResolver();
+        resolver.setBeanFactory(beanFactory);
+        for (String name : BeanFactoryUtils.beanNamesForTypeIncludingAncestors(beanFactory, type)) {
+            BeanDefinition bd = beanFactory.getMergedBeanDefinition(name);
+            //                                                             @Qualifier("service2")
+            if (resolver.isAutowireCandidate(new BeanDefinitionHolder(bd,name), dd5)) {
+                System.out.println(name);
+                System.out.println(dd5.resolveCandidate(name, type, beanFactory));
+                break;
+            }
+        }
+    }
+    private static void testGeneric(DefaultListableBeanFactory beanFactory) throws NoSuchFieldException {
+        DependencyDescriptor dd4 = new DependencyDescriptor(Target.class.getDeclaredField("dao"), true);
+        Class<?> type = dd4.getDependencyType();
+        ContextAnnotationAutowireCandidateResolver resolver = new ContextAnnotationAutowireCandidateResolver();
+        resolver.setBeanFactory(beanFactory);
+        for (String name : BeanFactoryUtils.beanNamesForTypeIncludingAncestors(beanFactory, type)) {
+            BeanDefinition bd = beanFactory.getMergedBeanDefinition(name);
+            // 对比 BeanDefinition 与 DependencyDescriptor 的泛型是否匹配
+            if (resolver.isAutowireCandidate(new BeanDefinitionHolder(bd,name), dd4)) {
+                System.out.println(name);
+                System.out.println(dd4.resolveCandidate(name, type, beanFactory));
+                break;
+            }
+        }
+    }
+    private static void testApplicationContext(DefaultListableBeanFactory beanFactory) throws NoSuchFieldException, IllegalAccessException {
+        DependencyDescriptor dd3 = new DependencyDescriptor(Target.class.getDeclaredField("applicationContext"), true);
+
+        Field resolvableDependencies = DefaultListableBeanFactory.class.getDeclaredField("resolvableDependencies");
+        resolvableDependencies.setAccessible(true);
+        Map<Class<?>, Object> dependencies = (Map<Class<?>, Object>) resolvableDependencies.get(beanFactory);
+//        dependencies.forEach((k, v) -> {
+//            System.out.println("key:" + k + " value: " + v);
+//        });
+        for (Map.Entry<Class<?>, Object> entry : dependencies.entrySet()) {
+            // 左边类型           是否是           右边类型 的父类
+            if (entry.getKey().isAssignableFrom(dd3.getDependencyType())) {
+                System.out.println(entry.getValue());
+                break;
+            }
+        }
+    }
+    private static void testList(DefaultListableBeanFactory beanFactory) throws NoSuchFieldException {
+        DependencyDescriptor dd2 = new DependencyDescriptor(Target.class.getDeclaredField("serviceList"), true);
+        if (dd2.getDependencyType() == List.class) {
+            Class<?> resolve = dd2.getResolvableType().getGeneric().resolve();
+            System.out.println(resolve);
+            List<Object> list = new ArrayList<>();
+            // 根据类型找到所有 bean 的名字
+            String[] names = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(beanFactory, resolve);
+            for (String name : names) {
+                Object bean = dd2.resolveCandidate(name, resolve, beanFactory);
+                list.add(bean);
+            }
+            System.out.println(list);
+        }
+    }
+    private static void testArray(DefaultListableBeanFactory beanFactory) throws NoSuchFieldException {
+        DependencyDescriptor dd1 = new DependencyDescriptor(Target.class.getDeclaredField("serviceArray"), true);
+        if (dd1.getDependencyType().isArray()) {
+            Class<?> componentType = dd1.getDependencyType().getComponentType();
+            System.out.println(componentType);
+            String[] names = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(beanFactory, componentType);
+            List<Object> beans = new ArrayList<>();
+            for (String name : names) {
+                System.out.println(name);
+                Object bean = dd1.resolveCandidate(name, componentType, beanFactory);
+                beans.add(bean);
+            }
+            Object array = beanFactory.getTypeConverter().convertIfNecessary(beans, dd1.getDependencyType());
+            System.out.println(array);
+        }
+    }
+    static class Target {
+        @Autowired private Service[] serviceArray;
+        @Autowired private List<Service> serviceList;
+        @Autowired private ConfigurableApplicationContext applicationContext;
+        @Autowired private Dao<Teacher> dao;
+        @Autowired @Qualifier("service2") private Service service;
+    }
+    
+    interface Dao<T> {}
+    @Component("dao1") static class Dao1 implements Dao<Student> {}
+    @Component("dao2") static class Dao2 implements Dao<Teacher> {}
+
+    static class Student {}
+
+    static class Teacher {}
+
+    interface Service {}
+
+    @Component("service1")
+    static class Service1 implements Service {}
+
+    @Component("service2")
+    static class Service2 implements Service {}
+
+    @Component("service3")
+    static class Service3 implements Service {}
+}
+```
+
+
+
+##### 例二
+
+```java
+@Configuration
+public class Application {
+    public static void main(String[] args) throws NoSuchFieldException {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+        testPrimary(beanFactory);
+        testDefault(beanFactory);
+
+        /*
+            学到了什么
+                1. @Primary 的处理, 其中 @Primary 会在 @Bean 解析或组件扫描时被解析 (另见 TestPrimary)
+                2. 最后的防线, 通过属性或参数名匹配
+         */
+    }
+
+    private static void testDefault(DefaultListableBeanFactory beanFactory) throws NoSuchFieldException {
+        DependencyDescriptor dd = new DependencyDescriptor(Target2.class.getDeclaredField("service3"), false);
+        Class<?> type = dd.getDependencyType();
+        for (String name : BeanFactoryUtils.beanNamesForTypeIncludingAncestors(beanFactory, type)) {
+            if(name.equals(dd.getDependencyName())) {
+                System.out.println(name);
+                break;
+            }
+        }
+    }
+
+    private static void testPrimary(DefaultListableBeanFactory beanFactory) throws NoSuchFieldException {
+        DependencyDescriptor dd = new DependencyDescriptor(Target1.class.getDeclaredField("service"), false);
+        Class<?> type = dd.getDependencyType();
+        for (String name : BeanFactoryUtils.beanNamesForTypeIncludingAncestors(beanFactory, type)) {
+            if (beanFactory.getMergedBeanDefinition(name).isPrimary()) {
+                System.out.println(name);
+                break;
+            }
+        }
+    }
+
+    static class Target1 {
+        @Autowired private Service service;
+    }
+
+    static class Target2 {
+        @Autowired private Service service3;
+    }
+
+    interface Service {}
+    @Component("service1") static class Service1 implements Service {}
+    @Component("service2") @Primary static class Service2 implements Service {}
+    @Component("service3") static class Service3 implements Service {}
+}
+```
+
+
+
+#### 总结
+
+1. @Autowired 本质上是根据成员变量或方法参数的类型进行装配
+2. 如果待装配类型是 Optional，需要根据 Optional 泛型找到 bean，再封装为 Optional 对象装配
+3. 如果待装配的类型是 ObjectFactory，需要根据 ObjectFactory 泛型创建 ObjectFactory 对象装配
+   * 此方法可以延迟 bean 的获取
+4. 如果待装配的成员变量或方法参数上用 @Lazy 标注，会创建代理对象装配
+   * 此方法可以延迟真实 bean 的获取
+   * 被装配的代理不作为 bean
+5. 如果待装配类型是数组，需要获取数组元素类型，根据此类型找到多个 bean 进行装配
+6. 如果待装配类型是 Collection 或其子接口，需要获取 Collection 泛型，根据此类型找到多个 bean
+7. 如果待装配类型是 ApplicationContext 等特殊类型
+   * 会在 BeanFactory 的 resolvableDependencies 成员按类型查找装配
+   * resolvableDependencies 是 map 集合，key 是特殊类型，value 是其对应对象
+   * 不能直接根据 key 进行查找，而是用 isAssignableFrom 逐一尝试右边类型是否可以被赋值给左边的 key 类型
+8. 如果待装配类型有泛型参数
+   * 需要利用 ContextAnnotationAutowireCandidateResolver 按泛型参数类型筛选
+9. 如果待装配类型有 @Qualifier
+   * 需要利用 ContextAnnotationAutowireCandidateResolver 按注解提供的 bean 名称筛选
+10. 有 @Primary 标注的 @Component 或 @Bean 的处理
+11. 与成员变量名或方法参数名同名 bean 的处理
+
+
+
+### 事件监听器
+
+#### 示例一
+
+事件监听示例
+
+```java
+// 事件解耦例子
+@Configuration
+public class Application {
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+        context.getBean(MyService.class).doBusiness();
+        context.close();
+    }
+
+}
+
+public class MyEvent extends ApplicationEvent {
+    public MyEvent(Object source) {
+        super(source);
+    }
+}
+
+@Component
+public class MyService {
+    private static final Logger log = LoggerFactory.getLogger(MyService.class);
+    @Autowired
+    private ApplicationEventPublisher publisher; // applicationContext
+    public void doBusiness() {
+        log.debug("主线业务");
+        // 主线业务完成后需要做一些支线业务，下面是问题代码
+        publisher.publishEvent(new MyEvent("MyService.doBusiness()"));
+    }
+}
+
+// @Component
+public class SmsApplicationListener implements ApplicationListener<MyEvent> {
+    private static final Logger log = LoggerFactory.getLogger(SmsApplicationListener.class);
+    @Override
+    public void onApplicationEvent(MyEvent event) {
+        log.debug("发送短信");
+    }
+}
+
+@Component
+public class EmailApplicationListener implements ApplicationListener<MyEvent> {
+    private static final Logger log = LoggerFactory.getLogger(EmailApplicationListener.class);
+    @Override
+    public void onApplicationEvent(MyEvent event) {
+        log.debug("发送邮件");
+    }
+}
+```
+
+
+
+#### 示例二
+
+事件监听注解
+
+```java
+@Configuration
+public class Application {
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+        context.getBean(MyService.class).doBusiness();
+        context.close();
+    }
+
+    @Bean
+    public ThreadPoolTaskExecutor executor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(3);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(100);
+        return executor;
+    }
+
+    @Bean
+    public SimpleApplicationEventMulticaster applicationEventMulticaster(ThreadPoolTaskExecutor executor) {
+        SimpleApplicationEventMulticaster multicaster = new SimpleApplicationEventMulticaster();
+        multicaster.setTaskExecutor(executor);
+        return multicaster;
+    }
+}
+
+public class MyEvent extends ApplicationEvent {
+    public MyEvent(Object source) {
+        super(source);
+    }
+}
+
+@Component
+public class MyService {
+    private static final Logger log = LoggerFactory.getLogger(MyService.class);
+    @Autowired
+    private ApplicationEventPublisher publisher; // applicationContext
+    public void doBusiness() {
+        log.debug("主线业务");
+        // 主线业务完成后需要做一些支线业务，下面是问题代码
+        publisher.publishEvent(new MyEvent("MyService.doBusiness()"));
+    }
+}
+
+@Component
+public class SmsService {
+    private static final Logger log = LoggerFactory.getLogger(SmsService.class);
+    @EventListener
+    public void listener(MyEvent myEvent) {
+        log.debug("发送短信");
+    }
+}
+
+@Component
+public class EmailService {
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+    @EventListener
+    public void listener(MyEvent myEvent) {
+        log.debug("发送邮件");
+    }
+}
+```
+
+
+
+#### 示例三
+
+自定义事件监听注解
+
+```java
+@Configuration
+public class Application {
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+        context.getBean(MyService.class).doBusiness();
+        context.close();
+    }
+
+    @Bean
+    public SmartInitializingSingleton smartInitializingSingleton(ConfigurableApplicationContext context) {
+        return () -> {
+            for (String name : context.getBeanDefinitionNames()) {
+                Object bean = context.getBean(name);
+                for (Method method : bean.getClass().getMethods()) {
+                    if (method.isAnnotationPresent(MyListener.class)) {
+                        context.addApplicationListener((event) -> {
+                            System.out.println(event);
+                            // 判断传的事件对象与接收的事件对象是否一致
+                            Class<?> eventType = method.getParameterTypes()[0];
+                            if (eventType.isAssignableFrom(event.getClass())) {
+                                try {
+                                    method.invoke(bean, event);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        };
+    }
+}
+
+@Component
+public class MyService {
+    private static final Logger log = LoggerFactory.getLogger(MyService.class);
+    @Autowired
+    private ApplicationEventPublisher publisher; // applicationContext
+
+    public void doBusiness() {
+        log.debug("主线业务");
+        // 主线业务完成后需要做一些支线业务，下面是问题代码
+        publisher.publishEvent(new MyEvent("MyService.doBusiness()"));
+    }
+}
+
+@Component
+public class SmsService {
+    private static final Logger log = LoggerFactory.getLogger(SmsService.class);
+
+    @MyListener
+    public void listener(MyEvent myEvent) {
+        log.debug("发送短信");
+    }
+}
+
+@Component
+public class EmailService {
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+
+    @MyListener
+    public void listener(MyEvent myEvent) {
+        log.debug("发送邮件");
+    }
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+@interface MyListener {
+}
+
+public class MyEvent extends ApplicationEvent {
+    public MyEvent(Object source) {
+        super(source);
+    }
+}
+```
+
+
+
+#### 总结
+
+事件监听器的两种方式
+
+1. 实现 ApplicationListener 接口
+   * 根据接口泛型确定事件类型
+2. @EventListener 标注监听方法
+   * 根据监听器方法参数确定事件类型
+   * 解析时机：在 SmartInitializingSingleton（所有单例初始化完成后），解析每个单例 bean
+
+
+
+### 49) 事件发布器
+
+#### 示例
+
+```java
+@Configuration
+public class Application {
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Application.class);
+        context.getBean(MyService.class).doBusiness();
+        context.close();
+    }
+
+    @Bean
+    public ThreadPoolTaskExecutor executor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(3);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(100);
+        return executor;
+    }
+}
+
+@Bean
+public ApplicationEventMulticaster applicationEventMulticaster(ConfigurableApplicationContext context, ThreadPoolTaskExecutor executor) {
+    return new AbstractApplicationEventMulticaster() {
+        private List<GenericApplicationListener> listeners = new ArrayList<>();
+
+        // 收集监听器
+        public void addApplicationListenerBean(String name) {
+            ApplicationListener listener = context.getBean(name, ApplicationListener.class);
+            System.out.println(listener);
+            // 获取该监听器支持的事件类型
+            ResolvableType type = ResolvableType.forClass(listener.getClass()).getInterfaces()[0].getGeneric();
+            System.out.println(type);
+
+            // 将原始的 listener 封装为支持事件类型检查的 listener
+            GenericApplicationListener genericApplicationListener = new GenericApplicationListener() {
+                // 是否支持某事件类型                真实的事件类型
+                public boolean supportsEventType(ResolvableType eventType) {
+                    return type.isAssignableFrom(eventType);
+                }
+
+                public void onApplicationEvent(ApplicationEvent event) {
+                    executor.submit(() -> listener.onApplicationEvent(event));
+                }
+            };
+
+            listeners.add(genericApplicationListener);
+        }
+
+        // 发布事件
+        public void multicastEvent(ApplicationEvent event, ResolvableType eventType) {
+            for (GenericApplicationListener listener : listeners) {
+                if (listener.supportsEventType(ResolvableType.forClass(event.getClass()))) {
+                    listener.onApplicationEvent(event);
+                }
+            }
+        }
+    };
+}
+
+public static class AbstractApplicationEventMulticaster implements ApplicationEventMulticaster {
+
+    @Override
+    public void addApplicationListener(ApplicationListener<?> listener) {
+
+    }
+
+    @Override
+    public void addApplicationListenerBean(String listenerBeanName) {
+
+    }
+
+    @Override
+    public void removeApplicationListener(ApplicationListener<?> listener) {
+
+    }
+
+    @Override
+    public void removeApplicationListenerBean(String listenerBeanName) {
+
+    }
+
+    @Override
+    public void removeApplicationListeners(Predicate<ApplicationListener<?>> predicate) {
+
+    }
+
+    @Override
+    public void removeApplicationListenerBeans(Predicate<String> predicate) {
+
+    }
+
+    @Override
+    public void removeAllListeners() {
+
+    }
+
+    @Override
+    public void multicastEvent(ApplicationEvent event) {
+
+    }
+
+    @Override
+    public void multicastEvent(ApplicationEvent event, ResolvableType eventType) {
+
+    }
+}
+
+public class MyEvent extends ApplicationEvent {
+    public MyEvent(Object source) {
+        super(source);
+    }
+}
+
+@Component
+public class MyService {
+    private static final Logger log = LoggerFactory.getLogger(MyService.class);
+    @Autowired
+    private ApplicationEventPublisher publisher; // applicationContext
+
+    public void doBusiness() {
+        log.debug("主线业务");
+        // 主线业务完成后需要做一些支线业务，下面是问题代码
+        publisher.publishEvent(new MyEvent("MyService.doBusiness()"));
+    }
+}
+
+@Component
+public class SmsApplicationListener implements ApplicationListener<MyEvent> {
+    private static final Logger log = LoggerFactory.getLogger(SmsApplicationListener.class);
+
+    @Override
+    public void onApplicationEvent(MyEvent event) {
+        log.debug("发送短信");
+    }
+}
+
+@Component
+public class EmailApplicationListener implements ApplicationListener<MyEvent> {
+    private static final Logger log = LoggerFactory.getLogger(EmailApplicationListener.class);
+
+    @Override
+    public void onApplicationEvent(MyEvent event) {
+        log.debug("发送邮件");
+    }
+}
+```
+
+
+
+#### 总结
+
+事件发布器模拟实现
+
+1. addApplicationListenerBean 负责收集容器中的监听器
+   * 监听器会统一转换为 GenericApplicationListener 对象，以支持判断事件类型
+2. multicastEvent 遍历监听器集合，发布事件
+   * 发布前先通过 GenericApplicationListener.supportsEventType 判断支持该事件类型才发事件
+   * 可以利用线程池进行异步发事件优化
+3. 如果发送的事件对象不是 ApplicationEvent 类型，Spring 会把它包装为 PayloadApplicationEvent 并用泛型技术解析事件对象的原始类型
+   * 视频中未讲解
+
+
+
+
 
 
 
@@ -2430,6 +23324,24 @@ public class GlobalExceptionHandler {
 # SpringCloud
 
 [Spring Cloud Alibaba](https://spring-cloud-alibaba-group.github.io/zh-cn/docs/next/overview/what-is-sca)
+
+
+
+## CAP
+
+Consistency（一致性）：数据一致更新，所有数据的变化都是同步的 
+
+Availability（可用性）：在集群中一部分节点故障后，集群整体是否还能响应客户端的读写请求
+
+Partition tolerance（分区容忍性）：某个节点的故障，并不影响整个系统的运行 
+
+| 选择 | 说明                                                         |
+| ---- | ------------------------------------------------------------ |
+| CA   | 放弃分区容错性，加强一致性和可用性，其实就是传统的关系型数据库的选择 |
+| AP   | 放弃一致性（这里说的一致性是强一致性），追求分区容错性和可用性，这是很多分布式 系统设计时的选择，例如很多NoSQL系统就是如此 |
+| CP   | 放弃可用性，追求一致性和分区容错性，基本不会选择，网络问题会直接让整个系统不可用 |
+
+
 
 
 
@@ -7958,7 +28870,7 @@ TCC 三个方法描述：
 ​		用户接入 TCC ，最重要的是考虑如何将自己的业务模型拆成两阶段来实现。以扣钱场景为例，在接入 TCC 前，对 A 账户的扣钱，只需一条更新账户余额的 SQL 便能完成；但是在接入 TCC 之后，用户就需要考虑如何将原来一步就能完成的扣钱操作，拆成两阶段，实
 现成三个方法，并且保证一阶段 Try 成功的话 二阶段 Confirm 一定能成功。
 
-​		Try 方法作为一阶段准备方法，需要做资源的检查和预留。在扣钱场景下，Try 要做的事情是就是检查账户余额是否充足，预留转账资金，预留的方式就是冻结 A 账户的 转账资金。Try 方法执行之后，账号 A 余额虽然还是 100，但是其中 30 元已经被冻结了，不能被其他事务使用。
+​		Try 方法作为一阶段准备方法，需要做资源的检查和预留。在扣钱场景下，Try 要做的事情是就是检查账户余额是否充足，预留转账资金，预留的方式就是冻结 A 账户的转账资金。Try 方法执行之后，账号 A 余额虽然还是 100，但是其中 30 元已经被冻结了，不能被其他事务使用。
 
 ​		二阶段 Confirm 方法执行真正的扣钱操作。Confirm 会使用 Try 阶段冻结的资金，执行账号扣款。Confirm 方法执行之后，账号 A 在一阶段中冻结的 30 元已经被扣除，账号 A 余额变成 70 元 。
 
